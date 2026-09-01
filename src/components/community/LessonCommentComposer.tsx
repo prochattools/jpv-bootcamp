@@ -1,9 +1,10 @@
 'use client'
 
-import { FormEvent, useRef, useState } from 'react'
+import { FormEvent, startTransition, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { ComposerToolbar } from '@/components/community/ComposerToolbar'
+import { readResponseJson } from '@/components/community/readResponseJson'
 
 export function LessonCommentComposer({
   courseSlug,
@@ -39,14 +40,14 @@ export function LessonCommentComposer({
           body: JSON.stringify({ body: form.get('body'), parentId: parentId ?? null }),
         },
       )
-      const result = (await response.json()) as { ok?: boolean; message?: string }
-      if (!response.ok || !result.ok) throw new Error(result.message || 'Unable to post your comment.')
+      const result = await readResponseJson<{ ok?: boolean; message?: string }>(response)
+      if (!response.ok || !result?.ok) throw new Error(result?.message || 'Unable to post your comment.')
       formRef.current?.reset()
       setMessage('Comment posted.')
       const main = document.querySelector('main')
       const mainScrollTop = main?.scrollTop ?? 0
       const windowScrollY = window.scrollY
-      router.refresh()
+      startTransition(() => router.refresh())
       requestAnimationFrame(() => {
         if (main) main.scrollTop = mainScrollTop
         window.scrollTo({ top: windowScrollY, behavior: 'auto' })

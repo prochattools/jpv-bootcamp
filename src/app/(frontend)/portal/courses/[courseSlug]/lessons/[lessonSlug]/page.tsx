@@ -29,6 +29,7 @@ import {
   listLessonDiscussion,
   type LessonDiscussionComment,
 } from '@/lib/payloadCourse/lessonDiscussion'
+import { withQueryDedup } from '@/lib/payloadCourse/communityPortal'
 import {
   getMemberLessonDetail,
   markMemberLessonComplete,
@@ -377,12 +378,13 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
   }
 
   const memberId = actor.memberId
-  const detail = await getMemberLessonDetail(payload, memberId, courseSlug, lessonSlug)
+  const readPayload = withQueryDedup(payload)
+  const detail = await getMemberLessonDetail(readPayload, memberId, courseSlug, lessonSlug)
 
   if (!detail) notFound()
 
   const discussion = detail.allowed && detail.lesson?.id
-    ? await listLessonDiscussion(payload as PayloadCourseWriteAPI, memberId, detail.lesson.id)
+    ? await listLessonDiscussion(readPayload as PayloadCourseWriteAPI, memberId, detail.lesson.id)
     : null
   const reactionSummaries = new Map<string, ReactionSummary>()
   const reactionError = firstParam(query?.reaction) === 'error'
@@ -392,7 +394,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
   if (discussion?.allowed) {
     try {
       const summaries = await getLessonCommentReactionSummaries(
-        payload,
+        readPayload,
         memberId,
         discussion.lessonId,
         discussion.comments.map((comment) => comment.id),

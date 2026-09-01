@@ -10,6 +10,17 @@ export type PlainTextLexicalTextNode = {
   version: 1
 }
 
+export type PlainTextLexicalLinkNode = {
+  type: 'link'
+  version: 2
+  url: string
+  rel: 'noopener noreferrer'
+  target: '_blank'
+  children: PlainTextLexicalTextNode[]
+}
+
+export type PlainTextLexicalInlineNode = PlainTextLexicalTextNode | PlainTextLexicalLinkNode
+
 export type PlainTextLexicalParagraphNode = {
   type: 'paragraph'
   format: ''
@@ -17,7 +28,7 @@ export type PlainTextLexicalParagraphNode = {
   version: 1
   textFormat: 0
   textStyle: ''
-  children: PlainTextLexicalTextNode[]
+  children: PlainTextLexicalInlineNode[]
 }
 
 export type PlainTextLexicalDocument = {
@@ -37,6 +48,52 @@ export type PlainTextToLexicalOptions = {
   appendText?: string | null
 }
 
+function textNode(text: string): PlainTextLexicalTextNode {
+  return {
+    type: 'text',
+    detail: 0,
+    format: 0,
+    mode: 'normal',
+    style: '',
+    text,
+    version: 1,
+  }
+}
+
+function trimUrlPunctuation(value: string): { url: string; trailing: string } {
+  const match = /[.,!?;:]+$/.exec(value)
+  if (!match) return { url: value, trailing: '' }
+  return { url: value.slice(0, -match[0].length), trailing: match[0] }
+}
+
+function inlineNodes(value: string): PlainTextLexicalInlineNode[] {
+  const nodes: PlainTextLexicalInlineNode[] = []
+  const urlPattern = /https?:\/\/[^\s<>"']+/gi
+  let cursor = 0
+
+  for (const match of value.matchAll(urlPattern)) {
+    const rawUrl = match[0]
+    const start = match.index ?? cursor
+    const { url, trailing } = trimUrlPunctuation(rawUrl)
+    if (!url) continue
+
+    if (start > cursor) nodes.push(textNode(value.slice(cursor, start)))
+    nodes.push({
+      type: 'link',
+      version: 2,
+      url,
+      rel: 'noopener noreferrer',
+      target: '_blank',
+      children: [textNode(url)],
+    })
+    if (trailing) nodes.push(textNode(trailing))
+    cursor = start + rawUrl.length
+  }
+
+  if (cursor < value.length) nodes.push(textNode(value.slice(cursor)))
+  return nodes.length > 0 ? nodes : [textNode(value)]
+}
+
 function paragraph(text: string): PlainTextLexicalParagraphNode {
   return {
     type: 'paragraph',
@@ -45,15 +102,7 @@ function paragraph(text: string): PlainTextLexicalParagraphNode {
     version: 1,
     textFormat: 0,
     textStyle: '',
-    children: [{
-      type: 'text',
-      detail: 0,
-      format: 0,
-      mode: 'normal',
-      style: '',
-      text,
-      version: 1,
-    }],
+    children: inlineNodes(text),
   }
 }
 

@@ -1,9 +1,10 @@
 'use client'
 
-import { FormEvent, useRef, useState } from 'react'
+import { FormEvent, startTransition, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { ComposerToolbar } from '@/components/community/ComposerToolbar'
+import { readResponseJson } from '@/components/community/readResponseJson'
 
 type ImageAttachment = { id: string; filename: string }
 
@@ -63,8 +64,8 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
 
     try {
       const response = await fetch('/api/community/files', { method: 'POST', body: data })
-      const result = await response.json() as { id?: string | number; filename?: string; error?: string }
-      if (!response.ok || result.id === undefined) throw new Error(result.error || 'Unable to upload this image.')
+      const result = await readResponseJson<{ id?: string | number; filename?: string; error?: string }>(response)
+      if (!response.ok || result?.id === undefined) throw new Error(result?.error || 'Unable to upload this image.')
       setImages((current) => [...current, { id: String(result.id), filename: result.filename || file.name }])
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to upload this image.')
@@ -92,8 +93,8 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
           attachmentIds: images.map((image) => image.id),
         }),
       })
-      const result = (await response.json()) as { ok?: boolean; message?: string; attachmentWarning?: string | null }
-      if (!response.ok || !result.ok) throw new Error(result.message || 'Unable to post your reply.')
+      const result = await readResponseJson<{ ok?: boolean; message?: string; attachmentWarning?: string | null }>(response)
+      if (!response.ok || !result?.ok) throw new Error(result?.message || 'Unable to post your reply.')
       formRef.current?.reset()
       setVideoUrl(null)
       setLinks([])
@@ -102,7 +103,7 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
       const main = document.querySelector('main')
       const mainScrollTop = main?.scrollTop ?? 0
       const windowScrollY = window.scrollY
-      router.refresh()
+      startTransition(() => router.refresh())
       requestAnimationFrame(() => {
         if (main) main.scrollTop = mainScrollTop
         window.scrollTo({ top: windowScrollY, behavior: 'auto' })

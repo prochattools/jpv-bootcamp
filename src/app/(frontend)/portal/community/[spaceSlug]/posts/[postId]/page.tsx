@@ -281,29 +281,19 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
     notFound()
   }
 
-  let reactionSummary: ReactionSummary | null = null
-  try {
-    reactionSummary = await getReactionSummary(readPayload, memberId, {
+  const [reactionSummary, bookmarked, commentReactionSummaries] = await Promise.all([
+    getReactionSummary(readPayload, memberId, {
       kind: 'space_post',
       id: post.id,
-    })
-  } catch {
-    // Keep the post readable while the separately authorized reaction schema
-    // or projection is unavailable. Mutations remain fail-closed server-side.
-  }
-  const bookmarked = await getMemberBookmarkState(readPayload, memberId, post.id).catch(() => false)
-  let commentReactionSummaries: ReadonlyMap<string, ReactionSummary> = new Map()
-  try {
-    commentReactionSummaries = await getSpaceCommentReactionSummaries(
+    }).catch((): ReactionSummary | null => null),
+    getMemberBookmarkState(readPayload, memberId, post.id).catch(() => false),
+    getSpaceCommentReactionSummaries(
       readPayload,
       memberId,
       post.id,
       post.comments.map((comment) => comment.id),
-    )
-  } catch {
-    // Comment reaction projection is optional until the staging migration and
-    // validation gate have completed.
-  }
+    ).catch(() => new Map<string, ReactionSummary>()),
+  ])
 
   return (
     <div className='mx-auto w-full max-w-3xl space-y-6'>

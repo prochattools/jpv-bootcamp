@@ -9,6 +9,10 @@ import {
   type MemberCommunityAttachmentResolution,
 } from '@/lib/payloadCourse/communityFiles'
 import { relationshipId } from '@/lib/domain/relationships'
+import {
+  safeCommunityVideoEmbed,
+  type CommunityVideoProvider,
+} from '@/lib/payloadCourse/communityRichMedia'
 
 export type SafeCommunityTextMarks = {
   bold: boolean
@@ -60,6 +64,11 @@ export type SafeCommunityRichTextNode =
     }
   | {
       type: 'legacy-bunny-embed'
+      src: string
+    }
+  | {
+      type: 'legacy-external-embed'
+      provider: Exclude<CommunityVideoProvider, 'bunny'>
       src: string
     }
 
@@ -224,10 +233,23 @@ function safeLegacyBunnyEmbed(value: unknown): string | null {
   const html = asString(value)
   if (!html || html.length > 100_000) return null
 
-  const match = /<iframe\b[^>]*\bsrc=["'](https:\/\/(?:player|iframe)\.mediadelivery\.net\/embed\/\d+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[/?#][^"']*)?["']/i.exec(html)
+  const match = /<iframe\b[^>]*\bsrc=["']([^"']+)["']/i.exec(html)
   if (!match) return null
 
-  return match[1]
+  const embed = safeCommunityVideoEmbed(match[1])
+  return embed?.provider === 'bunny' ? embed.src : null
+}
+
+function safeLegacyExternalEmbed(value: unknown): { provider: Exclude<CommunityVideoProvider, 'bunny'>; src: string } | null {
+  const html = asString(value)
+  if (!html || html.length > 100_000) return null
+
+  const match = /<iframe\b[^>]*\bsrc=["']([^"']+)["']/i.exec(html)
+  if (!match) return null
+
+  const embed = safeCommunityVideoEmbed(match[1])
+  if (!embed || embed.provider === 'bunny') return null
+  return { provider: embed.provider as Exclude<CommunityVideoProvider, 'bunny'>, src: embed.src }
 }
 
 function projectChildren(value: unknown): SafeCommunityRichTextNode[] {
@@ -305,6 +327,8 @@ function projectNode(value: unknown): SafeCommunityRichTextNode | null {
       if (fields?.blockType !== 'legacyHTML') return null
       const bunnyEmbed = safeLegacyBunnyEmbed(fields.safeHtml)
       if (bunnyEmbed) return { type: 'legacy-bunny-embed', src: bunnyEmbed }
+      const externalEmbed = safeLegacyExternalEmbed(fields.safeHtml)
+      if (externalEmbed) return { type: 'legacy-external-embed', ...externalEmbed }
       const html = safeLegacyHtml(fields.safeHtml)
       if (!html) return null
       return { type: 'legacy-html', html }
@@ -466,13 +490,15 @@ export async function getMemberCommunityPostDetail(
   if (!space) return denied()
 
   const spaceId = String(space.id)
-  const access = await evaluatePayloadSpaceAccess(payload, {
-    memberId,
-    spaceId,
-  })
+  const [access, post] = await Promise.all([
+    evaluatePayloadSpaceAccess(payload, {
+      memberId,
+      spaceId,
+    }),
+    findByIdSafe(payload, 'payload_space_posts', postId),
+  ])
   if (!access.decision.allowed) return denied()
 
-  const post = await findByIdSafe(payload, 'payload_space_posts', postId)
   if (
     !post ||
     post.moderationStatus !== 'visible' ||
@@ -481,8 +507,9 @@ export async function getMemberCommunityPostDetail(
     return denied()
   }
 
-  const comments = (
-    await findAll(payload, 'payload_space_comments', {
+  const postAuthorId = relationshipId(post.author)
+  const [comments, postAuthor, canPublish, attachments] = await Promise.all([
+    findAll(payload, 'payload_space_comments', {
       where: {
         and: [
           { post: { equals: postId } },
@@ -491,13 +518,11 @@ export async function getMemberCommunityPostDetail(
       },
       sort: 'createdAt',
       limit: 500,
-    })
-  ).sort(byCreatedAtThenId)
-
-  const postAuthorId = relationshipId(post.author)
-  const postAuthor = await findByIdSafe(payload, 'payload_members', postAuthorId)
-  const canPublish = await publishingCapability(payload, memberId, spaceId)
-  const attachments = await findVisiblePostAttachments(payload, memberId, postId)
+    }).then((result) => result.sort(byCreatedAtThenId)),
+    findByIdSafe(payload, 'payload_members', postAuthorId),
+    publishingCapability(payload, memberId, spaceId),
+    findVisiblePostAttachments(payload, memberId, postId),
+  ])
 
   // Collect unique author IDs so we can batch-fetch in a single query (N+1 → 1).
   const commentAuthorIdSet = new Set<string>()
@@ -566,6 +591,7 @@ export function extractPlainText(node: SafeCommunityRichTextNode): string {
   if (node.type === 'text') return node.text
   if (node.type === 'legacy-html') return ''
   if (node.type === 'legacy-bunny-embed') return ''
+  if (node.type === 'legacy-external-embed') return ''
   if ('children' in node) {
     const lines = node.children.map(extractPlainText)
     if (node.type === 'paragraph' || node.type === 'heading' || node.type === 'list-item') {

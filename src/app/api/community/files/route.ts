@@ -1,12 +1,11 @@
 import config from '@payload-config'
-import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
-import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
-import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
+import { evaluatePayloadSpaceAccess, type PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
+import { relationshipId } from '@/lib/domain/relationships'
 import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 
 export const runtime = 'nodejs'
@@ -77,6 +76,9 @@ export async function POST(request: Request): Promise<Response> {
   if (file.size > MAX_FILE_SIZE) {
     return errorResponse(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024} MB.`, 413)
   }
+  if (file.size === 0) {
+    return errorResponse('The selected file is empty.', 400)
+  }
 
   const mimeType = file.type.toLowerCase()
   if (!ALLOWED_MIME_TYPES.has(mimeType)) {
@@ -91,52 +93,84 @@ export async function POST(request: Request): Promise<Response> {
   const payload = attachOperationalBillingFallback(await getPayload({ config }))
   const accessPayload = payload as unknown as PayloadCourseAccessAPI
 
-  // Authorize the upload against the exact post that will consume it. This
-  // keeps media uploads on the same entitlement and locked-post rules as the
-  // reply mutation and avoids a space-level slug/access mismatch.
-  const detail = await getMemberCommunityPostDetail(accessPayload, memberId, spaceSlug, postId)
-  if (!detail.allowed || !detail.post.canComment) {
+  // Authorize against the exact post that will consume the file. Do not load
+  // the full discussion page here: uploads only need the post, its space, and
+  // the member entitlement, and the old full-detail call added a large query
+  // waterfall before the upload could even begin.
+  const [post, spaceResult] = await Promise.all([
+    payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true }).catch((): null => null),
+    payload.find({
+      collection: 'payload_spaces',
+      where: {
+        and: [
+          { slug: { equals: spaceSlug } },
+          { status: { equals: 'published' } },
+        ],
+      },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    }),
+  ])
+  const space = spaceResult.docs[0] ?? null
+  if (!post || !space || post.moderationStatus !== 'visible' || post.locked === true || relationshipId(post.space) !== String(space.id)) {
+    return errorResponse('Access denied to this space', 403)
+  }
+  const access = await evaluatePayloadSpaceAccess(accessPayload, { memberId, spaceId: space.id })
+  if (!access.decision.allowed) {
     return errorResponse('Access denied to this space', 403)
   }
 
   const safeFilename = sanitizeFilename(file.name)
-  const storageDir = path.resolve(process.cwd(), 'private/payload-course-media')
-  const filePath = path.join(storageDir, safeFilename)
-
-  if (!filePath.startsWith(storageDir + path.sep)) {
-    return errorResponse('Invalid filename', 400)
-  }
-
   const buffer = Buffer.from(await file.arrayBuffer())
-  await mkdir(storageDir, { recursive: true })
-  await writeFile(filePath, buffer)
-
-  const mediaDoc = await payload.create({
-    collection: 'payload_private_media',
-    data: {
-      alt: title.trim().slice(0, 250),
-      filename: safeFilename,
-      mimeType,
-      filesize: file.size,
-    },
-    overrideAccess: true,
-  })
+  let mediaDoc: { id: string | number }
+  try {
+    // Payload owns the upload lifecycle. Supplying the file here writes the
+    // binary and generates the matching upload metadata in one operation.
+    mediaDoc = await payload.create({
+      collection: 'payload_private_media',
+      data: {
+        alt: title.trim().slice(0, 250),
+      },
+      file: {
+        data: buffer,
+        mimetype: mimeType,
+        name: safeFilename,
+        size: file.size,
+      },
+      overrideAccess: true,
+    })
+  } catch (error) {
+    console.error('[community files POST] media upload error:', error instanceof Error ? error.message : String(error))
+    return errorResponse('Unable to upload this file. Please try again.', 500)
+  }
 
   const attachmentType = mimeType.startsWith('image/') ? 'image' : 'document'
 
-  const fileDoc = await payload.create({
-    collection: 'payload_space_files',
-    data: {
-      title: title.trim().slice(0, 160),
-      space: String(detail.post.space.id) as unknown as number,
-      post: String(detail.post.id) as unknown as number,
-      uploadedBy: String(memberId) as unknown as number,
-      attachmentType,
-      protectedFile: mediaDoc.id,
-      moderationStatus: 'pending_review',
-    },
-    overrideAccess: true,
-  })
+  let fileDoc: { id: string | number }
+  try {
+    fileDoc = await payload.create({
+      collection: 'payload_space_files',
+      data: {
+        altText: title.trim().slice(0, 250),
+        title: title.trim().slice(0, 160),
+        space: String(space.id) as unknown as number,
+        uploadedBy: String(memberId) as unknown as number,
+        attachmentType,
+        protectedFile: mediaDoc.id as number,
+        moderationStatus: 'pending_review',
+      },
+      overrideAccess: true,
+    })
+  } catch (error) {
+    console.error('[community files POST] attachment record error:', error instanceof Error ? error.message : String(error))
+    try {
+      await payload.delete({ collection: 'payload_private_media', id: mediaDoc.id, overrideAccess: true })
+    } catch (cleanupError) {
+      console.error('[community files POST] media cleanup error:', cleanupError instanceof Error ? cleanupError.message : String(cleanupError))
+    }
+    return errorResponse('Unable to attach this file. Please try again.', 500)
+  }
 
   return Response.json(
     { id: fileDoc.id, filename: safeFilename, status: 'pending_review' },

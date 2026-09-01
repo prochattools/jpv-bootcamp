@@ -355,7 +355,9 @@ async function getAllowedCourseModules(
             title: asString(lesson.title) ?? 'Untitled lesson',
             slug: asString(lesson.slug),
             summary: asString(lesson.summary),
-            coverImage: await resolveMemberMediaAsset(payload, lesson.coverImage),
+            // The course curriculum does not render per-lesson cover images;
+            // resolving them here caused one extra media query per lesson.
+            coverImage: null as MemberMediaAsset | null,
             estimatedDuration: asString(lesson.estimatedDuration),
             previewLesson: asBoolean(lesson.previewLesson),
             lockState: asLockState(lesson.lockState),
@@ -613,20 +615,19 @@ export async function getMemberLessonDetail(
     lessonTitle: asString(lesson.title),
   })) return null
 
-  const [completedLessonIds, sequence] = await Promise.all([
+  const [completedLessonIds, sequence, access] = await Promise.all([
     getCompletedLessonIds(payload, normalizedMemberId),
     getCourseSequence(payload, course.id, courseSlug),
+    evaluatePayloadLessonAccess(payload, {
+      memberId: normalizedMemberId,
+      lessonId: lesson.id,
+      requiresPreviousCompletion: false,
+    }),
   ])
   const index = sequence.findIndex((entry) => String(entry.lesson.id) === String(lesson.id))
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 ? sequence[index + 1] ?? null : null
   const courseNavigation = buildLessonNavigation(sequence, completedLessonIds)
-  const access = await evaluatePayloadLessonAccess(payload, {
-    memberId: normalizedMemberId,
-    lessonId: lesson.id,
-    requiresPreviousCompletion: false,
-    previousLessonId: previous?.lesson.id ?? null,
-  })
   const allowed = access.decision.allowed
   const lessonTitle = asString(lesson.title) ?? 'Untitled lesson'
   const [resources, coverImage, managedVideo] = await Promise.all([

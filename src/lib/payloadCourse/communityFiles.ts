@@ -16,6 +16,7 @@ export const COMMUNITY_FILE_MAX_BYTES = 25 * 1024 * 1024
 
 export const COMMUNITY_FILE_MIME_TYPES = [
   'application/pdf',
+  'image/gif',
   'image/jpeg',
   'image/png',
   'image/webp',

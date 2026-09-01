@@ -72,6 +72,19 @@ function CommunityRichTextNode({ node }: { node: SafeCommunityRichTextNode }) {
           />
         </div>
       )
+    case 'legacy-external-embed':
+      return (
+        <div className='my-5 aspect-video max-w-full overflow-hidden rounded-jpv-card bg-jpv-ink shadow-jpv-card' data-community-video-provider={node.provider}>
+          <iframe
+            allow='accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture'
+            allowFullScreen
+            className='h-full w-full border-0'
+            loading='lazy'
+            src={node.src}
+            title={`${node.provider === 'youtube' ? 'YouTube' : 'Vimeo'} video`}
+          />
+        </div>
+      )
     default:
       return null
   }
