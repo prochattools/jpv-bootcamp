@@ -1,4 +1,5 @@
 import type { AdminActor } from '@/lib/auth/portalActor'
+import { normalizeRelationshipId } from '@/lib/domain/relationships'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import type { PrivilegedPayloadAccess } from '@/lib/payload/privilegedAccess'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
@@ -54,7 +55,7 @@ export async function createModuleCommand(
   if (!course) throw new PortalAdminActionError('not_found', 'Course not found.')
 
   const document = await createRecord(persistence, 'payload_course_modules', {
-    course: input.courseId,
+    course: normalizeRelationshipId(input.courseId),
     title,
     description: input.description?.trim() || undefined,
     sortOrder: input.sortOrder ?? 0,

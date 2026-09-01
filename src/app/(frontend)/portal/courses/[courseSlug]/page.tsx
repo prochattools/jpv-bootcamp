@@ -6,7 +6,7 @@ import { CourseAdminPanel } from '@/components/portal/admin/CourseAdminPanel'
 import { CourseModuleAccordion } from '@/components/portal/CourseModuleAccordion'
 import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
-import { getAdminCourseOverview } from '@/lib/portalAdmin/adminPortal'
+import { getAdminCourseMedia, getAdminCourseOverview } from '@/lib/portalAdmin/adminPortal'
 import { getMemberCourseOverview } from '@/lib/payloadCourse/memberPortal'
 
 type CoursePageProps = {
@@ -35,6 +35,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
   if (actor.kind === 'admin') {
     const course = await getAdminCourseOverview(payload, courseSlug)
     if (!course) notFound()
+    const media = await getAdminCourseMedia(payload)
 
     return (
       <div className='mx-auto w-full max-w-4xl space-y-6'>
@@ -101,6 +102,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
                 bunnyVideoId: l.bunnyVideoId,
                 downloadIds: l.downloadIds,
                 contentPlainText: l.contentPlainText,
+                contentHtml: l.contentHtml,
                 coverImageId: l.coverImageId,
               })),
             }))}
@@ -109,7 +111,9 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
             title={course.title}
             visibility={course.visibility}
             descriptionPlainText={course.descriptionPlainText}
+            descriptionHtml={course.descriptionHtml}
             coverImageId={course.coverImageId}
+            media={media}
           />
         </AdminGate>
 

@@ -21,6 +21,15 @@ function VideoIcon({ className }: { className?: string }) {
   )
 }
 
+function FileIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden='true' className={className} fill='none' viewBox='0 0 24 24'>
+      <path d='M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z' stroke='currentColor' strokeLinejoin='round' strokeWidth='1.75' />
+      <path d='M14 3v5h5M8 13h6M8 17h6' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
+    </svg>
+  )
+}
+
 function LinkIcon({ className }: { className?: string }) {
   return (
     <svg aria-hidden='true' className={className} fill='none' viewBox='0 0 24 24'>
@@ -57,9 +66,10 @@ type ComposerToolbarProps = {
   onInsertVideoFile?: (file: File) => void | Promise<void>
   onInsertLink?: (url: string) => void
   onInsertImage?: (file: File) => void | Promise<void>
+  onInsertFile?: (file: File) => void | Promise<void>
 }
 
-export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, onInsertLink, onInsertImage }: ComposerToolbarProps) {
+export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, onInsertLink, onInsertImage, onInsertFile }: ComposerToolbarProps) {
   const [showVideoInput, setShowVideoInput] = useState(false)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -97,6 +107,8 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, 
     const file = e.target.files?.[0]
     if (file?.type.startsWith('video/') && onInsertVideoFile) {
       void onInsertVideoFile(file)
+    } else if (file && onInsertFile) {
+      void onInsertFile(file)
     } else if (file && onInsertImage) {
       void onInsertImage(file)
     }
@@ -150,6 +162,16 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, 
             type='button'
           >
             <VideoIcon className='h-5 w-5' />
+          </button>
+        ) : null}
+        {onInsertFile ? (
+          <button
+            aria-label='Add file'
+            className='rounded-md p-1.5 text-jpv-muted transition hover:bg-jpv-canvas hover:text-jpv-ink'
+            onClick={() => handleFileClick('*/*')}
+            type='button'
+          >
+            <FileIcon className='h-5 w-5' />
           </button>
         ) : null}
         {onInsertLink ? (

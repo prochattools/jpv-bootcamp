@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { cloneElement, isValidElement, useState, useTransition } from 'react'
+import { cloneElement, isValidElement, useRef, useState, useTransition } from 'react'
 
 import {
   Dialog,
@@ -23,6 +23,8 @@ import {
   updateLessonAction,
   updateModuleAction,
 } from '@/lib/portalAdmin/courseAdminActions'
+import type { AdminCourseMediaLibrary, AdminCourseMediaOption } from '@/lib/portalAdmin/adminPortal'
+import { RichContentEditor } from '@/components/portal/admin/RichContentEditor'
 
 // ---------- Types ----------
 
@@ -44,6 +46,7 @@ type Lesson = {
   bunnyVideoId: string | null
   downloadIds: string[]
   contentPlainText: string | null
+  contentHtml: string | null
   coverImageId: string | null
 }
 
@@ -66,7 +69,9 @@ export type CourseAdminPanelProps = {
   featured: boolean
   modules: Module[]
   descriptionPlainText: string | null
+  descriptionHtml: string | null
   coverImageId: string | null
+  media?: AdminCourseMediaLibrary
 }
 
 // ---------- Style constants ----------
@@ -93,9 +98,115 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+type MediaChoice = Pick<AdminCourseMediaOption, 'id' | 'label' | 'mimeType'>
+
+async function uploadPortalMedia(file: File): Promise<{ id: string; label: string; mimeType: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await fetch('/api/portal/announcements/media', { method: 'POST', body: formData })
+  const result = await response.json() as { ok?: boolean; message?: string; media?: { id: string; filename: string; mimeType: string } }
+  if (!response.ok || !result.ok || !result.media) throw new Error(result.message || 'Unable to upload this file.')
+  return { id: result.media.id, label: result.media.filename, mimeType: result.media.mimeType }
+}
+
+function MediaPicker({
+  label,
+  value,
+  options,
+  onChange,
+  accept = 'image/*',
+  helper,
+  allowUpload = true,
+}: {
+  label: string
+  value: string
+  options: MediaChoice[]
+  onChange: (value: string) => void
+  accept?: string
+  helper?: string
+  allowUpload?: boolean
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function upload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const media = await uploadPortalMedia(file)
+      onChange(media.id)
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Unable to upload this file.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <Field label={label}>
+      <div className='flex gap-2'>
+        <select className={INPUT + ' min-w-0 flex-1'} onChange={(event) => onChange(event.target.value)} value={value}>
+          <option value=''>No selection</option>
+          {value && !options.some((option) => option.id === value) ? <option value={value}>Current selection</option> : null}
+          {options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+        </select>
+        {allowUpload ? <>
+          <input accept={accept} className='hidden' onChange={upload} ref={inputRef} type='file' />
+          <button className={BTN_S + ' shrink-0'} disabled={uploading} onClick={() => inputRef.current?.click()} type='button'>{uploading ? 'Uploading…' : 'Upload'}</button>
+        </> : null}
+      </div>
+      {helper ? <p className='text-xs leading-5 text-jpv-muted'>{helper}</p> : null}
+      {error ? <p className='text-xs text-red-600'>{error}</p> : null}
+    </Field>
+  )
+}
+
+function DownloadPicker({ value, options, onChange }: { value: string; options: MediaChoice[]; onChange: (value: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const selected = value.split('\n').map((item) => item.trim()).filter(Boolean)
+
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter((item) => item !== id).join('\n') : [...selected, id].join('\n'))
+  }
+
+  async function upload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const media = await uploadPortalMedia(file)
+      onChange([...selected, media.id].join('\n'))
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Unable to upload this file.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <Field label='Downloads and handouts'>
+      <div className='max-h-36 space-y-1 overflow-y-auto rounded-jpv-card border border-jpv-border bg-jpv-canvas p-2'>
+        {options.length ? options.map((option) => <label className='flex items-start gap-2 rounded px-2 py-1.5 text-sm text-jpv-ink hover:bg-jpv-surface' key={option.id}><input checked={selected.includes(option.id)} onChange={() => toggle(option.id)} type='checkbox' /><span className='truncate'>{option.label}</span></label>) : <p className='p-2 text-xs text-jpv-muted'>No documents in the media library yet.</p>}
+      </div>
+      <input accept='.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf' className='hidden' onChange={upload} ref={inputRef} type='file' />
+      <button className={BTN_S + ' mt-2'} disabled={uploading} onClick={() => inputRef.current?.click()} type='button'>{uploading ? 'Uploading…' : 'Upload a handout'}</button>
+      {selected.length ? <p className='text-xs text-jpv-muted'>{selected.length} selected</p> : null}
+      {error ? <p className='text-xs text-red-600'>{error}</p> : null}
+    </Field>
+  )
+}
+
 // ---------- ConfirmDeleteDialog ----------
 
-function ConfirmDeleteDialog({ label, onDelete }: { label: string; onDelete: () => Promise<ActionResult> }) {
+function ConfirmDeleteDialog({ label, onDelete, onSuccess }: { label: string; onDelete: () => Promise<ActionResult>; onSuccess?: () => void }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState('')
@@ -107,7 +218,9 @@ function ConfirmDeleteDialog({ label, onDelete }: { label: string; onDelete: () 
     startTransition(async () => {
       const res = await onDelete()
       const resErr = getError(res); if (resErr) { setError(resErr); return }
-      setOpen(false); router.refresh()
+      setOpen(false)
+      if (onSuccess) onSuccess()
+      else router.refresh()
     })
   }
 
@@ -146,7 +259,7 @@ function EditCourseDialog(props: Omit<CourseAdminPanelProps, 'modules'>) {
     visibility: props.visibility,
     estimatedDuration: props.estimatedDuration ?? '',
     featured: props.featured,
-    descriptionText: props.descriptionPlainText ?? '',
+    descriptionHtml: props.descriptionHtml ?? props.descriptionPlainText ?? '',
     coverImageId: props.coverImageId ?? '',
   })
   const [error, setError] = useState<string | null>(null)
@@ -164,7 +277,7 @@ function EditCourseDialog(props: Omit<CourseAdminPanelProps, 'modules'>) {
         status: form.status as 'draft' | 'published' | 'archived',
         visibility: form.visibility as 'public' | 'members' | 'restricted',
         estimatedDuration: form.estimatedDuration, featured: form.featured,
-        descriptionText: form.descriptionText || undefined,
+        descriptionHtml: form.descriptionHtml || undefined,
         coverImage: form.coverImageId || null,
       })
       const resErr = getError(res); if (resErr) { setError(resErr); return }
@@ -184,11 +297,15 @@ function EditCourseDialog(props: Omit<CourseAdminPanelProps, 'modules'>) {
             <textarea className={INPUT} rows={3} value={form.shortDescription} onChange={set('shortDescription')} />
           </Field>
           <Field label="Description">
-            <textarea className={INPUT} rows={4} value={form.descriptionText} onChange={set('descriptionText')} placeholder="Full course description" />
+            <RichContentEditor id={`course-description-${props.courseId}`} onChange={(descriptionHtml) => setForm((current) => ({ ...current, descriptionHtml }))} placeholder="Write the course description…" value={form.descriptionHtml} />
           </Field>
-          <Field label="Cover Image ID">
-            <input className={INPUT} value={form.coverImageId} onChange={set('coverImageId')} placeholder="Media document ID" />
-          </Field>
+          <MediaPicker
+            helper='Choose an existing image or upload a new cover. The file will be added to the media library.'
+            label='Course cover image'
+            onChange={(coverImageId) => setForm((current) => ({ ...current, coverImageId }))}
+            options={props.media?.images ?? []}
+            value={form.coverImageId}
+          />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Status">
               <select className={INPUT} value={form.status} onChange={set('status')}>
@@ -281,7 +398,7 @@ function LessonFormDialog({
   trigger, dialogTitle, moduleId, lessonId,
   initialTitle = '', initialSummary = '',
   initialDuration = '', initialLockState = 'available' as Lesson['lockState'], initialPreview = false,
-  initialContent = '', initialCoverImageId = '', initialBunnyVideoId = '', initialDownloadIds = '',
+  initialContent = '', initialCoverImageId = '', initialBunnyVideoId = '', initialDownloadIds = '', media,
 }: {
   trigger: React.ReactNode
   dialogTitle: string
@@ -296,13 +413,14 @@ function LessonFormDialog({
   initialCoverImageId?: string
   initialBunnyVideoId?: string
   initialDownloadIds?: string
+  media?: AdminCourseMediaLibrary
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({
     title: initialTitle, summary: initialSummary,
     estimatedDuration: initialDuration, lockState: initialLockState, previewLesson: initialPreview,
-    contentText: initialContent, coverImageId: initialCoverImageId,
+    contentHtml: initialContent, coverImageId: initialCoverImageId,
     bunnyVideoId: initialBunnyVideoId, downloadIds: initialDownloadIds,
   })
   const [error, setError] = useState<string | null>(null)
@@ -318,10 +436,10 @@ function LessonFormDialog({
       const payload = {
         title: form.title, summary: form.summary,
         estimatedDuration: form.estimatedDuration, lockState: form.lockState, previewLesson: form.previewLesson,
-        contentText: form.contentText || undefined,
+        contentHtml: form.contentHtml || undefined,
         coverImage: form.coverImageId || null,
         bunnyVideo: form.bunnyVideoId || null,
-        downloads: downloads.length > 0 ? downloads : undefined,
+        downloads,
       }
       const res = lessonId
         ? await updateLessonAction(lessonId, payload)
@@ -342,8 +460,8 @@ function LessonFormDialog({
             <Field label="Summary (optional)">
               <textarea className={INPUT} rows={2} value={form.summary} onChange={set('summary')} />
             </Field>
-            <Field label="Content">
-              <textarea className={INPUT} rows={4} value={form.contentText} onChange={set('contentText')} placeholder="Lesson content (plain text)" />
+            <Field label="Lesson content">
+              <RichContentEditor id={`lesson-content-${lessonId ?? moduleId}`} onChange={(contentHtml) => setForm((current) => ({ ...current, contentHtml }))} placeholder="Write or paste the lesson content…" value={form.contentHtml} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Duration">
@@ -357,15 +475,22 @@ function LessonFormDialog({
                 </select>
               </Field>
             </div>
-            <Field label="Bunny Video ID">
-              <input className={INPUT} value={form.bunnyVideoId} onChange={set('bunnyVideoId')} placeholder="Bunny video ID" />
-            </Field>
-            <Field label="Cover Image ID">
-              <input className={INPUT} value={form.coverImageId} onChange={set('coverImageId')} placeholder="Media document ID" />
-            </Field>
-            <Field label="Download IDs (one per line)">
-              <textarea className={INPUT} rows={3} value={form.downloadIds} onChange={set('downloadIds')} placeholder="One media ID per line" />
-            </Field>
+            <MediaPicker
+              allowUpload={false}
+              helper='Choose the managed video already in the platform. Videos are linked automatically.'
+              label='Lesson video'
+              onChange={(bunnyVideoId) => setForm((current) => ({ ...current, bunnyVideoId }))}
+              options={(media?.videos ?? []).map((video) => ({ id: video.id, label: `${video.title} (${video.status})`, mimeType: 'video/*' }))}
+              value={form.bunnyVideoId}
+            />
+            <MediaPicker
+              helper='Choose an existing image or upload a new one.'
+              label='Lesson cover image'
+              onChange={(coverImageId) => setForm((current) => ({ ...current, coverImageId }))}
+              options={media?.images ?? []}
+              value={form.coverImageId}
+            />
+            <DownloadPicker options={media?.files ?? []} onChange={(downloadIds) => setForm((current) => ({ ...current, downloadIds }))} value={form.downloadIds} />
             <label className="flex items-center gap-2 text-sm text-jpv-ink">
               <input type="checkbox" checked={form.previewLesson} onChange={(e) => setForm((f) => ({ ...f, previewLesson: e.target.checked }))} />
               Preview lesson (public preview)
@@ -384,8 +509,8 @@ function LessonFormDialog({
 
 // ---------- LessonRow ----------
 
-function LessonRow({ lesson, moduleId, isFirst, isLast, allIds }: {
-  lesson: Lesson; moduleId: string; isFirst: boolean; isLast: boolean; allIds: string[]
+function LessonRow({ lesson, moduleId, isFirst, isLast, allIds, media }: {
+  lesson: Lesson; moduleId: string; isFirst: boolean; isLast: boolean; allIds: string[]; media?: AdminCourseMediaLibrary
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -414,10 +539,11 @@ function LessonRow({ lesson, moduleId, isFirst, isLast, allIds }: {
         initialDuration={lesson.estimatedDuration ?? ''}
         initialLockState={lesson.lockState}
         initialPreview={lesson.previewLesson}
-        initialContent={lesson.contentPlainText ?? ''}
+        initialContent={lesson.contentHtml ?? lesson.contentPlainText ?? ''}
         initialCoverImageId={lesson.coverImageId ?? ''}
         initialBunnyVideoId={lesson.bunnyVideoId ?? ''}
         initialDownloadIds={(lesson.downloadIds ?? []).join('\n')}
+        media={media}
       />
       <ConfirmDeleteDialog label="Del" onDelete={() => deleteLessonAction(lesson.id, true)} />
     </div>
@@ -426,8 +552,8 @@ function LessonRow({ lesson, moduleId, isFirst, isLast, allIds }: {
 
 // ---------- ModuleRow ----------
 
-function ModuleRow({ mod, courseId, isFirst, isLast, allModuleIds }: {
-  mod: Module; courseId: string; isFirst: boolean; isLast: boolean; allModuleIds: string[]
+function ModuleRow({ mod, courseId, isFirst, isLast, allModuleIds, media }: {
+  mod: Module; courseId: string; isFirst: boolean; isLast: boolean; allModuleIds: string[]; media?: AdminCourseMediaLibrary
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -458,6 +584,7 @@ function ModuleRow({ mod, courseId, isFirst, isLast, allModuleIds }: {
           trigger={<button className={BTN_S + ICON_BTN}>+ Lesson</button>}
           dialogTitle="Add Lesson"
           moduleId={mod.id}
+          media={media}
         />
         {mod.lessons.length === 0 && (
           <ConfirmDeleteDialog label="Del" onDelete={() => deleteModuleAction(mod.id, true)} />
@@ -473,6 +600,7 @@ function ModuleRow({ mod, courseId, isFirst, isLast, allModuleIds }: {
               isFirst={i === 0}
               isLast={i === mod.lessons.length - 1}
               allIds={lessonIds}
+              media={media}
             />
           ))}
         </div>
@@ -515,7 +643,7 @@ export function CourseAdminPanel(props: CourseAdminPanelProps) {
           <button className={BTN_D} disabled={isPending} onClick={handleArchive}>Archive</button>
         )}
         {modules.length === 0 && (
-          <ConfirmDeleteDialog label="Delete Course" onDelete={() => deleteCourseAction(courseId, true)} />
+          <ConfirmDeleteDialog label="Delete Course" onDelete={() => deleteCourseAction(courseId, true)} onSuccess={() => router.push('/portal/courses')} />
         )}
       </div>
       {modules.length > 0 && (
@@ -528,6 +656,7 @@ export function CourseAdminPanel(props: CourseAdminPanelProps) {
               isFirst={i === 0}
               isLast={i === modules.length - 1}
               allModuleIds={moduleIds}
+              media={props.media}
             />
           ))}
         </div>

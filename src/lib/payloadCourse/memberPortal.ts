@@ -273,13 +273,14 @@ async function findAll(
     where?: Record<string, unknown>
     limit?: number
     sort?: string
+    depth?: number
   } = {}
 ): Promise<PayloadDocument[]> {
   const result = await payload.find({
     collection,
     where: args.where,
     limit: args.limit ?? 100,
-    depth: 0,
+    depth: args.depth ?? 0,
     sort: args.sort,
     overrideAccess: true,
   })
@@ -291,9 +292,10 @@ async function findOne(
   payload: PayloadCourseAccessAPI,
   collection: string,
   where: Record<string, unknown>,
-  sort?: string
+  sort?: string,
+  depth?: number
 ): Promise<PayloadDocument | null> {
-  const docs = await findAll(payload, collection, { where, limit: 1, sort })
+  const docs = await findAll(payload, collection, { where, limit: 1, sort, depth })
   return docs[0] ?? null
 }
 
@@ -590,7 +592,7 @@ export async function getMemberLessonDetail(
   const normalizedMemberId = String(memberId)
   const lesson = await findOne(payload, 'payload_lessons', {
     slug: { equals: lessonSlug },
-  })
+  }, undefined, 1)
   if (!lesson) return null
 
   const moduleId = relationshipId(lesson.module)

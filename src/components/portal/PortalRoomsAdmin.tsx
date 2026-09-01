@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   archiveRoomAction,
   createRoomAction,
+  deleteRoomCategoryAction,
   deleteRoomAction,
   setRoomCategoryAction,
   transitionRoomAction,
@@ -13,7 +14,7 @@ import {
 } from '@/app/(frontend)/portal/rooms/actions'
 import type { RoomInput } from '@/lib/rooms/roomCommands'
 
-type Option = { id: string; label: string; email?: string; isAdministrator?: boolean; memberCount?: number }
+type Option = { id: string; label: string; email?: string; isAdministrator?: boolean; memberCount?: number; status?: 'active' | 'archived'; description?: string | null }
 type Room = {
   id: string
   title: string
@@ -34,6 +35,7 @@ type Props = {
   members: Option[]
   groups: Option[]
   categories: Option[]
+  allCategories: Option[]
   rooms: Room[]
 }
 
@@ -51,7 +53,7 @@ function audienceLabel(value: string): string {
   return 'Linked enrolments'
 }
 
-export function PortalRoomsAdmin({ members, groups, categories, rooms }: Props) {
+export function PortalRoomsAdmin({ members, groups, categories, allCategories, rooms }: Props) {
   const router = useRouter()
   const [audience, setAudience] = useState<RoomInput['audience']>('all')
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
@@ -63,6 +65,11 @@ export function PortalRoomsAdmin({ members, groups, categories, rooms }: Props) 
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [categoryMessage, setCategoryMessage] = useState<string | null>(null)
+  const [categoryPending, setCategoryPending] = useState(false)
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [categoryName, setCategoryName] = useState('')
+  const [categoryDescription, setCategoryDescription] = useState('')
+  const [categoryStatus, setCategoryStatus] = useState<'active' | 'archived'>('active')
 
   const visibleRooms = useMemo(() => rooms.filter((room) => {
     const matchesText = !filter.trim() || room.title.toLowerCase().includes(filter.trim().toLowerCase()) || room.categoryNames.some((name) => name.toLowerCase().includes(filter.trim().toLowerCase()))
@@ -146,12 +153,50 @@ export function PortalRoomsAdmin({ members, groups, categories, rooms }: Props) 
     event.preventDefault()
     setCategoryMessage(null)
     const form = new FormData(event.currentTarget)
-    const result = await setRoomCategoryAction('new', { name: String(form.get('name') ?? '') })
+    setCategoryPending(true)
+    const result = await setRoomCategoryAction(editingCategoryId ?? 'new', {
+      name: String(form.get('name') ?? ''),
+      description: String(form.get('description') ?? ''),
+      status: String(form.get('status') ?? 'active') as 'active' | 'archived',
+    })
+    setCategoryPending(false)
     setCategoryMessage(result.ok ? 'Category created.' : ('message' in result ? result.message : 'The request could not be completed.'))
     if (result.ok) {
       event.currentTarget.reset()
+      setEditingCategoryId(null)
+      setCategoryName('')
+      setCategoryDescription('')
+      setCategoryStatus('active')
+      setCategoryMessage(editingCategoryId ? 'Category updated.' : 'Category created.')
       router.refresh()
     }
+  }
+
+  function editCategory(category: Option) {
+    setEditingCategoryId(category.id)
+    setCategoryName(category.label)
+    setCategoryDescription(category.description ?? '')
+    setCategoryStatus(category.status ?? 'active')
+    setCategoryMessage(null)
+  }
+
+  async function archiveCategory(category: Option) {
+    setCategoryPending(true)
+    setCategoryMessage(null)
+    const result = await setRoomCategoryAction(category.id, { name: category.label, description: category.description ?? '', status: 'archived' })
+    setCategoryPending(false)
+    setCategoryMessage(result.ok ? 'Category archived.' : ('message' in result ? result.message : 'The request could not be completed.'))
+    if (result.ok) router.refresh()
+  }
+
+  async function deleteCategory(category: Option) {
+    if (!window.confirm(`Delete “${category.label}”? Categories assigned to Rooms must be archived instead.`)) return
+    setCategoryPending(true)
+    setCategoryMessage(null)
+    const result = await deleteRoomCategoryAction(category.id, true)
+    setCategoryPending(false)
+    setCategoryMessage(result.ok ? 'Category deleted.' : ('message' in result ? result.message : 'The request could not be completed.'))
+    if (result.ok) router.refresh()
   }
 
   const total = rooms.length
@@ -200,9 +245,34 @@ export function PortalRoomsAdmin({ members, groups, categories, rooms }: Props) 
         </form>
 
         <aside className='space-y-5 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
-          <div><p className='jpv-eyebrow'>Taxonomy</p><h2 className='mt-2 text-xl font-semibold text-jpv-ink'>Room categories</h2><p className='mt-2 text-sm leading-6 text-jpv-muted'>Categories help admins filter history. They never grant access.</p></div>
-          <div className='flex flex-wrap gap-2'>{categories.map((category) => <span className='rounded-full bg-jpv-surface px-3 py-1.5 text-xs font-semibold text-jpv-ink' key={category.id}>{category.label}</span>)}</div>
-          <form className='space-y-3 border-t border-jpv-border pt-5' onSubmit={createCategory}><label className='text-sm font-semibold text-jpv-ink'>New category<input className={inputClass} name='name' placeholder='Office hours' required /></label><p className='text-xs leading-5 text-jpv-muted'>The category URL identifier is generated automatically.</p><button className='jpv-button-secondary min-h-11' type='submit'>Add category</button>{categoryMessage ? <p aria-live='polite' className='text-xs text-jpv-muted'>{categoryMessage}</p> : null}</form>
+          <div>
+            <p className='jpv-eyebrow'>Taxonomy</p>
+            <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>Room categories</h2>
+            <p className='mt-2 text-sm leading-6 text-jpv-muted'>Categories help admins filter history. They never grant access.</p>
+          </div>
+          <div className='max-h-64 space-y-2 overflow-y-auto'>
+            {allCategories.length ? allCategories.map((category) => <div className='rounded-jpv-card border border-jpv-border bg-jpv-surface p-3' key={category.id}>
+              <div className='flex items-start justify-between gap-2'>
+                <div className='min-w-0'>
+                  <p className='font-semibold text-jpv-ink'>{category.label}</p>
+                  <p className='mt-1 text-xs text-jpv-muted'>{category.status === 'archived' ? 'Archived' : 'Active'}{category.description ? ` · ${category.description}` : ''}</p>
+                </div>
+                <div className='flex shrink-0 gap-1'>
+                  <button className='text-xs font-semibold text-jpv-brand-deep underline' onClick={() => editCategory(category)} type='button'>Edit</button>
+                  {category.status !== 'archived' ? <button className='text-xs font-semibold text-jpv-muted underline' disabled={categoryPending} onClick={() => void archiveCategory(category)} type='button'>Archive</button> : <button className='text-xs font-semibold text-red-700 underline' disabled={categoryPending} onClick={() => void deleteCategory(category)} type='button'>Delete</button>}
+                </div>
+              </div>
+            </div>) : <p className='text-sm text-jpv-muted'>No categories yet.</p>}
+          </div>
+          <form className='space-y-3 border-t border-jpv-border pt-5' onSubmit={createCategory}>
+            <h3 className='font-semibold text-jpv-ink'>{editingCategoryId && editingCategoryId !== 'new' ? 'Edit category' : 'New category'}</h3>
+            <label className='text-sm font-semibold text-jpv-ink'>Name<input className={inputClass} name='name' onChange={(event) => setCategoryName(event.target.value)} placeholder='Office hours' required value={categoryName} /></label>
+            <label className='text-sm font-semibold text-jpv-ink'>Description <span className='font-normal text-jpv-muted'>(optional)</span><textarea className={inputClass} name='description' onChange={(event) => setCategoryDescription(event.target.value)} placeholder='What is this category for?' rows={2} value={categoryDescription} /></label>
+            <label className='text-sm font-semibold text-jpv-ink'>Status<select className={inputClass} name='status' onChange={(event) => setCategoryStatus(event.target.value as 'active' | 'archived')} value={categoryStatus}><option value='active'>Active</option><option value='archived'>Archived</option></select></label>
+            <p className='text-xs leading-5 text-jpv-muted'>The category URL identifier is generated automatically.</p>
+            <div className='flex flex-wrap gap-2'><button className='jpv-button-secondary min-h-11' disabled={categoryPending} type='submit'>{categoryPending ? 'Saving…' : editingCategoryId && editingCategoryId !== 'new' ? 'Save changes' : 'Add category'}</button>{editingCategoryId ? <button className='jpv-button-secondary min-h-11' onClick={() => { setEditingCategoryId(null); setCategoryName(''); setCategoryDescription(''); setCategoryStatus('active') }} type='button'>Cancel</button> : null}</div>
+            {categoryMessage ? <p aria-live='polite' className='text-xs text-jpv-muted'>{categoryMessage}</p> : null}
+          </form>
         </aside>
       </div>
 

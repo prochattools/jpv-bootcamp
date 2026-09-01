@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
 
 import type {
   PayloadCourseAccessAPI,
@@ -12,10 +13,12 @@ import {
 } from '@/lib/payloadCourse/lessonResources'
 import {
   resolveMemberLessonManagedVideo,
+  resolveMemberManagedVideo,
   resolveMemberMediaAsset,
   type MemberManagedVideo,
   type MemberMediaAsset,
 } from '@/lib/payloadContent/memberMedia'
+import { sanitizeAnnouncementHTML } from '@/lib/payloadContent/announcementRichText'
 import { relationshipId } from '@/lib/domain/relationships'
 import { decodeHtmlEntities, isHiddenLegacyWelcomeLesson } from '@/lib/payloadCourse/curriculum'
 
@@ -39,6 +42,7 @@ export type AdminPortalLesson = {
   bunnyVideoId: string | null
   downloadIds: string[]
   contentPlainText: string | null
+  contentHtml: string | null
   coverImageId: string | null
 }
 
@@ -76,7 +80,29 @@ export type AdminPortalCourse = {
   lessonCount: number
   modules: AdminPortalModule[]
   descriptionPlainText: string | null
+  descriptionHtml: string | null
   coverImageId: string | null
+}
+
+export type AdminCourseMediaOption = {
+  id: string
+  label: string
+  url: string
+  mimeType: string | null
+  kind: 'image' | 'file'
+}
+
+export type AdminCourseVideoOption = {
+  id: string
+  title: string
+  status: MemberManagedVideo['status']
+  thumbnailUrl: string | null
+}
+
+export type AdminCourseMediaLibrary = {
+  images: AdminCourseMediaOption[]
+  files: AdminCourseMediaOption[]
+  videos: AdminCourseVideoOption[]
 }
 
 export type AdminPortalLessonDetail = {
@@ -154,6 +180,23 @@ function extractPlainText(value: unknown): string | null {
   return getText(root) || null
 }
 
+function extractHtml(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null
+  const record = value as Record<string, unknown>
+  const root = record.root
+  if (!root || typeof root !== 'object' || !Array.isArray((root as Record<string, unknown>).children)) return null
+
+  try {
+    const rendered = convertLexicalToHTML({
+      data: value as Parameters<typeof convertLexicalToHTML>[0]['data'],
+    }).trim()
+    const safe = sanitizeAnnouncementHTML(rendered)
+    return safe && safe !== '<div></div>' && safe !== '<div> </div>' ? safe : null
+  } catch {
+    return null
+  }
+}
+
 function extractIdArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.map(relationshipId).filter((id): id is string => id !== null)
@@ -169,13 +212,13 @@ function bySortOrder(a: PayloadDocument, b: PayloadDocument): number {
 async function findAll(
   payload: PayloadCourseAccessAPI,
   collection: string,
-  args: { where?: Record<string, unknown>; limit?: number; sort?: string } = {}
+  args: { where?: Record<string, unknown>; limit?: number; sort?: string; depth?: number } = {}
 ): Promise<PayloadDocument[]> {
   const result = await payload.find({
     collection,
     where: args.where,
     limit: args.limit ?? 200,
-    depth: 0,
+    depth: args.depth ?? 0,
     sort: args.sort,
     overrideAccess: true,
   })
@@ -185,9 +228,10 @@ async function findAll(
 async function findOne(
   payload: PayloadCourseAccessAPI,
   collection: string,
-  where: Record<string, unknown>
+  where: Record<string, unknown>,
+  options: { depth?: number } = {}
 ): Promise<PayloadDocument | null> {
-  const docs = await findAll(payload, collection, { where, limit: 1 })
+  const docs = await findAll(payload, collection, { where, limit: 1, depth: options.depth })
   return docs[0] ?? null
 }
 
@@ -198,7 +242,7 @@ async function findOne(
 export async function getAdminCourseDashboard(
   payload: PayloadCourseAccessAPI
 ): Promise<AdminPortalCourse[]> {
-  const courses = await findAll(payload, 'payload_courses', { sort: 'sortOrder' })
+  const courses = await findAll(payload, 'payload_courses', { sort: 'sortOrder', depth: 1 })
 
   return Promise.all(
     courses.sort(bySortOrder).map(async (course) => {
@@ -220,6 +264,7 @@ export async function getAdminCourseDashboard(
         lessonCount,
         modules,
         descriptionPlainText: extractPlainText(course.description),
+        descriptionHtml: extractHtml(course.description),
         coverImageId: relationshipId(course.coverImage),
       }
     })
@@ -230,7 +275,7 @@ export async function getAdminCourseOverview(
   payload: PayloadCourseAccessAPI,
   courseSlug: string
 ): Promise<AdminPortalCourse | null> {
-  const course = await findOne(payload, 'payload_courses', { slug: { equals: courseSlug } })
+  const course = await findOne(payload, 'payload_courses', { slug: { equals: courseSlug } }, { depth: 1 })
   if (!course) return null
 
   const modules = await getAdminCourseModules(payload, course.id, asString(course.slug))
@@ -251,7 +296,49 @@ export async function getAdminCourseOverview(
     lessonCount,
     modules,
     descriptionPlainText: extractPlainText(course.description),
+    descriptionHtml: extractHtml(course.description),
     coverImageId: relationshipId(course.coverImage),
+  }
+}
+
+export async function getAdminCourseMedia(
+  payload: PayloadCourseAccessAPI,
+): Promise<AdminCourseMediaLibrary> {
+  const [mediaDocuments, videoDocuments] = await Promise.all([
+    findAll(payload, 'payload_media', { sort: '-updatedAt' }),
+    findAll(payload, 'bunny_videos', { sort: '-updatedAt' }),
+  ])
+
+  const media = (await Promise.all(mediaDocuments.map(async (document) => {
+    const asset = await resolveMemberMediaAsset(payload, document)
+    if (!asset) return null
+    const kind = asset.mimeType?.startsWith('image/') ? 'image' : 'file'
+    return {
+      id: asset.id,
+      label: asset.filename ?? asset.alt,
+      url: asset.url,
+      mimeType: asset.mimeType,
+      kind,
+    } satisfies AdminCourseMediaOption
+  }))).filter((item): item is AdminCourseMediaOption => item !== null)
+
+  const videos = (await Promise.all(videoDocuments.map(async (document) => {
+    const video = await resolveMemberManagedVideo(payload, document)
+    if (!video) return null
+    return {
+      id: video.id,
+      title: video.title,
+      status: video.status,
+      thumbnailUrl: video.thumbnailUrl,
+    } satisfies AdminCourseVideoOption
+  }))).filter((item): item is AdminCourseVideoOption => item !== null)
+
+  const byLabel = (left: { label?: string; title?: string }, right: { label?: string; title?: string }) =>
+    (left.label ?? left.title ?? '').localeCompare(right.label ?? right.title ?? '')
+  return {
+    images: media.filter((item) => item.kind === 'image').sort(byLabel),
+    files: media.filter((item) => item.kind === 'file').sort(byLabel),
+    videos: videos.sort(byLabel),
   }
 }
 
@@ -263,6 +350,7 @@ async function getAdminCourseModules(
   const modules = await findAll(payload, 'payload_course_modules', {
     where: { course: { equals: String(courseId) } },
     sort: 'sortOrder',
+    depth: 1,
   })
 
   return Promise.all(
@@ -270,6 +358,7 @@ async function getAdminCourseModules(
       const lessons = await findAll(payload, 'payload_lessons', {
         where: { module: { equals: String(module.id) } },
         sort: 'sortOrder',
+        depth: 1,
       })
 
       const lessonProjections: AdminPortalLesson[] = await Promise.all(
@@ -294,6 +383,7 @@ async function getAdminCourseModules(
             bunnyVideoId: relationshipId(lesson.bunnyVideo),
             downloadIds: extractIdArray(lesson.downloads),
             contentPlainText: extractPlainText(lesson.content),
+            contentHtml: extractHtml(lesson.content),
             coverImageId: relationshipId(lesson.coverImage),
           }))
       )
