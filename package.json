@@ -28,7 +28,7 @@
     "test:release": "tsx scripts/release/runReleaseTests.ts",
     "test:architecture-boundaries": "tsx scripts/architecture_boundaries.test.ts",
     "test:rooms": "tsx scripts/rooms.test.ts && tsx scripts/rooms-contract.test.ts",
-    "test:member-activity-groups": "tsx scripts/member_activity.test.ts && tsx scripts/member_activity_groups_contract.test.ts && tsx scripts/member_group_commands.test.ts",
+    "test:member-activity-groups": "tsx scripts/member_activity.test.ts && tsx scripts/member_activity_groups_contract.test.ts && tsx scripts/member_group_commands.test.ts && pnpm exec vitest run src/__tests__/member-group-candidates.test.ts src/__tests__/portal-announcement-commands.test.ts",
     "test:release:staging-gate": "tsx scripts/release/runReleaseTests.ts --enable-condition STAGING_GATE",
     "test:e2e": "tsx scripts/e2e/runBrowserTests.ts",
     "test:e2e:install": "playwright install chromium",

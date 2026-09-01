@@ -123,6 +123,15 @@ function buildPayload() {
         excerpt: 'Useful files.',
         attachments: ['download'],
       },
+      {
+        id: 'post-targeted',
+        title: 'Targeted update',
+        slug: 'targeted',
+        status: 'published',
+        excerpt: 'Selected members only.',
+        audience: 'selected',
+        targetMemberIds: ['member-2'],
+      },
     ],
   })
 }
@@ -173,6 +182,13 @@ describe('member content media projections', () => {
       'page:welcome',
     ])
     expect(content.some((item) => item.slug === 'draft')).toBe(false)
+  })
+
+  it('lets the administrator projection include targeted published content without weakening member filtering', async () => {
+    const payload = buildPayload()
+
+    expect((await listPublishedMemberContent(payload)).some((item) => item.slug === 'targeted')).toBe(false)
+    expect((await listPublishedMemberContent(payload, null, { includeRestricted: true })).some((item) => item.slug === 'targeted')).toBe(true)
   })
 
   it('wires Page, Post, Course, and Lesson routes to managed media renderers', () => {

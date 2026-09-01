@@ -22,6 +22,9 @@ const collections: Record<string, Doc[]> = {
     { id: 'profile-1', member: 'member-1', displayName: 'One' },
     { id: 'profile-2', member: 'member-2', displayName: 'Two' },
   ],
+  payload_users: [
+    { id: 'admin-1', portalMember: 'member-3', email: 'three@example.test' },
+  ],
   payload_posts: [{ id: 'post-1', slug: 'community-update' }],
 }
 
@@ -76,7 +79,7 @@ assert.equal(await memberCanAccessContent(payload, { id: 'post-1', audience: 'gr
 assert.equal(await memberCanAccessContent(payload, { id: 'post-1', audience: 'selected', targetMemberIds: ['member-1'] }, 'member-2'), false)
 assert.deepEqual(
   (await activeMemberRecipients(payload, undefined, ['group-1', 'group-2', 'group-archived'])).map((recipient) => recipient.memberId),
-  ['member-1', 'member-2'],
+  ['member-1', 'member-2', 'member-3'],
 )
 
 const root = path.resolve(import.meta.dirname, '..')
@@ -87,6 +90,10 @@ const roomsPanel = fs.readFileSync(path.join(root, 'src/components/portal/Portal
 const postsCollection = fs.readFileSync(path.join(root, 'src/collections/PayloadPosts.ts'), 'utf8')
 const groupsPanel = fs.readFileSync(path.join(root, 'src/components/portal/MemberGroupsAdmin.tsx'), 'utf8')
 const memberActions = fs.readFileSync(path.join(root, 'src/app/(frontend)/portal/members/actions.ts'), 'utf8')
+const memberDirectory = fs.readFileSync(path.join(root, 'src/lib/payloadCourse/memberDirectory.ts'), 'utf8')
+const contentPage = fs.readFileSync(path.join(root, 'src/app/(frontend)/portal/content/page.tsx'), 'utf8')
+const updateManagement = fs.readFileSync(path.join(root, 'src/components/portal/PortalAnnouncementManagement.tsx'), 'utf8')
+const updateCommands = fs.readFileSync(path.join(root, 'src/lib/portalAdmin/announcementCommands.ts'), 'utf8')
 assert.doesNotMatch(coursePanel, /<Field label="Slug"|initialSlug|toSlug/)
 assert.doesNotMatch(createCourse, /Slug|slugify|autoSlug/)
 assert.doesNotMatch(spacePanel, /id=['"]space-slug|label.*Slug|values\.slug/)
@@ -94,6 +101,16 @@ assert.doesNotMatch(roomsPanel, /Slug \(optional\)|name=['"]slug['"]/)
 assert.doesNotMatch(postsCollection, /value:\s*['"]groups['"]/)
 assert.match(postsCollection, /groupIds/)
 assert.doesNotMatch(groupsPanel, /Slug|slug/)
+assert.match(memberDirectory, /listMemberGroupCandidates/)
+assert.match(memberDirectory, /payload_users/)
+assert.match(memberDirectory, /isAdministrator/)
+assert.match(groupsPanel, /overflow-y-auto/)
+assert.match(groupsPanel, /member\.email/)
+assert.match(contentPage, /listPortalAdminUpdates/)
+assert.match(contentPage, /includeRestricted: isAdmin/)
+assert.match(updateManagement, /Archive/)
+assert.match(updateManagement, /Delete/)
+assert.match(updateCommands, /payload_posts/)
 assert.equal(memberActions.split("requirePortalAdmin('/portal/members')").length - 1, 4)
 
 console.log('member_activity_groups_contract.test.ts passed')

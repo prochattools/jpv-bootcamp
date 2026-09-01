@@ -10,7 +10,7 @@ import {
 } from '@/app/(frontend)/portal/members/actions'
 import type { MemberGroupSummary } from '@/lib/portalAdmin/memberGroupCommands'
 
-type MemberOption = { id: string; label: string; email?: string | null }
+type MemberOption = { id: string; label: string; email?: string | null; isAdministrator?: boolean }
 
 type Props = {
   members: MemberOption[]
@@ -165,15 +165,15 @@ export function MemberGroupsAdmin({ members, groups: initialGroups }: Props) {
               <p className='text-sm font-semibold text-jpv-ink'>Members <span className='font-normal text-jpv-muted'>({selectedMemberIds.length} selected)</span></p>
               <button className='text-xs font-semibold text-jpv-brand-deep underline' onClick={toggleVisibleMembers} type='button'>Select / clear visible</button>
             </div>
-            <input aria-label='Search active members' className={`mt-2 ${inputClass}`} onChange={(event) => setMemberSearch(event.target.value)} placeholder='Search active members…' value={memberSearch} />
-            <div className='mt-2 grid max-h-56 gap-2 overflow-y-auto rounded-jpv-card border border-jpv-border p-3 sm:grid-cols-2'>
+            <input aria-label='Search members and administrators' className={`mt-2 ${inputClass}`} onChange={(event) => setMemberSearch(event.target.value)} placeholder='Search members and administrators…' value={memberSearch} />
+            <div aria-label='Member and administrator choices' className='mt-2 grid max-h-72 gap-2 overflow-y-auto rounded-jpv-card border border-jpv-border p-3 sm:grid-cols-2' role='group'>
               {visibleMembers.map((member) => (
                 <label className='flex items-start gap-2 text-sm text-jpv-ink' key={member.id}>
                   <input checked={selectedMemberIds.includes(member.id)} className='mt-0.5' onChange={() => toggleMember(member.id)} type='checkbox' />
-                  <span><span className='block'>{member.label}</span>{member.email ? <span className='block text-xs text-jpv-muted'>{member.email}</span> : null}</span>
+                  <span className='min-w-0'><span className='flex flex-wrap items-center gap-1.5'><span>{member.label}</span>{member.isAdministrator ? <span className='rounded-full bg-jpv-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-jpv-brand-deep'>Admin</span> : null}</span>{member.email ? <span className='block truncate text-xs text-jpv-muted'>{member.email}</span> : null}</span>
                 </label>
               ))}
-              {visibleMembers.length === 0 ? <p className='text-sm text-jpv-muted'>No active members match this search.</p> : null}
+              {visibleMembers.length === 0 ? <p className='text-sm text-jpv-muted'>No members or administrators match this search.</p> : null}
             </div>
           </div>
 

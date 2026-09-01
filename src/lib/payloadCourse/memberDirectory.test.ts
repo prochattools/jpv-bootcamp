@@ -6,10 +6,13 @@ function run(): void {
   const item: MemberDirectoryItem = {
     memberId: 'test-id',
     displayName: 'Test Member',
+    email: 'member@example.test',
     avatarUrl: null,
+    isAdministrator: false,
   }
   assert.equal(item.memberId, 'test-id')
   assert.equal(item.displayName, 'Test Member')
+  assert.equal(item.email, 'member@example.test')
   assert.equal(item.avatarUrl, null)
 
   const detail: MemberProfileDetail = {

@@ -22,10 +22,12 @@ export function MemberPublishedContentView({
   content,
   target,
   reactionSummary,
+  enableReactions = true,
 }: {
   content: MemberPublishedContent
   target: Extract<ManagedVideoTarget, 'page' | 'post'>
   reactionSummary?: ReactionSummary | null
+  enableReactions?: boolean
 }) {
   const publishedDate = formatPublishedDate(content.publishedAt)
 
@@ -70,9 +72,9 @@ export function MemberPublishedContentView({
           className='mt-2'
           counts={reactionSummary?.counts}
           label={`${target === 'post' ? 'Post' : 'Page'} reactions`}
-          redirectPath={`/portal/${target === 'post' ? 'posts' : 'pages'}/${encodeURIComponent(content.slug)}`}
-          targetId={content.id}
-          targetKind={target === 'post' ? 'content_post' : 'content_page'}
+          redirectPath={enableReactions ? `/portal/${target === 'post' ? 'posts' : 'pages'}/${encodeURIComponent(content.slug)}` : undefined}
+          targetId={enableReactions ? content.id : undefined}
+          targetKind={enableReactions ? target === 'post' ? 'content_post' : 'content_page' : undefined}
           totalCount={reactionSummary?.totalCount}
           viewerReaction={reactionSummary?.viewerReaction}
         />

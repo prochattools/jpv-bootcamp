@@ -37,7 +37,8 @@ import { shouldRegisterPayloadProdMigrations } from './lib/payloadMigrations'
 import { resolvePayloadMediaStorageConfig } from './lib/payload-media-storage'
 import { stagingAutoProvision } from './lib/staging-auto-provision'
 import { migrations } from './migrations'
-import { jpvBrand } from './lib/brand/jpvDesignSystem'
+import { resolveJpvLogoUrl } from './lib/brand/jpvDesignSystem'
+import { getPublicBaseUrl } from './lib/public-base-url'
 import {
   resolveDatabaseConnectionConfig,
   assertProductionSchema,
@@ -176,12 +177,12 @@ export default buildConfig({
         {
           rel: 'icon',
           type: 'image/jpeg',
-          url: jpvBrand.logoPath,
+          url: resolveJpvLogoUrl(getPublicBaseUrl()),
         },
         {
           rel: 'apple-touch-icon',
           type: 'image/jpeg',
-          url: jpvBrand.logoPath,
+          url: resolveJpvLogoUrl(getPublicBaseUrl()),
         },
       ],
     },

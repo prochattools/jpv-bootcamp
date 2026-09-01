@@ -10,9 +10,12 @@ import { relationshipId } from '@/lib/domain/relationships'
 export interface MemberDirectoryItem {
   memberId: string
   displayName: string
+  email: string
   avatarUrl: string | null
   isAdministrator: boolean
 }
+
+export type MemberGroupCandidate = MemberDirectoryItem
 
 export interface MemberProfileDetail {
   memberId: string
@@ -85,6 +88,18 @@ function displayNameForMember(member: PayloadDocument, profile: PayloadDocument 
     : fallbackDisplayName(member)
 }
 
+function administratorDisplayName(administrator: PayloadDocument | null): string | null {
+  if (!administrator) return null
+  for (const value of [administrator.displayName, administrator.name]) {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
+}
+
+function memberEmail(member: PayloadDocument): string {
+  return typeof member.email === 'string' ? member.email.trim() : ''
+}
+
 export async function listActiveMembers(payload?: PayloadCourseAccessAPI): Promise<MemberDirectoryItem[]> {
   const payloadClient = payload ?? await getPayload({ config })
   const [activeMembers, profiles] = await Promise.all([
@@ -98,10 +113,71 @@ export async function listActiveMembers(payload?: PayloadCourseAccessAPI): Promi
     return {
       memberId,
       displayName: displayNameForMember(member, profile),
+      email: memberEmail(member),
       avatarUrl: mediaUrl(profile?.avatar),
       isAdministrator: Boolean(member.isAdministrator),
     }
   })
+}
+
+/**
+ * Returns the member identities that can safely be used by communication
+ * audiences. This includes active members and the member-facing identities
+ * linked to Payload administrators, even when an administrator does not have
+ * a paid membership. The relationship stored by groups remains
+ * `payload_members`, so Rooms and Updates can consume the same IDs.
+ */
+export async function listMemberGroupCandidates(
+  payload: PayloadCourseAccessAPI,
+): Promise<MemberGroupCandidate[]> {
+  const [candidateMembers, administrators, profiles] = await Promise.all([
+    findAll(payload, 'payload_members', {
+      or: [
+        { accountStatus: { equals: 'active' } },
+        { isAdministrator: { equals: true } },
+      ],
+    }),
+    findAll(payload, 'payload_users'),
+    findAll(payload, 'payload_member_profiles', undefined, 1),
+  ])
+
+  const linkedAdministratorIds = new Set(
+    administrators
+      .map((administrator) => relationshipId(administrator.portalMember))
+      .filter((id): id is string => Boolean(id)),
+  )
+  const knownMemberIds = new Set(candidateMembers.map((member) => String(member.id)))
+  const missingLinkedIds = Array.from(linkedAdministratorIds).filter((id) => !knownMemberIds.has(id))
+  const linkedMembers = missingLinkedIds.length > 0
+    ? await findAll(payload, 'payload_members', { id: { in: missingLinkedIds } })
+    : []
+  const allCandidates = [...candidateMembers, ...linkedMembers]
+
+  return allCandidates
+    .map((member) => {
+      const memberId = String(member.id)
+      const administrator = administrators.find((candidate) => relationshipId(candidate.portalMember) === memberId) ?? null
+      const profile = profileForMember(profiles, memberId)
+      const email = memberEmail(member)
+      const isAdministrator = member.isAdministrator === true
+        || linkedAdministratorIds.has(memberId)
+        || administrators.some((candidate) => memberEmail(candidate) === email && email !== '')
+      const displayName = (typeof profile?.displayName === 'string' && profile.displayName.trim()
+        ? profile.displayName.trim()
+        : null)
+        || administratorDisplayName(administrator)
+        || fallbackDisplayName(member)
+
+      return {
+        memberId,
+        displayName,
+        email,
+        avatarUrl: mediaUrl(profile?.avatar),
+        isAdministrator,
+      }
+    })
+    .filter((member, index, members) => members.findIndex((candidate) => candidate.memberId === member.memberId) === index)
+    .sort((left, right) => left.displayName.localeCompare(right.displayName) || left.email.localeCompare(right.email))
 }
 
 export async function getMemberProfileDetail(memberId: string): Promise<MemberProfileDetail | null> {

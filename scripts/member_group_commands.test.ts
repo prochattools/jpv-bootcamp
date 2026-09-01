@@ -72,10 +72,15 @@ class FakePayload {
 async function main(): Promise<void> {
   const payload = new FakePayload({
     payload_members: [
-      { id: '1', accountStatus: 'active' },
-      { id: '2', accountStatus: 'active' },
+      { id: '1', accountStatus: 'active', email: 'one@example.test' },
+      { id: '2', accountStatus: 'active', email: 'two@example.test' },
       { id: '3', accountStatus: 'blocked' },
+      { id: '4', accountStatus: 'blocked', email: 'admin@example.test' },
     ],
+    payload_users: [
+      { id: 'admin-user-1', email: 'admin@example.test', displayName: 'Platform Admin', portalMember: '4' },
+    ],
+    payload_member_profiles: [],
     payload_member_groups: [],
     payload_audit_events: [],
     live_sessions: [],
@@ -90,6 +95,14 @@ async function main(): Promise<void> {
   assert.equal(created.slug, 'cafe-cohort')
   assert.equal(created.memberCount, 2)
   assert.deepEqual(payload.collections.payload_member_groups[0]?.members, [1, 2])
+
+  const administratorGroup = await createMemberGroupCommand(payload as never, 'admin-1', {
+    name: 'Administrators',
+    memberIds: ['4'],
+  })
+  assert.equal(administratorGroup.memberCount, 1)
+  await deleteMemberGroupCommand(payload as never, 'admin-1', administratorGroup.id, true)
+
 
   const renamed = await updateMemberGroupCommand(payload as never, 'admin-1', created.id, {
     name: 'Renamed Cohort',
