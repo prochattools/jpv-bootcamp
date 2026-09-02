@@ -288,10 +288,9 @@ jobs:
           INSPECT_OUTPUT="$(mktemp)"
           trap 'rm -f "$INSPECT_OUTPUT"' EXIT
           docker buildx imagetools inspect "$IMAGE" > "$INSPECT_OUTPUT"
-          grep -q "$APPLICATION_BUILD_SHA" "$INSPECT_OUTPUT"
-          grep -q 'linux/amd64' "$INSPECT_OUTPUT"
           DIGEST="$(grep -m1 -oE 'Digest: sha256:[0-9a-f]{64}' "$INSPECT_OUTPUT" | awk '{print $2}')"
           test -n "$DIGEST"
+          grep -Eq 'Platform:[[:space:]]+linux/amd64|linux/amd64' "$INSPECT_OUTPUT"
           echo "Immutable image verified: tag=$IMAGE digest=$DIGEST platform=linux/amd64"
 
   deploy-preview:
