@@ -1,5 +1,10 @@
 # JPV Bootcamp environment topology v1
 
+> **Current-state pointer (2026-09-02):** The repository clean-baseline record
+> at `docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md` supersedes the
+> dated live SHA and migration snapshots below. Those entries remain audit
+> history and are not current deployment instructions.
+
 **Status:** E1 final closeout complete — staging authority verified; ready to resume A6 Gate 1
 
 **Evidence date:** 2026-08-29

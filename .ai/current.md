@@ -1,34 +1,37 @@
 # Current Handoff
 
 ## Repo
-jpv-bootcamp (feature/course-branding-and-preview)
+jpv-bootcamp (codex/repository-hardening-20260902)
 
 ## Tool
-Claude Code
+Codex
 
 ## Goal
-Convert repository to solo-operator mode and configure staging-migration-plan environment
+Complete the authorized repository-hardening and clean-baseline reconciliation from current main without starting product work.
 
 ## Status
-In progress — solo-operator conversion complete, configuring GitHub environment
+Blocked — hardening branch and CI are validated; PR approval and staging governance reconciliation remain.
 
 ## Files touched
-- scripts/staging-gates/configureStagingMigrationPlanEnvironment.ts (solo-operator mode: no reviewer)
-- scripts/staging-gates/configureStagingMigrationPlanEnvironmentCli.ts (removed --reviewer-login)
-- scripts/staging-gates/configureStagingMigrationPlanEnvironment.test.ts (solo-operator tests: 31 pass)
-- scripts/staging-gates/stagingPayloadMigrationInfraPreflight.mts (zero-reviewer check)
-- scripts/release/releaseTestManifest.ts (updated descriptions)
-- docs/PREVIEW_RELEASE_READINESS.md (updated solo-operator description)
+- .github/workflows/pull-request-validation.yml
+- package.json
+- pnpm-lock.yaml
+- docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md
+- docs/git-workflow.md
+- docs/DOKPLOY_DEPLOYMENT_GUIDE.md
+- docs/ENVIRONMENT_DATABASE_BOUNDARIES.md
+- docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md
 
 ## Decisions made
-- REVIEWER_LOGIN removed: solo-operator mode requires zero reviewers
-- SOLO_OPERATOR_MODE=true variable added to staging-migration-plan environment
-- DATABASE_URL validated: host=10.0.2.4, port=5433, db=jpvbootcamp, schema=jpvbootcamp_staging
+- Production and legacy remain untouched.
+- Current Tailscale route `10.0.2.4:5433` is reachable; the remaining staging blocker is live-vs-checked-in environment policy drift.
+- No migration was applied because the latest available read-only staging evidence reports 55/55 applied and no pending migrations.
+- Active or dirty worktrees remain preserved; only safely merged local branches with gone remote refs were removed.
 
 ## Next steps
-1. Configure GitHub staging-migration-plan environment with zero reviewers
-2. Push branch and dispatch read-only-migration-plan workflow
-3. Monitor and validate sanitized evidence artifact
+1. Obtain a separate approving review for PR #30.
+2. Reconcile the checked-in staging preflight contract with the live protected environment without bypassing guards.
+3. Capture fresh read-only staging and production schema evidence; stop before merge/deploy/migration until both are complete.
 
 ## Blockers
-None
+PR #30 review required; staging-migration-plan has one reviewer and custom branch policy while the checked-in preflight expects solo mode; current generic production schema evidence is not available through the read-only repository tooling.

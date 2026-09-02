@@ -1,24 +1,25 @@
 # Git + Dokploy Workflow Guide
 
+> Current authority: [Repository Clean Baseline — 2026-09-02](release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md). The older feature-branch instructions previously in this file are superseded.
+
 ## Rules
 - Never push directly to `main`.
 - Always create a feature branch for new work.
-- Dokploy Preview Deployments are enabled: each branch auto-deploys to its own preview domain.
-- For the Payload-only Free/Pro staging work, `feature/course-branding-and-preview` is the staging / production-staged deployment target.
-- Do not switch to, merge into, or deploy from `main` during this staging branch workflow.
+- Staging is the guarded `https://staging.jpvbootcamp.com` lane and accepts only `feature/*`, `fix/*`, or `release/*` source refs through the existing workflow.
+- Production is the guarded `main` lane and is separate from staging and legacy.
+- Do not merge, deploy, or apply migrations while the baseline is marked `BLOCKED`.
 - Do not apply Prisma or Payload migrations from branch push/deploy. Migration execution requires a separate approved database migration path.
 
 ## Dokploy Notes
-- For the current JPV Bootcamp staging path, deploy `feature/course-branding-and-preview` only. `main` is outside the staging branch workflow.
-- Dokploy deployment history for this app can lag or show stale entries; trust `application.readLogs` and the live site as the source of truth when there is a mismatch.
-- The JPV Bootcamp Dokploy app must keep `buildType=dockerfile` with `dockerfile=Dockerfile` so Dokploy recognizes the repo root Dockerfile.
+- Dokploy deployment history can lag or show stale entries; use the guarded workflow evidence and live health endpoint together.
+- The JPV Bootcamp Dokploy app must keep its reviewed Docker build configuration; never target the legacy application from the current production/staging lanes.
 
 ## Steps
-1. Confirm the branch is `feature/course-branding-and-preview`.
-2. Commit reviewed staging changes on that branch.
-3. Push `feature/course-branding-and-preview` to origin.
-4. Test the staging / production-staged deployment target.
-5. Keep migration execution separate until explicitly approved for the target environment.
+1. Start from `origin/main` for new feature or hardening work.
+2. Use a reviewed `feature/*`, `fix/*`, or `release/*` branch for staging-only validation.
+3. Run `pnpm test:release` and the relevant guarded read-only gates.
+4. Obtain required review and environment approval before any external mutation.
+5. Keep migration execution separate from image publication and deployment.
 
 ## Automation Tasks
 
@@ -28,7 +29,7 @@ git branch --show-current
 git status -sb
 ```
 
-### Push Staging Branch
+### Push Reviewed Branch
 ```bash
-git push origin feature/course-branding-and-preview
+git push origin <reviewed-branch>
 ```

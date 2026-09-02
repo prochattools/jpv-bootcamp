@@ -1,5 +1,11 @@
 # JPV Bootcamp Preview Release Readiness
 
+> **Current-state pointer (2026-09-02):** This document contains historical
+> preview-era release records. Current branch, staging, migration, production,
+> and governance truth is maintained in
+> `docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md`. Do not use older
+> feature-branch names, SHA values, or migration counts below as live authority.
+
 ## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**

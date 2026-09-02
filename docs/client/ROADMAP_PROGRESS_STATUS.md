@@ -1,5 +1,13 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT REPOSITORY HARDENING BASELINE — 2026-09-02
+
+The current release and repository state is governed by
+`docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md`. Product feature work is
+not part of this pass. PR #30 is validated but requires review; no production,
+legacy, provider, or database mutation was performed. Older roadmap entries
+remain dated history and must not be treated as current deployment authority.
+
 ## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**

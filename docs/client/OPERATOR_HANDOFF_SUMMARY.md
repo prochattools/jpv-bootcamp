@@ -1,5 +1,15 @@
 # Operator Handoff Summary
 
+## CURRENT REPOSITORY HARDENING BASELINE — 2026-09-02
+
+Use `docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md` as the current
+authority. PR #30 is CI-green but review-blocked; production is healthy at
+`f93ffac7dd299c39d8daf242d6a436272cc79188`; staging health is green at
+`477eb1e4521d87b8344ff326f82d28ac537af74a`; the latest available staging
+read-only artifact reports 55/55 Payload migrations and no pending migrations.
+No production or legacy mutation was performed. Sections below are historical
+release records unless explicitly superseded by the current baseline.
+
 ## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**
