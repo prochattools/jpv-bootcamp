@@ -269,6 +269,13 @@ async function main(): Promise<void> {
     assert.ok(planJobYml.includes('tag:ci-reader'), 'must set tag:ci-reader ACL tag')
   })
 
+  await test('tailscale: accepts the protected subnet route on the GitHub runner', () => {
+    assert.ok(
+      planJobYml.includes('args: --accept-routes'),
+      'must pass --accept-routes so the Linux runner can reach the advertised staging subnet',
+    )
+  })
+
   await test('tailscale: ping probe before TCP probe', () => {
     const pingIdx = planJobYml.indexOf('tailscale ping')
     const ncIdx = planJobYml.indexOf('nc -z')

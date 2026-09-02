@@ -642,6 +642,7 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci-reader
+          args: --accept-routes
 
       - name: Probe approved staging database path
         shell: bash
@@ -1134,6 +1135,7 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci-reader
+          args: --accept-routes
 
       - name: Probe approved staging database path
         shell: bash
@@ -1363,6 +1365,7 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci-reader
+          args: --accept-routes
 
       - name: Ping staging host via Tailscale (connectivity probe)
         shell: bash
@@ -1599,6 +1602,7 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci-reader
+          args: --accept-routes
 
       - name: Probe approved staging database path
         shell: bash
@@ -1809,6 +1813,7 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci-reader
+          args: --accept-routes
 
       - name: Probe approved staging database path
         shell: bash
@@ -2036,6 +2041,7 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci-reader
+          args: --accept-routes
 
       - name: Probe exact staging database and backup host paths
         shell: bash
