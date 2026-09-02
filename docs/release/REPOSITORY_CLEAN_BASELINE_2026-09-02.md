@@ -21,7 +21,7 @@ preserved.
 | `origin/main` / local `main` | `f93ffac7dd299c39d8daf242d6a436272cc79188` |
 | Hardening branch | `codex/repository-hardening-20260902`; current pushed head is tracked by [PR #30](https://github.com/prochattools/jpv-bootcamp/pull/30) |
 | Hardening PR | [#30](https://github.com/prochattools/jpv-bootcamp/pull/30), open, mergeable, review required |
-| PR validation | Latest completed GitHub run `33640270215`, check `Validate, build, and test`, SUCCESS; local `pnpm test:release` 181/181 |
+| PR validation | Required check `Validate, build, and test` is configured and has passed on the hardening candidate; verify the live PR check for the current head. Local `pnpm test:release` is 181/181 |
 | Main protection | Admin enforcement, one approving review, stale-review dismissal, conversation resolution, no force-push/deletion, required check `Validate, build, and test` |
 | Default-branch security | Dependabot updates, secret scanning, and push protection enabled; the default-branch alert view still reports 8 historical alerts until the hardening PR lands |
 
