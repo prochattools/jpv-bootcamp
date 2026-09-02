@@ -10,7 +10,7 @@ Codex
 Complete the authorized repository-hardening and clean-baseline reconciliation from current main without starting product work.
 
 ## Status
-Blocked — hardening branch and CI are validated; PR approval and staging governance reconciliation remain.
+Blocked — protected-path hardening, staging connectivity/parity evidence, and local release validation are complete. PR #30 still requires independent approval, and the existing production schema runner cannot provide fresh current-main evidence.
 
 ## Files touched
 - .github/workflows/pull-request-validation.yml
@@ -21,17 +21,24 @@ Blocked — hardening branch and CI are validated; PR approval and staging gover
 - docs/DOKPLOY_DEPLOYMENT_GUIDE.md
 - docs/ENVIRONMENT_DATABASE_BOUNDARIES.md
 - docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md
+- docs/PREVIEW_RELEASE_READINESS.md
+- scripts/release/releaseTestManifest.ts
+- scripts/staging-gates/configureStagingMigrationPlanEnvironment.ts
+- scripts/staging-gates/configureStagingMigrationPlanEnvironmentCli.ts
+- scripts/staging-gates/configureStagingMigrationPlanEnvironment.test.ts
+- scripts/staging-gates/stagingPayloadMigrationInfraPreflight.mts
 
 ## Decisions made
 - Production and legacy remain untouched.
-- Current Tailscale route `10.0.2.4:5433` is reachable; the remaining staging blocker is live-vs-checked-in environment policy drift.
-- No migration was applied because the latest available read-only staging evidence reports 55/55 applied and no pending migrations.
+- Current Tailscale route `10.0.2.4:5433` is reachable; the checked-in staging guard now verifies and preserves the live protected reviewer plus exact `feature/*`, `fix/*`, and `release/*` branch policies.
+- Fresh preflight passed; the latest guarded read-only staging plan reports 55/55 applied, no pending migrations, healthy Prisma, and zero anomalies. No migration was applied.
+- Fresh health checks returned live for staging and production. Production schema status was not claimed because the only historical runner is bound to the missing `feature/member-portal-rooms` ref.
 - Active or dirty worktrees remain preserved; only safely merged local branches with gone remote refs were removed.
 
 ## Next steps
-1. Obtain a separate approving review for PR #30.
-2. Reconcile the checked-in staging preflight contract with the live protected environment without bypassing guards.
-3. Capture fresh read-only staging and production schema evidence; stop before merge/deploy/migration until both are complete.
+1. Commit and push the protected-path hardening candidate.
+2. Obtain a separate approving review for PR #30; never self-approve or bypass it.
+3. Obtain a separately governed fresh current-main production schema/migration read-only evidence path; do not mutate production.
 
 ## Blockers
-PR #30 review required; staging-migration-plan has one reviewer and custom branch policy while the checked-in preflight expects solo mode; current generic production schema evidence is not available through the read-only repository tooling.
+PR #30 review required; current generic production schema evidence is not available through the existing read-only repository tooling because its historical Rooms runner requires the missing `feature/member-portal-rooms` source ref.

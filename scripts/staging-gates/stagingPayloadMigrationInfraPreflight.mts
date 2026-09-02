@@ -16,6 +16,7 @@ import { spawnSync } from 'node:child_process'
 
 const ENV_NAME = 'staging-migration-plan'
 const REQUIRED_SOURCE_REF_DESCRIPTION = 'feature/*, fix/*, or release/*'
+const REQUIRED_BRANCH_POLICIES = ['feature/*', 'fix/*', 'release/*']
 const REQUIRED_ENV_SECRETS = ['DATABASE_URL', 'TAILSCALE_OAUTH_CLIENT_ID', 'TAILSCALE_OAUTH_SECRET']
 const STAGING_HOST = '10.0.2.4'
 const STAGING_PORT = 5433
@@ -26,6 +27,16 @@ export type GhApiExecutor = (args: string[]) => unknown
 export type TcpProbeExecutor = (host: string, port: number, timeoutSecs: number) => boolean
 export type TailscaleStatusExecutor = () => boolean
 export type RepoNameExecutor = () => string | null
+
+type StagingEnvironmentData = {
+  name?: string
+  protection_rules?: Array<{ type: string; reviewers?: unknown[]; prevent_self_review?: boolean }>
+  deployment_branch_policy?: { protected_branches: boolean; custom_branch_policies: boolean } | null
+}
+
+type StagingBranchPolicyData = {
+  branch_policies?: Array<{ name?: string }>
+}
 
 function defaultGhApi(args: string[]): unknown {
   const result = spawnSync('gh', args, {
@@ -121,11 +132,7 @@ export async function runPreflight(deps: PreflightDependencies = {}): Promise<Pr
   }
 
   // ── Environment existence ──────────────────────────────────────────────────
-  const envData = ghApi(`repos/${repo}/environments/${ENV_NAME}`, apiExec) as {
-    name?: string
-    protection_rules?: Array<{ type: string; reviewers?: unknown[]; prevent_self_review?: boolean }>
-    deployment_branch_policy?: { protected_branches: boolean; custom_branch_policies: boolean } | null
-  } | null
+  const envData = ghApi(`repos/${repo}/environments/${ENV_NAME}`, apiExec) as StagingEnvironmentData | null
 
   if (!envData || !envData.name) {
     result.blockers.push(
@@ -135,32 +142,53 @@ export async function runPreflight(deps: PreflightDependencies = {}): Promise<Pr
   } else {
     result.info.push(`Environment '${ENV_NAME}': exists`)
 
-    // Solo-operator mode: verify zero reviewers. Any unexpected reviewer is a configuration error.
+    // The live staging environment is protected. Keep at least one independent
+    // required reviewer in the deployment gate; this is intentionally stronger
+    // than the old solo-operator assumption.
     const reviewerRules = (envData.protection_rules ?? []).filter((r) => r.type === 'required_reviewers')
-    const reviewerCount = reviewerRules.length > 0 ? (reviewerRules[0].reviewers ?? []).length : 0
-    if (reviewerCount !== 0) {
+    const reviewerCount = reviewerRules.reduce((count, rule) => count + (rule.reviewers ?? []).length, 0)
+    if (reviewerCount < 1) {
       result.blockers.push(
-        `Environment '${ENV_NAME}' has ${reviewerCount} required reviewer(s) — solo-operator mode requires ` +
-          `exactly zero reviewers. Remove all reviewers at: ` +
+        `Environment '${ENV_NAME}' has no required reviewer — ` +
+          `the protected staging path requires an independent review before dispatch. ` +
+          `Configure it at: https://github.com/${repo}/settings/environments`,
+      )
+    } else {
+      result.info.push(`Required reviewers: ${reviewerCount} (protected staging path)`)
+    }
+
+    // Verify the protected deployment branch policy matches the live staging
+    // model. The API exposes the policy names through a separate endpoint.
+    const branchPolicy = envData.deployment_branch_policy
+    if (!branchPolicy || branchPolicy.protected_branches || !branchPolicy.custom_branch_policies) {
+      result.blockers.push(
+        `Environment '${ENV_NAME}' does not have the protected custom branch policy required for ` +
+          `${REQUIRED_SOURCE_REF_DESCRIPTION}. Configure it at: ` +
           `https://github.com/${repo}/settings/environments`,
       )
     } else {
-      result.info.push(`Required reviewers: 0 (solo-operator mode)`)
-    }
-
-    // GitHub custom deployment branch policies are not supported on public repositories
-    // with a free organization plan. Branch enforcement is handled in-workflow via explicit
-    // guards (source-ref pattern check, remote tip check, and source-ref evidence validation).
-    // Verify the environment does NOT have a branch_policy protection rule blocking deployments.
-    const branchPolicy = envData.deployment_branch_policy
-    if (branchPolicy && (branchPolicy.protected_branches || branchPolicy.custom_branch_policies)) {
-      result.blockers.push(
-        `Environment '${ENV_NAME}' has a deployment branch policy enabled — ` +
-          `this blocks deployments on the free org plan for public repos. ` +
-          `Remove it at: https://github.com/${repo}/settings/environments`,
-      )
-    } else {
-      result.info.push(`Branch policy: none (in-workflow guards enforce ${REQUIRED_SOURCE_REF_DESCRIPTION})`)
+      const policiesData = ghApi(
+        `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`,
+        apiExec,
+      ) as StagingBranchPolicyData | null
+      const policies = (policiesData?.branch_policies ?? [])
+        .map((policy) => policy.name)
+        .filter((name): name is string => typeof name === 'string')
+        .sort()
+      const expectedPolicies = [...REQUIRED_BRANCH_POLICIES].sort()
+      if (
+        !policiesData ||
+        policies.length !== expectedPolicies.length ||
+        policies.some((name, index) => name !== expectedPolicies[index])
+      ) {
+        result.blockers.push(
+          `Environment '${ENV_NAME}' branch policies do not match the protected staging model — ` +
+            `expected ${REQUIRED_SOURCE_REF_DESCRIPTION}. Review them at: ` +
+            `https://github.com/${repo}/settings/environments`,
+        )
+      } else {
+        result.info.push(`Branch policy: ${REQUIRED_SOURCE_REF_DESCRIPTION} (protected environment gate)`)
+      }
     }
   }
 

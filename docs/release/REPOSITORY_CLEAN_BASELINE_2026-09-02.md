@@ -1,6 +1,6 @@
 # Repository Clean Baseline — 2026-09-02
 
-**Status: BLOCKED — repository hardening is validated; external approval and staging governance reconciliation remain.**
+**Status: BLOCKED — repository hardening and staging parity evidence are complete; PR approval and fresh production schema evidence remain external gates.**
 
 This is the current cleanup and release-gate authority. Older dated handoffs,
 deployment guides, and branch-reconciliation reports remain audit history only.
@@ -21,13 +21,16 @@ preserved.
 | `origin/main` / local `main` | `f93ffac7dd299c39d8daf242d6a436272cc79188` |
 | Hardening branch | `codex/repository-hardening-20260902`; current pushed head is tracked by [PR #30](https://github.com/prochattools/jpv-bootcamp/pull/30) |
 | Hardening PR | [#30](https://github.com/prochattools/jpv-bootcamp/pull/30), open, mergeable, review required |
-| PR validation | Required check `Validate, build, and test` is configured and has passed on the hardening candidate; verify the live PR check for the current head. Local `pnpm test:release` is 181/181 |
+| PR validation | Required check `Validate, build, and test` is configured and has passed on the prior pushed hardening head; the current protected-path candidate must receive a fresh run after push. Local `pnpm test:release` is 181/181 |
 | Main protection | Admin enforcement, one approving review, stale-review dismissal, conversation resolution, no force-push/deletion, required check `Validate, build, and test` |
-| Default-branch security | Dependabot updates, secret scanning, and push protection enabled; the default-branch alert view still reports 8 historical alerts until the hardening PR lands |
+| Default-branch security | Dependabot updates, secret scanning, and push protection enabled; the default branch currently reports 8 open Dependabot alerts (3 high, 5 moderate) |
 
 The hardening change is limited to dependency overrides/lockfile resolution and
-the deterministic pull-request validation workflow. The hardened branch’s
-production dependency audit reports zero advisories at the configured level.
+the deterministic pull-request validation workflow. The release-required
+production audit (`--audit-level high`) passes. A fresh full audit also reports
+two moderate transitive `stripe -> qs` advisories; this pass does not widen into
+dependency remediation because the authorized scope is the staging-parity /
+hardening closeout only.
 
 ## Live runtime evidence
 
@@ -55,30 +58,29 @@ pending migration batch.
 ## Connectivity and staging governance
 
 The local Tailscale client is running and the protected route
-`10.0.2.4:5433` is reachable. The route outage is therefore resolved.
-
-The local `pnpm staging:payload-migration-infra-preflight` remains blocked by a
-contract mismatch, not by networking:
+`10.0.2.4:5433` is reachable. The route outage is resolved. The local
+`pnpm staging:payload-migration-infra-preflight` now matches the live protected
+environment and passed at closeout:
 
 1. the live `staging-migration-plan` environment has one required reviewer;
 2. the live environment has custom branch policies `feature/*`, `fix/*`, and
    `release/*`; and
-3. the checked-in preflight still requires solo mode with zero reviewers and no
-   environment branch policy.
+3. the checked-in preflight verifies those protections and refuses to weaken
+   them.
 
-The operator must choose and document the intended protected mode, then make
-the checked-in preflight and live environment agree. Do not remove protections,
-approve a migration, or dispatch around this mismatch as a workaround. The
-minimum safe action is to reconcile the policy contract, rerun the preflight,
-and then obtain a fresh read-only plan through the guarded workflow.
+No environment protection settings, variables, secrets, database, or staging
+deployment were mutated by this closeout.
 
 ## Staging and production gates
 
 The current read-only staging evidence is safe and complete for migration
-state, but staging is not aligned to `main`, and no current generic production
-schema/migration status artifact was available through the repository’s
-read-only tooling. Production health is green; no production migration or
-redeploy is authorized by this document.
+state, but staging is not aligned to `main`. Production health is green, but no
+fresh generic production schema/migration status artifact is available through
+the repository’s read-only tooling. The only guarded production schema runner
+is the historical Rooms control, which is bound to the missing source ref
+`feature/member-portal-rooms` and an older Rooms-only baseline; it cannot safely
+produce current-main schema evidence without a separately governed operator
+update. No production migration or redeploy is authorized by this document.
 
 PR #30 cannot be merged by this pass because main requires a separate approving
 review. PR #29 is a separate open Dependabot postcss PR and was not merged or
@@ -105,7 +107,10 @@ database or deployment mutation was performed.
 `BLOCKED`, with two independent outstanding actions:
 
 1. a separate approving review for PR #30; and
-2. reconciliation of the staging environment protection contract, followed by
-   a fresh read-only staging plan and current production schema evidence.
+2. a separately governed production read-only schema/migration evidence path
+   for current `main` (the existing historical Rooms runner cannot provide it
+   because its required source ref is absent).
 
-Until those are complete, do not merge, deploy, or apply migrations.
+Staging connectivity/governance reconciliation, the guarded staging plan, and
+all local release validation are complete. Until the two outstanding gates are
+resolved, do not merge, deploy, or apply migrations.
