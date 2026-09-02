@@ -54,19 +54,12 @@ const MIGRATION36 = '20260820_000000_live_session_space'
 const MIGRATION39 = '20260824_200000_member_notifications'
 const MIGRATION40 = '20260824_210000_pay_it_forward_schema'
 const TARGET_MIGRATIONS = [
-  '20260825_120000_billing_invoice_visibility',
-  '20260825_121000_membership_support_runtime_alignment',
-  '20260825_122000_membership_support_relationships',
-  '20260825_123000_membership_support_relationship_alignment',
-  '20260825_124000_membership_review_assignee_alignment',
-  '20260825_125000_membership_shadow_state_alignment',
-  '20260826_090000_payment_action_required_status',
-  '20260826_120000_billing_pause_actions',
-  '20260826_130000_portal_engagement_distribution',
+  '20260901_210000_notification_event_key',
+  '20260901_220000_member_follows',
 ] as const
 const TARGET_MIGRATION = TARGET_MIGRATIONS.at(-1)!
-const APPLY_CONFIRMATION = 'apply_billing_reconciliation_to_jpvbootcamp'
-const ROLLBACK_CONFIRMATION = 'plan_rollback_billing_reconciliation_from_jpvbootcamp'
+const APPLY_CONFIRMATION = 'apply_member_social_schema_to_jpvbootcamp_staging'
+const ROLLBACK_CONFIRMATION = 'plan_rollback_member_social_schema_from_jpvbootcamp_staging'
 const REVIEWED_APPLY_SET = new Set<string>(TARGET_MIGRATIONS)
 // Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
 const STAGING_HOSTNAME = '10.0.2.4'
