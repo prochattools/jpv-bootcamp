@@ -16,12 +16,12 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Operation: validate-only | deploy-preview (staging) | prepare-rooms-staging-rollback | redeploy-staging-candidate (no build) | authenticated-acceptance (staging) | read-only-migration-plan | apply-rooms-migration (staging) | bootstrap-staging-database | backfill-administrator-members | seed-staging-qa-content'
+        description: 'Operation: validate-only | publish-staging-candidate-image | deploy-preview (staging) | prepare-rooms-staging-rollback | redeploy-staging-candidate (no build) | authenticated-acceptance (staging) | read-only-migration-plan | apply-rooms-migration (staging) | bootstrap-staging-database | backfill-administrator-members | seed-staging-qa-content'
         required: false
         type: string
         default: 'validate-only'
       expected_sha:
-        description: 'Full 40-character SHA (required for deploy-preview, prepare-rooms-staging-rollback, redeploy-staging-candidate, authenticated-acceptance, read-only-migration-plan, apply-rooms-migration, bootstrap-staging-database, backfill-administrator-members, and seed-staging-qa-content)'
+        description: 'Full 40-character SHA (required for publish-staging-candidate-image, deploy-preview, prepare-rooms-staging-rollback, redeploy-staging-candidate, authenticated-acceptance, read-only-migration-plan, apply-rooms-migration, bootstrap-staging-database, backfill-administrator-members, and seed-staging-qa-content)'
         required: false
         type: string
       source_ref:
@@ -29,7 +29,7 @@ on:
         required: true
         type: string
       confirmation:
-        description: 'Confirmation phrase (deploy: deploy-staging-feature-tip; rollback preparation: prepare-rooms-staging-rollback-to-jpvbootcamp-staging; redeploy: redeploy-published-staging-candidate; acceptance: run-authenticated-staging-acceptance; plan: run-read-only-staging-payload-migration-plan; Rooms migration: apply-rooms-migration-to-jpvbootcamp-staging; bootstrap: bootstrap-empty-staging-database; backfill: apply-guarded-staging-administrator-member-backfill; seed: apply-guarded-staging-qa-content-seed)'
+        description: 'Confirmation phrase (publish: publish-exact-staging-candidate-image; deploy: deploy-staging-feature-tip; rollback preparation: prepare-rooms-staging-rollback-to-jpvbootcamp-staging; redeploy: redeploy-published-staging-candidate; acceptance: run-authenticated-staging-acceptance; plan: run-read-only-staging-payload-migration-plan; Rooms migration: apply-rooms-migration-to-jpvbootcamp-staging; bootstrap: bootstrap-empty-staging-database; backfill: apply-guarded-staging-administrator-member-backfill; seed: apply-guarded-staging-qa-content-seed)'
         required: false
         type: string
       backup_evidence_id:
@@ -52,8 +52,8 @@ permissions:
 # preparation, plan, migration, bootstrap, administrator backfill, and QA seed
 # runs use separate non-cancellable groups.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'prepare-rooms-staging-rollback' && 'staging-rooms-rollback-preparation' || github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || github.event_name == 'workflow_dispatch' && inputs.operation == 'apply-rooms-migration' && 'staging-rooms-migration-apply' || github.event_name == 'workflow_dispatch' && inputs.operation == 'bootstrap-staging-database' && 'staging-empty-database-bootstrap' || github.event_name == 'workflow_dispatch' && inputs.operation == 'backfill-administrator-members' && 'staging-administrator-member-backfill' || github.event_name == 'workflow_dispatch' && inputs.operation == 'seed-staging-qa-content' && 'staging-qa-content-seed' || format('staging-deploy-{0}', github.ref) }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.operation == 'prepare-rooms-staging-rollback' || inputs.operation == 'read-only-migration-plan' || inputs.operation == 'apply-rooms-migration' || inputs.operation == 'bootstrap-staging-database' || inputs.operation == 'backfill-administrator-members' || inputs.operation == 'seed-staging-qa-content')) }}
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'prepare-rooms-staging-rollback' && 'staging-rooms-rollback-preparation' || github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || github.event_name == 'workflow_dispatch' && inputs.operation == 'apply-rooms-migration' && 'staging-rooms-migration-apply' || github.event_name == 'workflow_dispatch' && inputs.operation == 'bootstrap-staging-database' && 'staging-empty-database-bootstrap' || github.event_name == 'workflow_dispatch' && inputs.operation == 'backfill-administrator-members' && 'staging-administrator-member-backfill' || github.event_name == 'workflow_dispatch' && inputs.operation == 'seed-staging-qa-content' && 'staging-qa-content-seed' || github.event_name == 'workflow_dispatch' && inputs.operation == 'publish-staging-candidate-image' && 'staging-candidate-image-publication' || format('staging-deploy-{0}', github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.operation == 'prepare-rooms-staging-rollback' || inputs.operation == 'read-only-migration-plan' || inputs.operation == 'apply-rooms-migration' || inputs.operation == 'bootstrap-staging-database' || inputs.operation == 'backfill-administrator-members' || inputs.operation == 'seed-staging-qa-content' || inputs.operation == 'publish-staging-candidate-image')) }}
 
 jobs:
   validate-only:
@@ -170,6 +170,129 @@ jobs:
             test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  publish-staging-candidate-image:
+    name: Publish exact staging candidate image (manual control lane)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging-deploy
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'publish-staging-candidate-image'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Validate publication inputs
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          APPROVED_APPLICATION_CANDIDATE="477eb1e4521d87b8344ff326f82d28ac537af74a"
+          if ! printf '%s' "$EXPECTED_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "IMAGE-PUBLISH-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+          if [ "$EXPECTED_SHA" != "$APPROVED_APPLICATION_CANDIDATE" ]; then
+            echo "IMAGE-PUBLISH-DENIED: expected_sha is not the approved application candidate" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "IMAGE-PUBLISH-DENIED: source_ref must match feature/*, fix/*, or release/*" >&2
+            exit 1
+          fi
+          if [ "$SOURCE_REF_INPUT" = "main" ]; then
+            echo "IMAGE-PUBLISH-DENIED: source_ref main is never allowed" >&2
+            exit 1
+          fi
+          if [ "$CONFIRMATION" != "publish-exact-staging-candidate-image" ]; then
+            echo "IMAGE-PUBLISH-DENIED: confirmation phrase is invalid" >&2
+            exit 1
+          fi
+          echo "Publication boundary validated: staging immutable image only"
+
+      - name: Check out control branch for publication workflow
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Check out exact application candidate for build context
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          CONTROL_SHA="$(git rev-parse HEAD)"
+          REMOTE_TIP="$(git rev-parse "origin/$SOURCE_REF_INPUT")"
+          if [ "$CONTROL_SHA" != "$REMOTE_TIP" ]; then
+            echo "IMAGE-PUBLISH-DENIED: source_ref is not its current remote tip" >&2
+            exit 1
+          fi
+          if ! git cat-file -e "$EXPECTED_SHA^{commit}" || ! git merge-base --is-ancestor "$EXPECTED_SHA" "$CONTROL_SHA"; then
+            echo "IMAGE-PUBLISH-DENIED: application candidate is not reachable from control branch" >&2
+            exit 1
+          fi
+          if git merge-base --is-ancestor "$EXPECTED_SHA" origin/main 2>/dev/null; then
+            echo "IMAGE-PUBLISH-DENIED: application candidate is reachable from main" >&2
+            exit 1
+          fi
+          git switch --detach "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "CONTROL_SHA=$CONTROL_SHA" >> "$GITHUB_ENV"
+          echo "APPLICATION_BUILD_SHA=$EXPECTED_SHA" >> "$GITHUB_ENV"
+          echo "Control SHA: $CONTROL_SHA"
+          echo "Application build SHA: $EXPECTED_SHA"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and publish immutable candidate image
+        shell: bash
+        env:
+          APPLICATION_BUILD_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ github.repository }}:${APPLICATION_BUILD_SHA}"
+          docker buildx build \
+            --platform linux/amd64 \
+            --file Dockerfile \
+            --progress=plain \
+            --push \
+            --tag "$IMAGE" \
+            --build-arg NEXT_PUBLIC_APP_URL=https://staging.jpvbootcamp.com \
+            --build-arg APP_BASE_URL=https://staging.jpvbootcamp.com \
+            --build-arg NEXT_PUBLIC_SERVER_URL=https://staging.jpvbootcamp.com \
+            --build-arg IMAGE_TAG="$APPLICATION_BUILD_SHA" \
+            --build-arg COMMIT_SHA="$APPLICATION_BUILD_SHA" \
+            .
+          echo "Immutable candidate image published: $IMAGE"
+
+      - name: Verify immutable candidate manifest
+        shell: bash
+        env:
+          APPLICATION_BUILD_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ github.repository }}:${APPLICATION_BUILD_SHA}"
+          INSPECT_OUTPUT="$(mktemp)"
+          trap 'rm -f "$INSPECT_OUTPUT"' EXIT
+          docker buildx imagetools inspect "$IMAGE" > "$INSPECT_OUTPUT"
+          grep -q "$APPLICATION_BUILD_SHA" "$INSPECT_OUTPUT"
+          grep -q 'linux/amd64' "$INSPECT_OUTPUT"
+          DIGEST="$(grep -m1 -oE 'Digest: sha256:[0-9a-f]{64}' "$INSPECT_OUTPUT" | awk '{print $2}')"
+          test -n "$DIGEST"
+          echo "Immutable image verified: tag=$IMAGE digest=$DIGEST platform=linux/amd64"
 
   deploy-preview:
     name: Deploy staging (manual dispatch only)
