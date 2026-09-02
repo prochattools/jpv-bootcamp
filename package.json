@@ -53,6 +53,7 @@
     "test:migration:next-domains:sql": "tsx scripts/migration/legacyMigrationSQLContract.test.ts",
     "test:migration:next-domains:behavior": "tsx scripts/migration/legacyMigrationBehavior.test.ts",
     "staging:migration-status": "tsx scripts/release/buildStagingMigrationStatus.ts",
+    "production:migration-status:read-only": "tsx scripts/release/verifyProductionMigrationStatus.ts",
     "staging:migration-preflight": "tsx scripts/release/stagingMigrationPreflight.ts",
     "staging:migration-rehearsal": "tsx scripts/release/migrationRehearsal.ts",
     "staging:migration-rehearsal:evidence": "tsx scripts/release/buildMigrationRehearsalEvidence.ts",
@@ -194,7 +195,7 @@
   },
   "pnpm": {
     "overrides": {
-      "fast-uri": "3.1.5",
+      "fast-uri": "3.1.6",
       "undici": "7.29.0",
       "sharp": "^0.35.0",
       "immutable@<5": "4.3.9",

@@ -1,6 +1,6 @@
 # Repository Clean Baseline — 2026-09-02
 
-**Status: BLOCKED — repository hardening and staging parity evidence are complete; PR approval and fresh production schema evidence remain external gates.**
+**Status: TECHNICAL CLEANUP BLOCKERS RESOLVED — PR #30 is ready for independent review; fresh production evidence remains an operator-run read-only evidence step.**
 
 This is the current cleanup and release-gate authority. Older dated handoffs,
 deployment guides, and branch-reconciliation reports remain audit history only.
@@ -21,7 +21,7 @@ preserved.
 | `origin/main` / local `main` | `f93ffac7dd299c39d8daf242d6a436272cc79188` |
 | Hardening branch | `codex/repository-hardening-20260902`; current pushed head is tracked by [PR #30](https://github.com/prochattools/jpv-bootcamp/pull/30) |
 | Hardening PR | [#30](https://github.com/prochattools/jpv-bootcamp/pull/30), open, mergeable, review required |
-| PR validation | Required check `Validate, build, and test` is configured and passed on the current protected-path candidate; local `pnpm test:release` is 181/181 |
+| PR validation | Required check `Validate, build, and test` is configured and passed on the current protected-path candidate; local `pnpm test:release` is 182/182 |
 | Main protection | Admin enforcement, one approving review, stale-review dismissal, conversation resolution, no force-push/deletion, required check `Validate, build, and test` |
 | Default-branch security | Dependabot updates, secret scanning, and push protection enabled; the default branch currently reports 8 open Dependabot alerts (3 high, 5 moderate) |
 
@@ -31,6 +31,10 @@ production audit (`--audit-level high`) passes. A fresh full audit also reports
 two moderate transitive `stripe -> qs` advisories; this pass does not widen into
 dependency remediation because the authorized scope is the staging-parity /
 hardening closeout only.
+
+The current-main production migration-ledger verifier is now part of this
+candidate. It is separate from the historical Rooms migration control and uses
+the canonical Payload and Prisma inventories from the checked-out source.
 
 ## Live runtime evidence
 
@@ -74,13 +78,32 @@ deployment were mutated by this closeout.
 ## Staging and production gates
 
 The current read-only staging evidence is safe and complete for migration
-state, but staging is not aligned to `main`. Production health is green, but no
-fresh generic production schema/migration status artifact is available through
-the repository’s read-only tooling. The only guarded production schema runner
-is the historical Rooms control, which is bound to the missing source ref
-`feature/member-portal-rooms` and an older Rooms-only baseline; it cannot safely
-produce current-main schema evidence without a separately governed operator
-update. No production migration or redeploy is authorized by this document.
+state, but staging is not aligned to `main`. Production health is green. A
+fresh production ledger artifact has not been captured in this local pass
+because production database credentials are not present in the worktree.
+
+The approved current-main evidence command is:
+
+```text
+DEPLOYMENT_ENV=production EXPECTED_DEPLOYMENT_SHA=<40-char-production-sha> pnpm production:migration-status:read-only -- --mode=production-read-only --expected-schema=jpvbootcamp --acknowledge-read-only
+```
+
+Run it only inside the governed production runtime with its production-bound
+`DATABASE_URL` for `10.0.2.4:5433/jpvbootcamp?schema=jpvbootcamp`, using the
+`jpvbootcamp_production_app` role and the protected route. The command performs
+one `BEGIN TRANSACTION READ ONLY` metadata read, compares Payload and Prisma
+ledger state with the current source inventories, performs a deployment-health
+GET for the expected SHA, and always rolls back the read-only transaction. It
+does not apply migrations, alter schema/data, seed, reset, clean up, deploy, or
+fall back to staging/local state. Its JSON output contains migration metadata
+only; credentials and database contents are not emitted.
+
+If the protected route or credentials are unavailable, the exact operator
+prerequisite is to restore access to that governed production runtime and rerun
+the command there. Do not substitute `feature/member-portal-rooms`, staging,
+legacy, a local database, or a guessed host/role. The historical Rooms control
+remains Rooms-specific and is not a current-main production ledger verifier.
+No production migration or redeploy is authorized by this document.
 
 PR #30 cannot be merged by this pass because main requires a separate approving
 review. PR #29 is a separate open Dependabot postcss PR and was not merged or
@@ -104,13 +127,11 @@ database or deployment mutation was performed.
 
 ## Final decision
 
-`BLOCKED`, with two independent outstanding actions:
+`TECHNICAL CLEANUP BLOCKERS RESOLVED — PR #30 READY FOR INDEPENDENT REVIEW`.
 
-1. a separate approving review for PR #30; and
-2. a separately governed production read-only schema/migration evidence path
-   for current `main` (the existing historical Rooms runner cannot provide it
-   because its required source ref is absent).
-
-Staging connectivity/governance reconciliation, the guarded staging plan, and
-all local release validation are complete. Until the two outstanding gates are
-resolved, do not merge, deploy, or apply migrations.
+Staging connectivity/governance reconciliation, the guarded staging plan, the
+current-main production verifier, its no-mutation tests, and local release
+validation are complete. Independent review remains required before merge.
+Fresh live production ledger evidence is an operator-run read-only prerequisite
+for production evidence, not a reason to mutate production from this worktree.
+Do not merge, deploy, or apply migrations from this document.
