@@ -286,11 +286,18 @@ jobs:
           set -euo pipefail
           IMAGE="ghcr.io/${{ github.repository }}:${APPLICATION_BUILD_SHA}"
           INSPECT_OUTPUT="$(mktemp)"
-          trap 'rm -f "$INSPECT_OUTPUT"' EXIT
+          RAW_OUTPUT="$(mktemp)"
+          trap 'rm -f "$INSPECT_OUTPUT" "$RAW_OUTPUT"' EXIT
           docker buildx imagetools inspect "$IMAGE" > "$INSPECT_OUTPUT"
-          DIGEST="$(grep -m1 -oE 'Digest: sha256:[0-9a-f]{64}' "$INSPECT_OUTPUT" | awk '{print $2}')"
+          DIGEST="$(awk '$1 == "Digest:" { print $2; exit }' "$INSPECT_OUTPUT" | tr -d '\r')"
           test -n "$DIGEST"
-          grep -Eq 'Platform:[[:space:]]+linux/amd64|linux/amd64' "$INSPECT_OUTPUT"
+          docker buildx imagetools inspect --raw "$IMAGE" > "$RAW_OUTPUT"
+          node - "$RAW_OUTPUT" <<'NODE'
+          const fs = require('node:fs')
+          const manifest = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+          if (!Array.isArray(manifest.manifests)) process.exit(1)
+          if (!manifest.manifests.some((entry) => entry.platform?.os === 'linux' && entry.platform?.architecture === 'amd64')) process.exit(1)
+          NODE
           echo "Immutable image verified: tag=$IMAGE digest=$DIGEST platform=linux/amd64"
 
   deploy-preview:
@@ -934,8 +941,15 @@ jobs:
         run: |
           set -euo pipefail
           IMAGE="ghcr.io/${{ github.repository }}:${EXPECTED_SHA}"
-          docker buildx imagetools inspect "$IMAGE" >/tmp/rooms-candidate-image.txt
-          grep -q "$EXPECTED_SHA" /tmp/rooms-candidate-image.txt
+          RAW_OUTPUT="$(mktemp)"
+          trap 'rm -f "$RAW_OUTPUT"' EXIT
+          docker buildx imagetools inspect --raw "$IMAGE" > "$RAW_OUTPUT"
+          node - "$RAW_OUTPUT" <<'NODE'
+          const fs = require('node:fs')
+          const manifest = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+          if (!Array.isArray(manifest.manifests)) process.exit(1)
+          if (!manifest.manifests.some((entry) => entry.platform?.os === 'linux' && entry.platform?.architecture === 'amd64')) process.exit(1)
+          NODE
           echo "Published immutable candidate image is available: $IMAGE"
 
       - name: Update only canonical staging Dokploy app to the published image
