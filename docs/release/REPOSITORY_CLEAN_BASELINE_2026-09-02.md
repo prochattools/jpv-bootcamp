@@ -19,9 +19,9 @@ preserved.
 | Item | Verified state |
 | --- | --- |
 | `origin/main` / local `main` | `f93ffac7dd299c39d8daf242d6a436272cc79188` |
-| Hardening branch | `codex/repository-hardening-20260902` at `00eadf239be3aaf3013be5683a153e4795e1c156` |
+| Hardening branch | `codex/repository-hardening-20260902` at `1462a571842c545721fc8a6a52478232e9fffafd` |
 | Hardening PR | [#30](https://github.com/prochattools/jpv-bootcamp/pull/30), open, mergeable, review required |
-| PR validation | GitHub run `33638376147`, check `Validate, build, and test`, SUCCESS; local `pnpm test:release` 181/181 |
+| PR validation | GitHub run `33639604700`, check `Validate, build, and test`, SUCCESS; local `pnpm test:release` 181/181 |
 | Main protection | Admin enforcement, one approving review, stale-review dismissal, conversation resolution, no force-push/deletion, required check `Validate, build, and test` |
 | Default-branch security | Dependabot updates, secret scanning, and push protection enabled; the default-branch alert view still reports 8 historical alerts until the hardening PR lands |
 
