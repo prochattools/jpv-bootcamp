@@ -1,5 +1,13 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT REPOSITORY HARDENING BASELINE — 2026-09-02
+
+The current release and repository state is governed by
+`docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md`. Product feature work is
+not part of this pass. PR #30 is validated but requires review; no production,
+legacy, provider, or database mutation was performed. Older roadmap entries
+remain dated history and must not be treated as current deployment authority.
+
 ## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**
@@ -56,7 +64,7 @@ retained as dated audit history.
 - **Hard stops:** do not start A6 integration, add feature work, merge
   historical branches, mutate production data/providers, run migrations,
   delete worktrees/branches, or deploy from this A5 architecture packet.
-- **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`; `pnpm test:release` passed `181/181` required checks (182 manifest entries including one deferred browser gate). This is local/CI validation only and does not constitute staging or production evidence.
+- **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`; `pnpm test:release` passed `182/182` required checks (183 manifest entries including one deferred browser gate). This is local/CI validation only and does not constitute staging or production evidence.
 
 ### ARCHITECTURAL HOLD — POST-LAUNCH CONSOLIDATION
 

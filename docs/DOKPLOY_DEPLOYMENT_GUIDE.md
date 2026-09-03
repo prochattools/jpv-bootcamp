@@ -1,6 +1,6 @@
 # Dokploy Deployment Guide — JPV Bootcamp Staging
 
-> **Historical/non-operative reference.** This guide contains staging-era operator detail and must not be used as production authorization. For current Phase 9.5 truth, use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`; for remaining work use `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`; for the protected future cutover procedure use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`. Do not record or expose credentials; live target identity must be independently verified before any authorized operation.
+> **Historical/non-operative reference.** This guide contains staging-era operator detail and must not be used as current authorization. For current branch, environment, migration, rollback, and deployment truth, use `docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md`. Do not record or expose credentials; live target identity must be independently verified before any authorized operation.
 
 **Target**: clients-jpv-bootcamp-app-tp9xrk  
 **Dokploy app ID**: `I_2Vukga3cc3ZhaG-mUzU`  

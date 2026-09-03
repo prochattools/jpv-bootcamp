@@ -2,6 +2,17 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT REPOSITORY HARDENING BASELINE — 2026-09-02
+
+The current cleanup authority is
+`docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md`. The repository
+hardening branch is validated at `00eadf239be3aaf3013be5683a153e4795e1c156`,
+PR #30 has a successful required check but still needs a separate approving
+review, and no production, legacy, provider, or database mutation was made.
+The latest available staging read-only plan reports 55/55 applied and no
+pending migrations. The older handoff sections below are retained historical
+evidence and must not override the current baseline.
+
 ---
 
 ## CURRENT A6 GATE 2 PRODUCTION CLOSEOUT — 2026-08-30

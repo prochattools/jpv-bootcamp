@@ -29,7 +29,7 @@ async function main(): Promise<void> {
     const input = parseArgs(process.argv.slice(2))
     const result = await configureStagingMigrationPlanEnvironment(input)
 
-    console.log('\n=== Staging Migration Plan Environment Configurator (Solo Operator) ===\n')
+    console.log('\n=== Staging Migration Plan Environment Configurator (Protected Path) ===\n')
     console.log(`Mode: ${result.dryRun ? 'DRY-RUN (no mutations)' : 'APPLY'}`)
     console.log()
 

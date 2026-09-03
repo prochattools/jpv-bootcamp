@@ -237,7 +237,7 @@ async function main(): Promise<void> {
   })
 
   // ══════════════════════════════════════════════════════════════════════════
-  // CONFIGURATOR VALIDATION TESTS (solo-operator mode — no reviewer required)
+  // CONFIGURATOR VALIDATION TESTS (protected reviewer/branch-policy mode)
   // ══════════════════════════════════════════════════════════════════════════
 
   // Test: dry-run requires expectedCommit
@@ -298,8 +298,8 @@ async function main(): Promise<void> {
     assert(result.blockers.some((b) => b === 'guarded_path_dirty'))
   })
 
-  // Test: dry-run succeeds with exact SHA and clean paths (no reviewer needed)
-  await test('dry-run: succeeds with exact SHA and clean paths (solo-operator mode)', async () => {
+  // Test: dry-run succeeds with exact SHA and clean paths
+  await test('dry-run: succeeds with exact SHA and clean paths', async () => {
     const result = await configureStagingMigrationPlanEnvironment(
       {
         confirmation: undefined,
@@ -318,14 +318,14 @@ async function main(): Promise<void> {
     assert(result.dryRun === true)
     assert(result.actions.length > 0)
     assert(result.blockers.length === 0)
-    // Verify solo-operator mode is mentioned in actions
-    assert(result.actions.some((a) => a.includes('zero reviewers') || a.includes('solo-operator')))
+    // Verify protected mode is mentioned in actions
+    assert(result.actions.some((a) => a.includes('protected') && a.includes('reviewer')))
     // Verify SOLO_OPERATOR_MODE variable is planned
     assert(result.actions.some((a) => a.includes('SOLO_OPERATOR_MODE')))
   })
 
-  // Test: dry-run succeeds without any reviewer arguments
-  await test('dry-run: succeeds with no reviewer arguments (solo-operator mode requires none)', async () => {
+  // Test: dry-run does not accept reviewer identities as input
+  await test('dry-run: succeeds without reviewer arguments', async () => {
     const result = await configureStagingMigrationPlanEnvironment(
       {
         confirmation: undefined,
@@ -364,40 +364,19 @@ async function main(): Promise<void> {
     assert(result.blockers.some((b) => b === 'repo_mismatch'))
   })
 
-  // Test: verify step requires zero reviewers — non-zero reviewer count fails verification
-  await test('apply: verify fails if environment has unexpected reviewer count', async () => {
-    // Responses: the verify call returns an env with a reviewer (should have been zero)
+  // Test: apply refuses to proceed when the protected environment is absent
+  await test('apply: refuses to proceed when protections are absent', async () => {
     const responses = new Map<string, unknown>()
-    const envWithReviewer = {
+    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan', {
       name: 'staging-migration-plan',
-      protection_rules: [
-        { type: 'required_reviewers', reviewers: [{ type: 'User', id: 999 }], prevent_self_review: true },
-      ],
-      deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
-    }
-    // Pre-apply reads: existingPolicies (has exact branch), existingVars (has both variables already)
+      protection_rules: [],
+      deployment_branch_policy: null,
+    })
     responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/deployment-branch-policies', {
-      branch_policies: [{ id: 1, name: 'feature/course-branding-and-preview' }],
-    })
-    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/variables', {
-      variables: [
-        { name: 'PLAN_READY_FOR_DISPATCH', value: 'true' },
-        { name: 'SOLO_OPERATOR_MODE', value: 'true' },
-      ],
-    })
-    // Verify reads: env has a reviewer (must be rejected), policies, variables, secrets all fine
-    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan', envWithReviewer)
-    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/secrets', {
-      secrets: [
-        { name: 'DATABASE_URL' },
-        { name: 'TAILSCALE_OAUTH_CLIENT_ID' },
-        { name: 'TAILSCALE_OAUTH_SECRET' },
-      ],
+      branch_policies: [],
     })
 
-    // Allow all mutations (test is about verification, not mutations)
-    const allowAllMutate = (_: GhApiCall) => ({ ok: true, exitCode: 0 })
-
+    const mutationCalls: GhApiCall[] = []
     const envWithSecrets = {
       DATABASE_URL: 'postgres://user:pass@10.0.2.4:5433/jpvbootcamp?search_path=jpvbootcamp_staging',
       TAILSCALE_OAUTH_CLIENT_ID: 'test-client-id',
@@ -414,7 +393,10 @@ async function main(): Promise<void> {
         },
         {
           ghApiRead: mockGhApiRead(responses),
-          ghApiMutate: allowAllMutate,
+          ghApiMutate: (call) => {
+            mutationCalls.push(call)
+            return { ok: true, exitCode: 0 }
+          },
           gitStatus: mockGitStatus(new Map()),
           repoName: () => 'prochattools/jpv-bootcamp',
           currentHead: () => 'e'.repeat(40),
@@ -424,26 +406,36 @@ async function main(): Promise<void> {
     } finally {
       for (const k of Object.keys(envWithSecrets)) delete process.env[k]
     }
-    // Verification must fail because reviewer count is 1 (not zero)
+
     assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'environment_verification_failed'))
+    assert(result.blockers.some((b) => b === 'environment_protection_mismatch'))
+    assert.equal(mutationCalls.length, 0)
   })
 
-  // Test: verify step passes with zero reviewers
-  await test('apply: verify passes when environment has zero reviewers (solo-operator)', async () => {
+  // Test: apply accepts the live protected reviewer and branch-policy model
+  await test('apply: preserves and verifies the protected environment', async () => {
     const responses = new Map<string, unknown>()
-    // Pre-apply reads
+    const protectedEnvironment = {
+      name: 'staging-migration-plan',
+      protection_rules: [
+        { type: 'required_reviewers', reviewers: [{ type: 'User', id: 999 }], prevent_self_review: false },
+      ],
+      deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+    }
+    const branchPolicies = {
+      branch_policies: [
+        { id: 1, name: 'feature/*' },
+        { id: 2, name: 'fix/*' },
+        { id: 3, name: 'release/*' },
+      ],
+    }
+    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan', protectedEnvironment)
+    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/deployment-branch-policies', branchPolicies)
     responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/variables', {
       variables: [
         { name: 'PLAN_READY_FOR_DISPATCH', value: 'true' },
         { name: 'SOLO_OPERATOR_MODE', value: 'true' },
       ],
-    })
-    // Verify reads: zero reviewers, no branch policy (free plan public repo)
-    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan', {
-      name: 'staging-migration-plan',
-      protection_rules: [],
-      deployment_branch_policy: null,
     })
     responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/secrets', {
       secrets: [
@@ -453,8 +445,7 @@ async function main(): Promise<void> {
       ],
     })
 
-    const allowAllMutate = (_: GhApiCall) => ({ ok: true, exitCode: 0 })
-
+    const mutationCalls: GhApiCall[] = []
     const envWithSecrets = {
       DATABASE_URL: 'postgres://user:pass@10.0.2.4:5433/jpvbootcamp?search_path=jpvbootcamp_staging',
       TAILSCALE_OAUTH_CLIENT_ID: 'test-client-id',
@@ -471,7 +462,10 @@ async function main(): Promise<void> {
         },
         {
           ghApiRead: mockGhApiRead(responses),
-          ghApiMutate: allowAllMutate,
+          ghApiMutate: (call) => {
+            mutationCalls.push(call)
+            return { ok: true, exitCode: 0 }
+          },
           gitStatus: mockGitStatus(new Map()),
           repoName: () => 'prochattools/jpv-bootcamp',
           currentHead: () => 'f'.repeat(40),
@@ -484,9 +478,14 @@ async function main(): Promise<void> {
 
     assert(result.ok === true)
     assert(result.blockers.length === 0)
-    assert(result.verifiedState.some((s) => s.includes('solo-operator') || s.includes('reviewers: 0')))
+    assert(result.verifiedState.some((s) => s.includes('protected staging path')))
+    assert(result.verifiedState.some((s) => s.includes('feature/*, fix/*, or release/*')))
     assert(result.verifiedState.some((s) => s.includes('PLAN_READY_FOR_DISPATCH')))
     assert(result.verifiedState.some((s) => s.includes('SOLO_OPERATOR_MODE')))
+    assert.equal(
+      mutationCalls.some((call) => call.args.includes('--method') && call.args.includes('PUT')),
+      false,
+    )
   })
 
   // Test: apply fails without confirmation

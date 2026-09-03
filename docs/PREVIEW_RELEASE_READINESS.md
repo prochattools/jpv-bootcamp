@@ -1,5 +1,11 @@
 # JPV Bootcamp Preview Release Readiness
 
+> **Current-state pointer (2026-09-02):** This document contains historical
+> preview-era release records. Current branch, staging, migration, production,
+> and governance truth is maintained in
+> `docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md`. Do not use older
+> feature-branch names, SHA values, or migration counts below as live authority.
+
 ## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**
@@ -40,7 +46,7 @@ those sections remain retained as audit history.
 - **Cutover procedure:** `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`.
 - **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
 - **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
-- **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`; `pnpm test:release` passed `181/181` required checks (182 manifest entries including one deferred browser gate). This is local/CI validation only and does not constitute staging or production evidence.
+- **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`; `pnpm test:release` passed `182/182` required checks (183 manifest entries including one deferred browser gate). This is local/CI validation only and does not constitute staging or production evidence.
 
 ## Historical staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
 
@@ -242,7 +248,7 @@ The previous preview workflow published an image from ordinary feature-branch pu
 
 **Manual dispatch path (`deploy-preview`):** Triggered by `workflow_dispatch` with `operation=deploy-preview`. Requires `expected_sha` (full 40-char SHA matching the current remote feature tip) and `confirmation=deploy-staging-feature-tip`. Checks out the exact current remote tip, verifies the SHA matches, then builds, publishes to GHCR, deploys to Dokploy staging, and runs the authenticated admin responsive gate. All Docker actions are SHA-pinned. The canonical Dokploy allow-list (`clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`) is enforced.
 
-**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation=run-read-only-staging-payload-migration-plan`. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (zero-reviewer solo-operator environment, branch policy, variable, and secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps. The `staging-migration-plan` environment operates in solo-operator mode: zero required reviewers, zero wait timer, custom branch policy for `feature/course-branding-and-preview` only, `PLAN_READY_FOR_DISPATCH=true`, and `SOLO_OPERATOR_MODE=true`.
+**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation=run-read-only-staging-payload-migration-plan`. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (protected reviewer, exact branch-policy, variable, and secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps. The `staging-migration-plan` environment requires its configured reviewer gate and custom branch policies `feature/*`, `fix/*`, and `release/*`; `PLAN_READY_FOR_DISPATCH=true` and `SOLO_OPERATOR_MODE=true` remain explicit workflow variables. `SOLO_OPERATOR_MODE` is an operator gate and does not authorize removal or bypass of the environment protections.
 
 Commits with `[migration-plan-only]` in the message suppress the push-triggered validate job so a migration-plan dispatch can be the sole authorized action for that tip.
 

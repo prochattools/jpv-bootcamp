@@ -1,5 +1,23 @@
 # Operator Handoff Summary
 
+## CURRENT REPOSITORY HARDENING BASELINE — 2026-09-02
+
+Use `docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md` as the current
+authority. PR #30 is CI-green but review-blocked; production is healthy at
+`f93ffac7dd299c39d8daf242d6a436272cc79188`; staging health is green at
+`477eb1e4521d87b8344ff326f82d28ac537af74a`; the latest available staging
+read-only artifact reports 55/55 Payload migrations and no pending migrations.
+No production or legacy mutation was performed. Sections below are historical
+release records unless explicitly superseded by the current baseline.
+
+The current-main production ledger evidence command is
+`DEPLOYMENT_ENV=production EXPECTED_DEPLOYMENT_SHA=<40-char-production-sha> pnpm production:migration-status:read-only -- --mode=production-read-only --expected-schema=jpvbootcamp --acknowledge-read-only`.
+Run it only with the governed production `DATABASE_URL` bound to
+`10.0.2.4:5433/jpvbootcamp`, schema `jpvbootcamp`, and role
+`jpvbootcamp_production_app`. It is a read-only metadata verifier for the
+current source inventories and deployed SHA; it must not be replaced by the
+historical `feature/member-portal-rooms` runner or a staging/local connection.
+
 ## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**
@@ -22,7 +40,7 @@
 - **Operational boundary:** no production operation or migration execution occurred. The only external mutation was the authorized staging deployment of this candidate.
 - **Handoff order:** preserve this evidence as the frozen staging checkpoint. Phase 10 requires separate explicit production authorization.
 - **Phase 9.5 authority:** use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` for current truth and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` for remaining work.
-- **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`. Deterministic release gate: `pnpm test:release` (`181/181`). The manifest contains 182 entries including one deferred browser gate. This is local/CI validation only and does not constitute staging or production evidence.
+- **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`. Deterministic release gate: `pnpm test:release` (`182/182`). The manifest contains 183 entries including one deferred browser gate. This is local/CI validation only and does not constitute staging or production evidence.
 
 <!-- Reconciliation note 2026-08-08: Verify the exact feature tip with `git rev-parse HEAD`. The release manifest contains 164 required gates. The live staging baseline remains `9c045fa5a5c327014c20fe9377f7d5368b550573`; guarded read-only plan run `31215369413` established the clean pre-apply state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`. -->
 

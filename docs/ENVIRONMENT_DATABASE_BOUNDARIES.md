@@ -1,5 +1,10 @@
 # JPV Bootcamp environment and database boundaries
 
+> **Current-state pointer (2026-09-02):** Use
+> `docs/release/REPOSITORY_CLEAN_BASELINE_2026-09-02.md` for current live
+> health, staging migration evidence, and governance blockers. The dated E1
+> records below are retained historical evidence only.
+
 Verified 2026-08-29 from live staging, production, legacy, DNS, TLS, and health
 evidence on the authorized host. This
 document records runtime facts only; passwords and other secret values are never
