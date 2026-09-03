@@ -25,6 +25,9 @@
 *.pem
 .tmp
 
+# Claude local worktrees
+.claude/worktrees/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
