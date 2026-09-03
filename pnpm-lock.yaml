@@ -6,6 +6,7 @@ settings:
 
 overrides:
   fast-uri: 3.1.6
+  stripe>qs: 6.16.0
   undici: 7.29.0
   sharp: ^0.35.0
   immutable@<5: 4.3.9
@@ -4834,8 +4835,8 @@ packages:
     resolution: {integrity: sha512-eZ7l+0ZVy3He9c85pEM9KEBR9DFA4jrmWvIjm9wpcHvScwc/vgZDl2TNOF0pm0JsWKw24XBUZOY0Wxn7/nvJnw==}
     engines: {node: '>=18'}
 
-  qs@6.15.2:
-    resolution: {integrity: sha512-Rzq0KEyX/w/tEybncDgdkZrJgVUsUMk3xjh3t5bv3S1HTAtg+uOYt72+ZfwiQwKdysThkTBdL/rTi6HDmX9Ddw==}
+  qs@6.16.0:
+    resolution: {integrity: sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA==}
     engines: {node: '>=0.6'}
 
   queue-microtask@1.2.3:
@@ -10947,8 +10948,9 @@ snapshots:
 
   qs-esm@8.0.1: {}
 
-  qs@6.15.2:
+  qs@6.16.0:
     dependencies:
+      es-define-property: 1.0.1
       side-channel: 1.1.1
 
   queue-microtask@1.2.3: {}
@@ -11503,7 +11505,7 @@ snapshots:
   stripe@16.12.0:
     dependencies:
       '@types/node': 20.19.43
-      qs: 6.15.2
+      qs: 6.16.0
 
   strtok3@10.3.5:
     dependencies:
