@@ -10,8 +10,8 @@ reconciliation. Historical Phase documents remain audit evidence.
 
 ### R1. Source and dependency hardening
 
-**Status:** implemented in the reconciliation worktree, pending final validation
-and review.
+**Status:** complete locally in source candidate
+`dcd8911ebdf61a48d45525ae86f7b57d399ff2ba`.
 
 - ESLint 9 flat configuration and current lint command.
 - dependency/security overrides with lockfile reconciliation.
@@ -23,7 +23,8 @@ and review.
 
 ### R2. Documentation authority reconciliation
 
-**Status:** implemented by this documentation pass, pending stale-current scan.
+**Status:** complete locally; the 2026-09-06 current-truth document is the
+repository authority and older dated claims remain historical evidence.
 
 - make the 2026-09-06 repository current-truth document authoritative;
 - keep all prior evidence intact but clearly historical;
@@ -34,26 +35,31 @@ and review.
 
 ### R3. Branch/worktree cleanup
 
-**Status:** safe cleanup partially complete.
+**Status:** complete within the proven lossless cleanup boundary.
 
-- seven verified-clean worktrees removed, refs preserved, approximately 6.3 GB
-  reclaimed;
+- worktree inventory reduced to 3; the first cleanup pass reclaimed
+  approximately 6.3 GB and the second pass removed additional custody-backed
+  worktrees;
+- local branch inventory reduced from 22 to 5 after exact recovery and
+  supersession checks; no remote branch was deleted;
 - tracked `newrelic_agent.log` removed from the current tree and ignored going
   forward; the historical blob remains recoverable from Git history;
 - tracked `src/app/(frontend)/sponsored/claim/page.tsx.bak` removed from the
   current tree and `*.bak` ignored; the canonical `page.tsx` remains in place
   and the historical backup blob remains recoverable from Git history;
-- recovery archive retained;
-- all dirty, credential-bearing, or unique worktrees preserved;
-- future branch-ref deletion is allowed only after ancestry/equivalence and
-  unique-work evidence prove it lossless.
+- verified complete-history post-Gate-1 bundle and exact dirty-file custody
+  snapshots retained;
+- primary dirty worktree and environment-custody worktree preserved because
+  their unique/user/environment state is not eligible for deletion;
+- PR #30 branch retained while the PR remains open and review-protected.
 
 ### R4. Final local validation
 
-**Status:** full local `pnpm test:release` passed `182/182` required checks on
-2026-09-06 after the status-document contracts were refreshed. Final
-diff/style/type checks and focused documentation contracts remain before this
-gate is closed.
+**Status:** complete for the exact source candidate. Full local
+`pnpm test:release` passed `182/182` required checks on 2026-09-06 after the
+status-document contracts were refreshed, with the supporting lint, diff,
+type-check, build, migration, staging-plan, workflow-contract, and release
+validation checks green.
 
 Run and require green results for:
 
@@ -67,17 +73,18 @@ Run and require green results for:
 8. production build;
 9. full `pnpm test:release`.
 
-### R5. Final review and landing
+### R5. Final review and local landing
 
-**Status:** pending.
+**Status:** complete locally; remote landing is intentionally not performed.
 
-- run the mandatory pre-landing review over the complete reconciliation diff;
-- use adversarial/high-risk review posture because migration tooling, billing
-  dependencies, CI, and production-read paths are present in the diff;
-- fix concrete in-scope findings and rerun affected validation;
-- commit only after the final diff is clean and review passes;
-- push only to the reconciliation branch; do not bypass branch protection and
-  do not merge PR #30.
+- final adversarial review reported zero findings and assessed the patch as
+  correct;
+- exact reviewed source candidate committed locally as `dcd8911`;
+- this documentation/cleanup closure records the post-commit branch/worktree
+  reconciliation state;
+- no push, PR merge, deployment, or external mutation occurred;
+- any future push must target the reconciliation branch and preserve branch
+  protection; PR #30 remains separate.
 
 ## Gate 2 — Staging verified
 
@@ -116,7 +123,8 @@ is not production authorization.
 
 ## Exit condition
 
-After Gate 1 is green and committed, repository reconciliation can be marked
-complete with Gate 2 and Gate 3 explicitly open. Do not keep the repository
-assessment artificially “in progress” merely because environment/operator work
-requires separate authorization; record those as separate release gates.
+Gate 1 repository reconciliation is complete locally. Gate 2 and Gate 3 remain
+explicitly open and require their own evidence/authorization. The two preserved
+non-reconciliation worktrees are separate custody work: they must not be
+deleted until their unique or environment-local state has a lossless
+disposition.

@@ -3,7 +3,7 @@
 **Authority date:** 2026-09-06
 **Reconciliation branch:** `codex/repository-reconciliation-20260905`
 **Starting source authority:** `origin/main` at `f93ffac7dd299c39d8daf242d6a436272cc79188`
-**Status:** repository reconciliation in progress; local changes are not yet committed or pushed.
+**Status:** Gate 1 repository reconciliation is complete locally; the reconciliation branch is not pushed.
 
 This document is the current repository-level authority for the assessment,
 hardening, branch reconciliation, cleanup, and release-readiness work started on
@@ -59,6 +59,13 @@ Local release validation on 2026-09-06 passed the complete required manifest:
 total: `182` required and `1` conditional. This result proves the local
 repository gate only and does not establish current staging database state.
 
+The exact source candidate was committed locally as
+`dcd8911ebdf61a48d45525ae86f7b57d399ff2ba` (`chore: reconcile repository
+state and release hardening`). The final adversarial review of that candidate
+reported zero findings and assessed the patch as correct. No push, PR merge,
+deployment, provider mutation, Stripe mutation, database mutation, or
+staging/production operation followed.
+
 ## Migration source truth
 
 The current source registry ends with:
@@ -80,21 +87,31 @@ that batch is appropriate. The apply-batch change therefore remains deferred.
 
 ## Branch and worktree reconciliation
 
-### Safely reclaimed worktrees
+### Safely reclaimed worktrees and local refs
 
-Seven worktrees were independently verified clean and removed with
-`git worktree remove`. Their branch refs were preserved. Approximately 6.3 GB
-of local disk space was reclaimed:
+The first cleanup pass removed seven independently verified clean worktrees and
+reclaimed approximately 6.3 GB. A second custody-backed pass removed seven
+additional worktrees after unique dirty files were captured byte-for-byte,
+tracked baselines were restored, and each worktree was verified clean before
+normal `git worktree remove`.
 
-- `jpv-bootcamp-hotfix-parallel-work`
-- `jpv-bootcamp-billing-integration`
-- `jpv-bootcamp-leaderboard`
-- `jpv-bootcamp-legacy-domain`
-- `.claude/worktrees/agent-a636...`
-- `.claude/worktrees/wf_...-4`
-- the Buildflow `feature_payload-v2` worktree
+The worktree inventory is now **3**:
 
-No branch ref was deleted as part of that cleanup.
+- primary `jpv-bootcamp` on `codex/ux-architecture-consolidation`;
+- `jpv-bootcamp-main` on `codex/post-release-baseline-closeout`;
+- this reconciliation worktree on `codex/repository-reconciliation-20260905`.
+
+Local branch inventory was reduced from 22 to **5** after ancestry,
+patch/behavioral supersession, remote-ref, and recovery-bundle checks. The only
+remaining local branches are:
+
+- `main`;
+- `codex/repository-reconciliation-20260905`;
+- `codex/repository-hardening-20260902` (open PR #30);
+- `codex/ux-architecture-consolidation` (primary dirty worktree);
+- `codex/post-release-baseline-closeout` (environment-custody worktree).
+
+No remote branch ref was deleted.
 
 The repository also contained a tracked `newrelic_agent.log` runtime artifact
 of 45,452,459 bytes. Reconciliation removes it from the current tree and adds
@@ -108,24 +125,17 @@ the historical backup blob remains recoverable from Git history.
 
 ### Preserved worktrees
 
-The following worktrees remain because they contain active work, unique
-untracked files, local credentials/runtime state, or unresolved branch history:
+Two non-reconciliation worktrees remain intentionally:
 
-- primary `jpv-bootcamp` worktree on `codex/ux-architecture-consolidation`;
-- `jpv-bootcamp-aug25-stripe`;
-- `jpv-bootcamp-hardening` / PR #30;
-- `jpv-bootcamp-main` on `codex/post-release-baseline-closeout` because local
-  `.env`, `.env.production`, and `.next/standalone` environment copies require
-  custody;
-- this reconciliation worktree;
-- `jpv-bootcamp-staging-route-fix`;
-- `.claude/worktrees/agent-a640...`;
-- `.claude/worktrees/agent-aace...`;
-- `.claude/worktrees/wf_...-1`;
-- `.claude/worktrees/wf_...-2`.
+- primary `jpv-bootcamp` on `codex/ux-architecture-consolidation` contains
+  substantial modified/untracked documentation, assets, scripts, and runtime
+  material that is not proven safe to discard;
+- `jpv-bootcamp-main` on `codex/post-release-baseline-closeout` contains local
+  `.env`, `.env.production`, and `.next/standalone` environment/runtime custody.
 
-These must not be deleted until unique changes and local-state custody are
-independently resolved.
+Neither is eligible for deletion until its unique/user/environment state has
+an explicit lossless disposition. Keeping them is a safety boundary, not an
+unfinished branch-reconciliation ambiguity.
 
 ### Recovery archive
 
@@ -133,10 +143,14 @@ The lossless recovery backstop is retained at:
 
 `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-safety-20260905`
 
-It is approximately 180 MB and intentionally is not a Git repository. It
-contains the all-refs bundle, primary patch, untracked inventories/tarballs, and
-dirty-worktree patches. It must be retained until repository reconciliation is
-fully landed and the preserved worktrees have their own explicit disposition.
+It intentionally is not a Git repository. In addition to the earlier archive
+material, it now contains the verified complete-history bundle
+`jpv-bootcamp-all-refs-20260906-post-gate1.bundle` plus exact-file custody
+snapshots for every dirty worktree removed in the second cleanup pass. Before
+local branch deletion, every deleted tip was confirmed present in that bundle;
+historical Payload, legacy-domain, overnight-report, staging-route, and v1 tips
+were also confirmed at identical remote refs. The archive must be retained
+until the two preserved custody worktrees receive explicit disposition.
 
 ## Unique branch dispositions
 
@@ -152,6 +166,13 @@ The following decisions are established from source/ancestry comparison:
 | `codex/leaderboard-social-identity` | Functionality already evolved on main. |
 | old portal-layout worktree | Superseded by current portal shell/theme/admin/navigation/live-call implementation. |
 | `fix/staging-tailscale-accept-routes-20260902` | Adopt only the verified route-probe net fix. Defer migration apply-batch change. Do not adopt stale candidate-image publication commits. |
+| old webhook retry-safety worktree (`96f6781`) | Superseded by the stronger mainline atomic claim/finalize/release protocol with 500/503 retry semantics; do not adopt. |
+
+The superseded local-only agent/worktree refs were deleted after their exact
+tips were verified in the complete-history bundle. Local refs for Payload v2,
+legacy-domain, the overnight report, the staging-route branch, and v1 were also
+removed after exact remote-tip and bundle verification. Their remote refs were
+left unchanged.
 
 The pinned Tailscale GitHub Action already injects `--accept-routes`; adding the
 same argument explicitly is redundant. The retained route change verifies the
@@ -184,24 +205,26 @@ PR #30 must not be merged while branch protection requires review.
 - current staging database applied state requires a fresh authorized read-only
   exact-state probe.
 
-The full local release suite is currently green at `182/182`; the remaining
-repository work is final diff/style/type validation, pre-landing adversarial
-review, and landing the reviewed reconciliation branch.
+The full local release suite is green at `182/182`, the exact source candidate
+is committed locally, and adversarial review has no findings. Gate 1 is locally
+complete. Gate 2 staging evidence and Gate 3 production authorization remain
+separate open release gates.
 
 ## Completion criteria for this reconciliation
 
-The repository reconciliation is complete only when all of the following are
-true:
+Gate 1 repository reconciliation is complete locally because all of the
+following are true:
 
 1. stale “current” documentation points here or is explicitly historical;
 2. roadmap and implementation plan use the three-gate model above;
 3. focused tests for newly imported migration/CI/staging artifacts pass;
 4. lint, diff check, type-check, production build, and full `pnpm test:release`
    pass after the final diff;
-5. the final pre-landing review reports no unresolved in-scope defect;
-6. the reconciliation commit contains only reviewed, intentional files;
-7. any push preserves branch protection and does not merge PR #30;
-8. remaining staging/production/operator work is reported as open rather than
+5. the final adversarial review reports no unresolved in-scope defect;
+6. the reconciliation source commit contains only reviewed, intentional files;
+7. cleanup retains lossless custody for every removed dirty worktree/ref;
+8. any future push preserves branch protection and does not merge PR #30;
+9. remaining staging/production/operator work is reported as open rather than
    inferred complete.
 
 See

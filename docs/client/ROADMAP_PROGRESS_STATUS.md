@@ -16,13 +16,15 @@ state remains unknown until a fresh read-only exact-state probe is captured.
 
 | Gate | Status | Meaning |
 | --- | --- | --- |
-| Implementation complete | **IN PROGRESS** | Hardening and reconciliation changes are present locally; final docs scan, validation, review, and commit remain. |
+| Implementation complete | **COMPLETE LOCALLY** | Exact source candidate `dcd8911` is committed; `182/182` release validation and adversarial review are green; cleanup/docs closure is local only. |
 | Staging verified | **OPEN** | Current staging applied migration state is unknown until a fresh read-only exact-state probe and exact-SHA evidence packet are captured. |
 | Production authorized | **NOT AUTHORIZED BY THIS TRACK** | Requires a separate production operation and approval after staging evidence. |
 
-Safe cleanup has reclaimed approximately 6.3 GB from seven independently
-verified clean worktrees while preserving every branch ref. Dirty, unique, and
-credential-bearing worktrees plus the 180 MB recovery archive remain intact.
+Safe cleanup has reduced the workspace to 3 worktrees and 5 local branches.
+Every removed dirty worktree/ref has lossless custody in the verified
+post-Gate-1 complete-history bundle and exact-file snapshots; no remote branch
+was deleted. The primary dirty worktree and the environment-custody worktree
+remain intentionally preserved.
 
 The repository migration registry currently ends with
 `20260901_210000_notification_event_key` and
