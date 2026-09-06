@@ -23,11 +23,11 @@ async function main(): Promise<void> {
   assert.match(approvalStatusSource, /Payload migrations applied:\*\*\s*`35\/35`/)
   assert.match(approvalStatusSource, /Production migration \/ cutover.*NOT performed, NOT authorized/)
   assert.match(approvalPacketSource, /Approve table-plan-to-Free mapping for the target environment\./)
-  assert.match(
-    roadmapSource,
-    /The repository contains (?:36|37) canonical Payload migration registrations\. Registration and the deployment health inventory are not database-applied state\./i,
-  )
-  assert.match(roadmapSource, /has not been run against staging.*authorized operator captures the read-only report/is)
+  assert.match(roadmapSource, /Current 2026-09-06 authority: the repository contains `55` canonical Payload/i)
+  assert.match(roadmapSource, /guarded read-only Gate 2 run `34026196340`/i)
+  assert.match(roadmapSource, /exact SHA `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`/i)
+  assert.match(roadmapSource, /all `55` applied, `0` pending, zero integrity\/anomaly findings, and healthy\s+Prisma state/i)
+  assert.match(roadmapSource, /No migration apply was needed or performed/i)
   assert.match(roadmapSource, /does not authorize further staging writes or any production migration/i)
   assert.match(stagingSmokeSource, /# Staging Smoke Checklist/)
   assert.match(providerReadinessSource, /# Provider and Email Readiness/)

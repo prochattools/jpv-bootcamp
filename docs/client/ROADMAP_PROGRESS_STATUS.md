@@ -11,13 +11,17 @@ remaining implementation sequence is owned by
 Current reconciliation release manifest: `183` entries; `182` required and `1` conditional.
 After the status-document contracts were refreshed, the full local
 `pnpm test:release` gate passed `182/182` required checks on 2026-09-06. This
-closes the repository release-test gate only; current staging applied migration
-state remains unknown until a fresh read-only exact-state probe is captured.
+closes the repository release-test gate. Gate 2 then verified exact staging
+candidate `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`: migration-plan run
+`34026196340` reported `55` applied and `0` pending with zero anomalies and
+healthy Prisma state; deploy run `34026379042` made that exact candidate live in
+staging; authenticated acceptance run `34027526347` passed `24/24` Playwright
+checks.
 
 | Gate | Status | Meaning |
 | --- | --- | --- |
-| Implementation complete | **COMPLETE LOCALLY** | Exact source candidate `dcd8911` is committed; `182/182` release validation and adversarial review are green; cleanup/docs closure is local only. |
-| Staging verified | **OPEN** | Current staging applied migration state is unknown until a fresh read-only exact-state probe and exact-SHA evidence packet are captured. |
+| Implementation complete | **COMPLETE** | Source implementation `dcd8911` and Gate 1 closure candidate `8c74235` are committed; `182/182` release validation and adversarial review are green. |
+| Staging verified | **COMPLETE** | Exact SHA `8c74235` is live in staging; plan `34026196340` is `55` applied / `0` pending; deploy `34026379042` is live; A6 `34027526347` passed `24/24`. |
 | Production authorized | **NOT AUTHORIZED BY THIS TRACK** | Requires a separate production operation and approval after staging evidence. |
 
 Safe cleanup has reduced the workspace to 3 worktrees and 5 local branches.
@@ -28,8 +32,16 @@ remain intentionally preserved.
 
 The repository migration registry currently ends with
 `20260901_210000_notification_event_key` and
-`20260901_220000_member_follows`. Older applied-migration counts below are
-historical environment evidence only.
+`20260901_220000_member_follows` and contains `55` canonical Payload migrations.
+Gate 2 read-only evidence confirms all `55` are applied in staging with none
+pending. Older applied-migration counts below are historical environment
+evidence only.
+
+Gate 2 performed no migration apply, bootstrap, backfill, QA seed, provider or
+billing mutation, or production action. Authenticated acceptance used normal
+Payload login behavior, which can update bounded staging login/session metadata
+for its two test actors. Live-provider smoke remains deferred and is not part of
+this reconciliation Gate 2 closeout.
 
 ## Historical Rooms production release — 2026-08-30
 
@@ -508,10 +520,11 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 
 ## Final staging readiness checkpoint — 2026-08-21
 
-This is a historical checkpoint, superseded by the 2026-08-24 Phase 9.5
-convergence evidence above. Its 36/36 and readiness claims are retained for
-audit only; staging currently has migration 37 pending and the candidate is
-not live.
+This is a historical checkpoint, superseded first by the 2026-08-24 Phase 9.5
+convergence evidence and now by the 2026-09-06 reconciliation authority above.
+Its 36/36 and readiness claims are retained for audit only. At the later
+2026-08-24 checkpoint, migration 37 was pending and that checkpoint's candidate
+was not live; those statements are not current staging state.
 
 Status: READY FOR PRODUCTION AUTHORIZATION REVIEW (production operation NOT authorized)
 
@@ -549,7 +562,18 @@ Hard stops:
 
 ## Migration status
 
-The repository contains 36 canonical Payload migration registrations. Registration and the deployment health inventory are not database-applied state. The real `pnpm staging:migration-status` adapter is implemented as one guarded PostgreSQL client and one read-only transaction, but it has not been run against staging in this work. Exact Payload and Prisma applied, failed, in-progress, rolled-back, and pending state therefore remains unverified until an authorized operator captures the read-only report.
+Current 2026-09-06 authority: the repository contains `55` canonical Payload
+migration registrations, and guarded read-only Gate 2 run `34026196340`
+verified staging at exact SHA `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`
+with all `55` applied, `0` pending, zero integrity/anomaly findings, and healthy
+Prisma state. No migration apply was needed or performed.
+
+Historical safety context retained for older launch packets: the repository
+contains 36 canonical Payload migration registrations. Registration and the
+deployment health inventory are not database-applied state. At that checkpoint,
+the real `pnpm staging:migration-status` adapter had not been run against
+staging in this work; an authorized operator still had to capture the read-only
+report before relying on that checkpoint's state.
 
 Repository documentation identifies the support schema, account-column rename, table-plan enum removal, and a future account-action reservation/finalization schema as migration candidates or open requirements. Their actual target state must not be inferred from repository names or health output. Do not execute any migration until the target owner approves the business mapping, exact database/schema, backup, operator, maintenance window, apply path, verification, and rollback procedure.
 

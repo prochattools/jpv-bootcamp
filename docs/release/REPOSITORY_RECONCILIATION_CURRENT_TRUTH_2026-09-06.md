@@ -3,7 +3,10 @@
 **Authority date:** 2026-09-06
 **Reconciliation branch:** `codex/repository-reconciliation-20260905`
 **Starting source authority:** `origin/main` at `f93ffac7dd299c39d8daf242d6a436272cc79188`
-**Status:** Gate 1 repository reconciliation is complete locally; the reconciliation branch is not pushed.
+**Status:** Gate 1 implementation and Gate 2 exact-SHA staging verification are
+complete. Gate 3 production remains unauthorized. The reconciliation branch
+itself is not pushed; Gate 2 used the dedicated remote source ref
+`release/gate2-reconciliation-20260906`.
 
 This document is the current repository-level authority for the assessment,
 hardening, branch reconciliation, cleanup, and release-readiness work started on
@@ -14,16 +17,19 @@ claim that describes itself as “current”, “authoritative”, “ready”, 
 ## Evidence rules
 
 The repository can prove source code, registered migrations, branch ancestry,
-local validation, and tracked documentation. It cannot prove the currently
-applied staging or production database state without a fresh environment probe.
+local validation, and tracked documentation. Current staging state is now also
+backed by fresh exact-SHA environment evidence captured during Gate 2. Current
+production state still requires its own fresh environment probe before any
+production operation.
 
 Three gates must remain separate:
 
 1. **Implementation complete** — repository code, tests, documentation, and
    review are internally consistent.
 2. **Staging verified** — a fresh exact-target, exact-SHA staging evidence
-   packet establishes deployment, schema/migration state, provider behavior,
-   and required acceptance checks.
+   packet establishes deployment, schema/migration state, and required
+   acceptance checks. Provider smoke remains separate when the release contract
+   explicitly requires it.
 3. **Production authorized** — a separate approval permits production
    mutation, migration, deployment, provider changes, or cutover.
 
@@ -51,20 +57,26 @@ The main categories are:
 - staging migration-plan configuration and preflight hardening imported from
   the safe portion of PR #30.
 
-No production data, staging data, provider state, credentials, deployment,
-Stripe state, or database schema has been mutated by this reconciliation.
+No production data, provider state, credentials, Stripe/billing state, or
+database schema was mutated by this reconciliation. Gate 2 did deploy the exact
+candidate to staging and ran authenticated acceptance. Payload login may write
+controlled staging authentication/session metadata and reset login-attempt
+metadata on the two staging acceptance actors; no business-data migration,
+bootstrap, backfill, seed, provider mutation, or billing mutation occurred.
 
 Local release validation on 2026-09-06 passed the complete required manifest:
 `pnpm test:release` reported `182/182`. The manifest contains `183` entries in
 total: `182` required and `1` conditional. This result proves the local
-repository gate only and does not establish current staging database state.
+repository gate. Gate 2 staging state is established separately by the fresh
+environment evidence recorded below.
 
-The exact source candidate was committed locally as
+The exact source implementation was committed locally as
 `dcd8911ebdf61a48d45525ae86f7b57d399ff2ba` (`chore: reconcile repository
-state and release hardening`). The final adversarial review of that candidate
-reported zero findings and assessed the patch as correct. No push, PR merge,
-deployment, provider mutation, Stripe mutation, database mutation, or
-staging/production operation followed.
+state and release hardening`). Gate 1 documentation closure then produced exact
+Gate 2 execution candidate `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`.
+The final adversarial review reported zero findings and assessed the source
+patch as correct. The dedicated Gate 2 release ref was pushed for staging
+verification; PR #30 was not merged and no production operation followed.
 
 ## Migration source truth
 
@@ -77,13 +89,36 @@ Older documentation that names 35, 36, 37, 52, or 53 applied migrations records
 the environment at a prior checkpoint. Those counts must not be projected onto
 the current staging database.
 
-**Current staging applied state: UNKNOWN until a fresh read-only exact-state
-probe is captured.**
+**Current Gate 2 staging applied state: VERIFIED at exact candidate
+`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`.** Read-only migration-plan run
+`34026196340` reported `55` Payload migrations applied, `0` pending migrations,
+zero integrity/anomaly findings, and healthy Prisma state.
 
 The staging-route branch contains a guarded apply-batch change that targets the
-two September 1 migrations. The source registry confirms those migration names,
-but current staging applied-state evidence is insufficient to establish whether
-that batch is appropriate. The apply-batch change therefore remains deferred.
+two September 1 migrations. The fresh Gate 2 plan proves both are already
+applied and nothing is pending, so no staging migration apply was required or
+performed. The apply-batch change remains deferred.
+
+## Gate 2 staging evidence
+
+Gate 2 is complete for the repository reconciliation candidate. The evidence is
+bound to source ref `release/gate2-reconciliation-20260906` and exact SHA
+`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`:
+
+- read-only migration-plan workflow `34026196340`: `plan_ok`, `55` applied,
+  `0` pending, zero anomalies, Prisma healthy;
+- exact-SHA staging deploy workflow `34026379042`: staging health reported
+  `status: live`, `deploymentEnv: staging`, and the exact candidate commit/image;
+- authenticated acceptance workflow `34027526347`: `24/24` Playwright checks
+  passed across authenticated member and creator/admin routes, course/module/
+  lesson navigation, community, server-authorized admin session, and Admin Mode;
+- mutation-capable staging migration apply, bootstrap, backfill, QA seed, and
+  provider/billing jobs were not run; production was not touched.
+
+The authenticated acceptance lane can update controlled login/session metadata
+for its two staging actor records as part of normal Payload authentication. That
+bounded behavior is distinct from business-data, schema, provider, billing, or
+production mutation.
 
 ## Branch and worktree reconciliation
 
@@ -198,17 +233,20 @@ PR #30 must not be merged while branch protection requires review.
   currently used Payload line because no verified patched upgrade was available
   during the dependency assessment. Do not force an unverified major/minor
   upgrade merely to silence the advisory.
-- Browser E2E (`M1-03`) remains an external/operator validation.
 - `support-request-migration-apply` remains an explicitly deferred mutation.
-- live-provider smoke remains an external/operator validation.
-- deployment and production smoke remain external/operator validations.
-- current staging database applied state requires a fresh authorized read-only
-  exact-state probe.
+- live-provider smoke remains deferred external/operator validation and was not
+  required to close this repository-reconciliation Gate 2.
+- production smoke remains an external/operator validation under Gate 3.
+- the successful A6 workflow emitted a post-job checkout warning for a stale
+  `.claude/worktrees/...` submodule path absent from `.gitmodules`; all `24/24`
+  acceptance checks still passed. GitHub also emitted its Node 20-to-24 action
+  runtime deprecation warning. Both are residual tooling noise, not Gate 2
+  failures.
 
 The full local release suite is green at `182/182`, the exact source candidate
-is committed locally, and adversarial review has no findings. Gate 1 is locally
-complete. Gate 2 staging evidence and Gate 3 production authorization remain
-separate open release gates.
+is committed locally, and adversarial review has no findings. Gate 1 is
+complete. Gate 2 exact-SHA staging verification is complete. Gate 3 production
+authorization remains separate and explicitly unauthorized by this track.
 
 ## Completion criteria for this reconciliation
 
@@ -224,8 +262,9 @@ following are true:
 6. the reconciliation source commit contains only reviewed, intentional files;
 7. cleanup retains lossless custody for every removed dirty worktree/ref;
 8. any future push preserves branch protection and does not merge PR #30;
-9. remaining staging/production/operator work is reported as open rather than
-   inferred complete.
+9. Gate 2 evidence is bound to the exact staging SHA and run IDs above;
+10. remaining production/deferred operator work is reported as open rather than
+    inferred complete.
 
 See
 [REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md](REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md)

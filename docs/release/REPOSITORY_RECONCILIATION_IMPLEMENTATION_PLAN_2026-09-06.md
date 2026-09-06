@@ -75,32 +75,46 @@ Run and require green results for:
 
 ### R5. Final review and local landing
 
-**Status:** complete locally; remote landing is intentionally not performed.
+**Status:** complete locally. The reconciliation branch itself remains local;
+the dedicated Gate 2 source ref was subsequently pushed for exact-SHA staging
+verification.
 
 - final adversarial review reported zero findings and assessed the patch as
   correct;
 - exact reviewed source candidate committed locally as `dcd8911`;
-- this documentation/cleanup closure records the post-commit branch/worktree
-  reconciliation state;
-- no push, PR merge, deployment, or external mutation occurred;
+- Gate 1 documentation/cleanup closure produced exact Gate 2 candidate
+  `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`;
+- no PR merge or production operation occurred during Gate 1;
 - any future push must target the reconciliation branch and preserve branch
   protection; PR #30 remains separate.
 
 ## Gate 2 — Staging verified
 
-**Status:** open. Repository work alone cannot close this gate.
+**Status:** **COMPLETE** for exact staging candidate
+`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`.
 
-Required fresh evidence:
+Captured fresh evidence:
 
-- exact candidate SHA and exact staging target;
-- read-only applied/pending migration state with integrity/anomaly checks;
-- Prisma/schema health;
-- exact-SHA deployment/health evidence;
-- required browser E2E/acceptance packet;
-- live-provider smoke where the release contract requires it.
+- source ref `release/gate2-reconciliation-20260906` resolved to the exact
+  candidate SHA;
+- read-only migration-plan run `34026196340` reported `55` applied Payload
+  migrations, `0` pending, zero anomalies, and healthy Prisma state;
+- exact-SHA staging deploy run `34026379042` reported the exact candidate image
+  live in `deploymentEnv: staging`;
+- authenticated acceptance run `34027526347` passed `24/24` Playwright checks
+  across the required member and creator/admin route matrices and navigation;
+- all migration-apply, bootstrap, backfill, QA-seed, provider/billing mutation,
+  and production lanes remained unused.
 
-The current staging applied state remains **UNKNOWN** until the read-only probe
-is captured. No staging migration apply is authorized by this plan.
+No staging migration apply was needed because the read-only plan found no
+pending migrations. The authenticated acceptance lane can write bounded
+login/session metadata for its two staging test actors as part of normal Payload
+authentication; it did not mutate business data, schema, provider, billing, or
+production state.
+
+Live-provider smoke remains deferred because this reconciliation Gate 2 did not
+require a live-provider mutation/verification lane. It must stay a separately
+authorized operator task wherever a later release contract requires it.
 
 ## Gate 3 — Production authorized
 
@@ -116,15 +130,16 @@ is not production authorization.
 - `support-request-migration-apply`;
 - current-staging migration apply batch from the staging-route branch;
 - stale candidate-image publication lane tied to the old `477eb1e...` candidate;
-- live-provider smoke;
+- live-provider smoke where a later release contract requires it;
 - deployment/production smoke;
-- browser E2E `M1-03` when it requires an operator/environment lane;
+- real-device/WebRTC or other operator-only browser checks that are distinct
+  from the completed A6 authenticated acceptance packet;
 - PR #30 merge while GitHub reports `REVIEW_REQUIRED`.
 
 ## Exit condition
 
-Gate 1 repository reconciliation is complete locally. Gate 2 and Gate 3 remain
-explicitly open and require their own evidence/authorization. The two preserved
-non-reconciliation worktrees are separate custody work: they must not be
-deleted until their unique or environment-local state has a lossless
-disposition.
+Gate 1 repository reconciliation and Gate 2 exact-SHA staging verification are
+complete. Gate 3 remains explicitly unauthorized and requires its own
+production evidence/authorization. The two preserved non-reconciliation
+worktrees are separate custody work: they must not be deleted until their unique
+or environment-local state has a lossless disposition.
