@@ -424,17 +424,17 @@ function buildLessonNavigation(
 
   for (const entry of sequence) {
     const moduleId = String(entry.module.id)
-    let module = modules.find((item) => item.id === moduleId)
-    if (!module) {
-      module = {
+    let courseModule = modules.find((item) => item.id === moduleId)
+    if (!courseModule) {
+      courseModule = {
         id: moduleId,
         title: asString(entry.module.title) ?? 'Untitled module',
         lessons: [],
       }
-      modules.push(module)
+      modules.push(courseModule)
     }
 
-    module.lessons.push({
+    courseModule.lessons.push({
       id: String(entry.lesson.id),
       title: asString(entry.lesson.title) ?? 'Untitled lesson',
       slug: asString(entry.lesson.slug),
@@ -488,8 +488,8 @@ async function buildCourseProjection(
 function findContinueLesson(courses: MemberPortalCourse[]): MemberPortalContinueLesson {
   for (const course of courses) {
     if (!course.allowed) continue
-    for (const module of course.modules) {
-      for (const lesson of module.lessons) {
+    for (const courseModule of course.modules) {
+      for (const lesson of courseModule.lessons) {
         if (!lesson.completed) {
           return {
             courseTitle: course.title,
@@ -596,10 +596,10 @@ export async function getMemberLessonDetail(
   if (!lesson) return null
 
   const moduleId = relationshipId(lesson.module)
-  const module = await findOne(payload, 'payload_course_modules', {
+  const courseModule = await findOne(payload, 'payload_course_modules', {
     id: { equals: moduleId },
   })
-  const courseId = relationshipId(module?.course)
+  const courseId = relationshipId(courseModule?.course)
   const course = await findOne(payload, 'payload_courses', {
     and: [
       { id: { equals: courseId } },
@@ -608,11 +608,11 @@ export async function getMemberLessonDetail(
     ],
   })
 
-  if (!module || !course) return null
+  if (!courseModule || !course) return null
 
   if (isHiddenLegacyWelcomeLesson({
     courseSlug: asString(course.slug),
-    moduleTitle: asString(module.title),
+    moduleTitle: asString(courseModule.title),
     lessonSlug: asString(lesson.slug),
     lessonTitle: asString(lesson.title),
   })) return null
@@ -645,8 +645,8 @@ export async function getMemberLessonDetail(
       slug: asString(course.slug),
     },
     module: {
-      id: String(module.id),
-      title: asString(module.title) ?? 'Untitled module',
+      id: String(courseModule.id),
+      title: asString(courseModule.title) ?? 'Untitled module',
     },
     lesson: allowed
       ? {

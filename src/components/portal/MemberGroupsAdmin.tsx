@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 
 import {
   archiveMemberGroupAction,
@@ -36,18 +36,13 @@ export function MemberGroupsAdmin({ members, groups: initialGroups }: Props) {
     return members.filter((member) => `${member.label} ${member.email ?? ''}`.toLowerCase().includes(query))
   }, [memberSearch, members])
 
-  useEffect(() => {
-    if (!selectedGroup) {
-      setName('')
-      setDescription('')
-      setSelectedMemberIds([])
-      return
-    }
-    setName(selectedGroup.name)
-    setDescription(selectedGroup.description ?? '')
-    setSelectedMemberIds(selectedGroup.memberIds)
+  function selectGroup(group: MemberGroupSummary) {
+    setSelectedGroupId(group.id)
+    setName(group.name)
+    setDescription(group.description ?? '')
+    setSelectedMemberIds(group.memberIds)
     setMessage(null)
-  }, [selectedGroup])
+  }
 
   function startNewGroup() {
     setSelectedGroupId(null)
@@ -91,7 +86,7 @@ export function MemberGroupsAdmin({ members, groups: initialGroups }: Props) {
         setGroups((current) => selectedGroup
           ? current.map((group) => group.id === result.data!.id ? result.data! : group)
           : [...current, result.data!].sort((left, right) => left.name.localeCompare(right.name)))
-        setSelectedGroupId(result.data.id)
+        selectGroup(result.data)
       }
       setMessage('Group saved.')
     })
@@ -145,7 +140,7 @@ export function MemberGroupsAdmin({ members, groups: initialGroups }: Props) {
             <button
               className={`block w-full rounded-jpv-card border px-3 py-3 text-left ${selectedGroupId === group.id ? 'border-jpv-brand-deep bg-jpv-surface' : 'border-jpv-border bg-jpv-canvas'}`}
               key={group.id}
-              onClick={() => setSelectedGroupId(group.id)}
+              onClick={() => selectGroup(group)}
               type='button'
             >
               <span className='block truncate text-sm font-semibold text-jpv-ink'>{group.name}</span>

@@ -1,8 +1,8 @@
 # Legacy Platform → Payload Staging Dry-Run Plan
 
-> **Historical planning record — reviewed checkpoint 2026-08-15.** This dry-run plan remains useful as migration design provenance, but it is not a current staging-status report. The current source registry contains 36 migrations and the current live database state is unverified by the 2026-08-23 reconciliation. Do not use this document alone to authorize a write.
+> **Historical planning record — reviewed checkpoint 2026-08-15.** This dry-run plan remains useful as migration design provenance, but it is not a current staging-status report. The source registry has advanced beyond this checkpoint and the current live database state is not established by this document. Do not use this document alone to authorize a write.
 
-> **Current authority:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`. Remaining migration/media work is tracked in `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`. All “current” counts in this historical plan are checkpoint-specific unless the current-truth document explicitly re-adopts them.
+> **Current authority:** `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`. All “current” counts in this historical plan are checkpoint-specific unless the current-truth document explicitly re-adopts them.
 
 **Repository:** jpv-bootcamp  
 **Branch:** `feature/course-branding-and-preview`  

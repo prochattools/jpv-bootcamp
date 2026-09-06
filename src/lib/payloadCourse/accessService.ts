@@ -757,15 +757,15 @@ export async function evaluatePayloadLessonAccess(
   }
 
   const moduleId = relationshipId(lesson.module)
-  const module = await findByIdSafe(payload, 'payload_course_modules', moduleId)
-  const courseId = relationshipId(module?.course)
+  const courseModule = await findByIdSafe(payload, 'payload_course_modules', moduleId)
+  const courseId = relationshipId(courseModule?.course)
   const course = await findByIdSafe(payload, 'payload_courses', courseId)
 
-  if (!module || !course) {
+  if (!courseModule || !course) {
     return failClosed('content_not_published', {
       resourceType: 'lesson',
       lessonId: String(lesson.id),
-      missingParent: !module ? 'module' : 'course',
+      missingParent: !courseModule ? 'module' : 'course',
     })
   }
 

@@ -269,12 +269,15 @@ async function main(): Promise<void> {
     assert.ok(planJobYml.includes('tag:ci-reader'), 'must set tag:ci-reader ACL tag')
   })
 
-  await test('tailscale: ping probe before TCP probe', () => {
-    const pingIdx = planJobYml.indexOf('tailscale ping')
+  await test('tailscale: verifies the subnet route before TCP probe', () => {
+    const routeIdx = planJobYml.indexOf('ip route get')
     const ncIdx = planJobYml.indexOf('nc -z')
-    assert.ok(pingIdx > -1, 'must run tailscale ping to verify connectivity')
+    assert.ok(routeIdx > -1, 'must inspect the OS route to the subnet-routed staging host')
     assert.ok(ncIdx > -1, 'must run nc -z TCP probe to verify port reachability')
-    assert.ok(pingIdx < ncIdx, 'tailscale ping must precede nc TCP probe')
+    assert.ok(routeIdx < ncIdx, 'the subnet route must be verified before the TCP probe')
+    assert.ok(planJobYml.includes('dev tailscale0'), 'the staging route must use the Tailscale interface')
+    assert.doesNotMatch(planJobYml, /args:\s+--accept-routes/, 'v4.1.3 already adds --accept-routes internally; do not pass it twice')
+    assert.ok(planJobYml.includes('tailscale ping --timeout=10s 100.71.47.24'), 'direct Tailscale peer ping must remain for the protected backup host')
   })
 
   // ─── Network: port 5433 (not 5432) ────────────────────────────────────────

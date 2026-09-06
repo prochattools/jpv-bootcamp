@@ -74,6 +74,7 @@ export default async function ShadowValidationPage(): Promise<JSX.Element> {
       <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 sm:p-6'>
         <div className='flex flex-wrap items-center justify-between gap-4'>
           <h2 className='font-semibold text-jpv-ink'>Admin evidence</h2>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- This API route returns a downloadable JSON response and requires native navigation. */}
           <a className='jpv-button-secondary min-h-11 px-4 text-sm' href='/api/admin/shadow-validation/evidence'>
             Download JSON
           </a>

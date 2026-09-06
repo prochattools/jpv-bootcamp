@@ -15,6 +15,13 @@ type LiveSession = {
   hostUser?: string | { id: string; email?: string } | null
 }
 
+async function fetchSessionsData(signal?: AbortSignal): Promise<LiveSession[]> {
+  const res = await fetch('/api/admin/sessions', { signal })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  return data.sessions ?? []
+}
+
 export default function AdminSessionsPage() {
   const [sessions, setSessions] = useState<LiveSession[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -28,19 +35,27 @@ export default function AdminSessionsPage() {
   const [submitting, setSubmitting] = useState(false)
 
   async function loadSessions() {
-    setLoadError(null)
     try {
-      const res = await fetch('/api/admin/sessions')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setSessions(data.sessions ?? [])
+      const nextSessions = await fetchSessionsData()
+      setLoadError(null)
+      setSessions(nextSessions)
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load sessions')
     }
   }
 
   useEffect(() => {
-    loadSessions()
+    const controller = new AbortController()
+    void fetchSessionsData(controller.signal)
+      .then((nextSessions) => {
+        setLoadError(null)
+        setSessions(nextSessions)
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return
+        setLoadError(err instanceof Error ? err.message : 'Failed to load sessions')
+      })
+    return () => controller.abort()
   }, [])
 
   async function createSession() {

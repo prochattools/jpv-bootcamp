@@ -1,14 +1,30 @@
 # Payload CMS Integration Plan
 
-## Current repository reconciliation — 2026-08-23
+## Current repository authority — 2026-09-06
+
+Repository implementation, assessment, cleanup, branch/worktree disposition,
+and release-gate truth are owned by
+`docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md` and
+`docs/release/REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md`.
+
+This document remains the architecture and long-form Payload implementation
+plan. The repository source currently registers migrations through
+`20260901_220000_member_follows`, but source registration does not establish
+what is applied in staging. Current staging applied state is unknown until a
+fresh read-only exact-state probe is captured.
+
+The dated reconciliation and staging sections below are historical evidence.
+They must not override the 2026-09-06 repository authority.
+
+## Historical repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; current repository tip `626bf3926412065fb7e5655d35c98d8f4be67a58` is documentation-only relative to the canonical staging release. The single canonical staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`; all other SHAs are historical or repository checkpoints.
 - **Current source truth:** the feature branch is the authoritative implementation under review. The registry contains 36 migrations, ending with `20260820_000000_live_session_space`; the release-lead verified sanitized staging position is 36/36 applied with pending `[]`, and the current workflow checks that post-apply state read-only.
 - **Local evidence:** after cleanup, `pnpm test:release` passed `164/164`, the focused browser set passed `60/60`, and full browser E2E passed `148/148` with 60 declared skips. The initial shared muted-token contrast defect and tracked sponsored-claim backup were corrected.
 - **Live evidence boundary:** migration state is reconciled from the release-lead verified sanitized position; exact-SHA staging deployment, provider state, production schema, production deployment, and cutover approval were not reverified or changed by this reconciliation. Historical deployment/acceptance snapshots below remain audit evidence only.
 - **Cutover plan:** use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`; do not rename, reset, or force-push `main`.
-- **Current release dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md` is the authoritative reconciliation of implementation, documentation, branch, and evidence state. Long-form dated sections below remain design or historical records unless explicitly marked current.
-- **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` owns current implementation/release status; `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` owns the remaining completion work. This plan remains the architecture and implementation-plan authority.
+- **Historical release dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md` records the 2026-08-23 reconciliation baseline. Long-form dated sections below remain design or historical records unless explicitly adopted by the 2026-09-06 repository authority.
+- **Historical Phase 9.5 references:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` describe that dated phase and do not override the current repository truth above.
 
 ## Historical staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
 

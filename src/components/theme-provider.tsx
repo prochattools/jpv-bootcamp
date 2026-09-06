@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 export type PortalTheme = 'light' | 'dark'
@@ -26,10 +26,12 @@ export function PortalThemeProvider({
   enabled?: boolean
 }) {
   const [theme, setTheme] = useState<PortalTheme>('light')
+  const [previousEnabled, setPreviousEnabled] = useState(enabled)
 
-  useEffect(() => {
-    if (!enabled) setTheme('light')
-  }, [enabled])
+  if (previousEnabled !== enabled) {
+    setPreviousEnabled(enabled)
+    if (!enabled && theme !== 'light') setTheme('light')
+  }
 
   const toggleTheme = useCallback(() => {
     if (!enabled) return

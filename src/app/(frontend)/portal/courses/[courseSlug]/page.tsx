@@ -17,8 +17,8 @@ function findContinueLessonHref(
   modules: Array<{ lessons: Array<{ completed: boolean; slug: string | null }> }>,
   courseSlug: string,
 ): string | null {
-  for (const module of modules) {
-    for (const lesson of module.lessons) {
+  for (const courseModule of modules) {
+    for (const lesson of courseModule.lessons) {
       if (!lesson.completed && lesson.slug) {
         return `/portal/courses/${courseSlug}/lessons/${lesson.slug}`
       }
@@ -49,7 +49,6 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
         <header className='space-y-4'>
           {course.coverImage ? (
             <div className='max-h-[300px] w-full overflow-hidden rounded-xl border border-jpv-border bg-jpv-surface'>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 alt={course.coverImage.alt}
                 className='h-full max-h-[300px] w-full object-cover'

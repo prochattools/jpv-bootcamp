@@ -80,8 +80,8 @@ export async function updateModuleCommand(
   input: ModuleUpdateInput,
 ): Promise<ModuleCommandResult> {
   const persistence = persistenceContext(context)
-  const module = await findModuleById(persistence, moduleId)
-  if (!module) throw new PortalAdminActionError('not_found', 'Module not found.')
+  const courseModule = await findModuleById(persistence, moduleId)
+  if (!courseModule) throw new PortalAdminActionError('not_found', 'Module not found.')
 
   const data: Record<string, unknown> = {}
   if (input.title !== undefined) data.title = validateTitle(input.title)
@@ -94,11 +94,11 @@ export async function updateModuleCommand(
     action: 'module.updated',
     targetCollection: 'payload_course_modules',
     targetId: moduleId,
-    before: { title: module.title },
+    before: { title: courseModule.title },
     after: data,
   })
 
-  const course = await findCourseForModule(persistence, module).catch((error): null => {
+  const course = await findCourseForModule(persistence, courseModule).catch((error): null => {
     void error
     return null
   })
@@ -136,8 +136,8 @@ export async function deleteModuleCommand(
 ): Promise<ModuleCommandResult> {
   assertDeletionConfirmed(confirmed)
   const persistence = persistenceContext(context)
-  const module = await findModuleById(persistence, moduleId)
-  if (!module) throw new PortalAdminActionError('not_found', 'Module not found.')
+  const courseModule = await findModuleById(persistence, moduleId)
+  if (!courseModule) throw new PortalAdminActionError('not_found', 'Module not found.')
 
   if ((await findLessonsForModule(persistence, moduleId, 1)).length > 0) {
     throw new PortalAdminActionError(
@@ -151,9 +151,9 @@ export async function deleteModuleCommand(
     action: 'module.deleted',
     targetCollection: 'payload_course_modules',
     targetId: moduleId,
-    before: { title: module.title },
+    before: { title: courseModule.title },
   })
-  const course = await findCourseForModule(persistence, module).catch((error): null => {
+  const course = await findCourseForModule(persistence, courseModule).catch((error): null => {
     void error
     return null
   })

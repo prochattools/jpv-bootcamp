@@ -46,7 +46,6 @@ export function AuthShell({
         style={branding?.bannerBackgroundColor ? { backgroundColor: branding.bannerBackgroundColor } : undefined}
       >
         <Link className='relative flex w-fit items-center' href='/'>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img alt={jpvBrand.logoAlt} className='h-16 w-auto max-w-[12rem] object-contain' src={jpvBrand.logoHorizontalPath} />
         </Link>
 
@@ -80,7 +79,6 @@ export function AuthShell({
           {/* Logo — visible on mobile; desktop sees logo in the left banner */}
           <div className='mb-8 lg:hidden'>
             <Link href='/'>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img alt={jpvBrand.logoAlt} className='h-12 w-auto max-w-[10rem] object-contain' src={jpvBrand.logoHorizontalPath} />
             </Link>
           </div>

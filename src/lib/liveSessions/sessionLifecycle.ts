@@ -99,13 +99,13 @@ export function generateLiveSessionRoomName(input: {
   lessonId?: string | null
 }): string {
   const course = sanitizeRoomSegment(input.courseId)
-  const module = sanitizeRoomSegment(input.moduleId ?? 'general')
+  const courseModule = sanitizeRoomSegment(input.moduleId ?? 'general')
   const lesson = sanitizeRoomSegment(input.lessonId ?? 'general')
-  if (!course || !module || !lesson) {
+  if (!course || !courseModule || !lesson) {
     throw new Error('Live session relationships cannot generate a valid room name.')
   }
 
-  const roomName = `jpv-course-${course}-module-${module}-lesson-${lesson}`.slice(0, 128)
+  const roomName = `jpv-course-${course}-module-${courseModule}-lesson-${lesson}`.slice(0, 128)
   if (!isValidLiveSessionRoomName(roomName)) {
     throw new Error('Generated LiveKit room name is invalid.')
   }
@@ -288,9 +288,9 @@ export async function assertLiveSessionRelationships(params: {
   }
 
   if (moduleId) {
-    let module: Record<string, unknown>
+    let courseModule: Record<string, unknown>
     try {
-      module = await params.payload.findByID({
+      courseModule = await params.payload.findByID({
         collection: 'payload_course_modules',
         id: moduleId,
         depth: 0,
@@ -299,7 +299,7 @@ export async function assertLiveSessionRelationships(params: {
     } catch {
       throw new Error(`Module "${moduleId}" was not found. It may have been deleted.`)
     }
-    if (liveSessionRelationshipId(module.course) !== courseId) {
+    if (liveSessionRelationshipId(courseModule.course) !== courseId) {
       throw new Error(
         `The selected module does not belong to the selected course. Clear the module field and re-select from the filtered list.`,
       )

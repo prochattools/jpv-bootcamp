@@ -11,6 +11,9 @@ function commandOf(id: string): string | undefined {
 
 function main(): void {
   const releaseCount = RELEASE_TEST_MANIFEST.filter((entry) => entry.requirement === 'required').length
+  const conditionalReleaseCount = RELEASE_TEST_MANIFEST.filter((entry) => entry.requirement === 'conditional').length
+  const releaseManifestCount = RELEASE_TEST_MANIFEST.length
+  const currentManifestLine = `Current reconciliation release manifest: \`${releaseManifestCount}\` entries; \`${releaseCount}\` required and \`${conditionalReleaseCount}\` conditional.`
   const previewReadiness = readFileSync('docs/PREVIEW_RELEASE_READINESS.md', 'utf8')
   const roadmap = readFileSync('docs/client/ROADMAP_PROGRESS_STATUS.md', 'utf8')
   const operatorHandoff = readFileSync('docs/client/OPERATOR_HANDOFF_SUMMARY.md', 'utf8')
@@ -51,6 +54,7 @@ function main(): void {
 
   assert.equal(packageJson.scripts?.['staging:migration-preflight'], 'tsx scripts/release/stagingMigrationPreflight.ts')
   assert.equal(packageJson.scripts?.['staging:migration-status'], 'tsx scripts/release/buildStagingMigrationStatus.ts')
+  assert.equal(packageJson.scripts?.['production:migration-status:read-only'], 'tsx scripts/release/verifyProductionMigrationStatus.ts')
   assert.equal(packageJson.scripts?.['staging:migration-rehearsal'], 'tsx scripts/release/migrationRehearsal.ts')
   assert.equal(packageJson.scripts?.['staging:migration-rehearsal:evidence'], 'tsx scripts/release/buildMigrationRehearsalEvidence.ts')
   assert.equal(packageJson.scripts?.['staging:decision-readiness'], 'tsx scripts/release/runDecisionReadiness.ts')
@@ -103,7 +107,7 @@ function main(): void {
   assert.match(previewReadiness, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
   assert.match(previewReadiness, /30853006495/)
   assert.match(previewReadiness, /M2-01.*post-core/i)
-  assert.match(previewReadiness, new RegExp(`pnpm test:release.*${releaseCount}\\/${releaseCount}`, 'i'))
+  assert.ok(previewReadiness.includes(currentManifestLine))
   assert.match(previewReadiness, /pnpm test:e2e.*188 collected.*148 passed/i)
   assert.match(previewReadiness, /pnpm staging:decision-readiness/i)
   assert.match(previewReadiness, /pnpm test:release:full/)
@@ -131,7 +135,7 @@ function main(): void {
   assert.match(roadmap, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
 
   assert.match(operatorHandoff, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
-  assert.match(operatorHandoff, new RegExp(String.raw`Deterministic release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))
+  assert.ok(operatorHandoff.includes(currentManifestLine))
   assert.match(operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(Playwright: 188 collected, 148 passed/)
   assert.match(operatorHandoff, /pnpm staging:decision-readiness/)
   assert.match(operatorHandoff, /DECISION-READY, EXTERNAL APPROVALS PENDING/)

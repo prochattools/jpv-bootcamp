@@ -133,8 +133,8 @@ export async function findCourseForLesson(
 ): Promise<PayloadDocument | null> {
   const moduleId = relationshipId(lesson.module)
   if (!moduleId) return null
-  const module = await findModuleById(context, moduleId)
-  return module ? findCourseForModule(context, module) : null
+  const courseModule = await findModuleById(context, moduleId)
+  return courseModule ? findCourseForModule(context, courseModule) : null
 }
 
 export async function createRecord(

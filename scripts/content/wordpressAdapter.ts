@@ -165,7 +165,6 @@ function extractMediaReferences(
   const srcPattern = /\bsrc=["']([^"']+)["']/gi
   let match: RegExpExecArray | null
 
-  // eslint-disable-next-line no-cond-assign
   while ((match = srcPattern.exec(content)) !== null) {
     const url = match[1]
     if (!url || seen.has(url)) continue
@@ -291,7 +290,6 @@ function extractCategories(xml: string, domain?: string): string[] {
   )
   const results: string[] = []
   let match: RegExpExecArray | null
-  // eslint-disable-next-line no-cond-assign
   while ((match = pattern.exec(xml)) !== null) {
     const value = (match[1] ?? match[2] ?? '').trim()
     if (value) results.push(value)
@@ -306,7 +304,6 @@ function extractPostMeta(itemXml: string): Record<string, string> {
   const meta: Record<string, string> = {}
   const metaBlockPattern = /<wp:postmeta>([\s\S]*?)<\/wp:postmeta>/gi
   let blockMatch: RegExpExecArray | null
-  // eslint-disable-next-line no-cond-assign
   while ((blockMatch = metaBlockPattern.exec(itemXml)) !== null) {
     const block = blockMatch[1]
     const keyMatch = /<wp:meta_key[^>]*>(?:<!\[CDATA\[)?([^\]<]*)(?:\]\]>)?<\/wp:meta_key>/i.exec(block)
@@ -325,7 +322,6 @@ function splitWxrItems(xml: string): string[] {
   const items: string[] = []
   const pattern = /<item>([\s\S]*?)<\/item>/gi
   let match: RegExpExecArray | null
-  // eslint-disable-next-line no-cond-assign
   while ((match = pattern.exec(xml)) !== null) {
     items.push(match[1])
   }

@@ -1,10 +1,19 @@
 # Staging Operational Readiness Matrix
 
+> **CURRENT POINTER — 2026-09-06:** This matrix is historical staging evidence.
+> Current repository truth is
+> `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`. Current staging
+> applied migration state is unknown until a fresh read-only exact-state probe
+> is captured; repository source and old run records cannot establish it.
+
 > **Current repository review — 2026-08-23:** Working branch `feature/course-branding-and-preview`, starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`. After cleanup, local `pnpm test:release` is `164/164`, focused browser validation is `60/60`, and full browser E2E is `148/148` with 60 declared skips. The release-lead verified sanitized staging migration position is 36/36 applied with pending `[]`; deployment, provider, Prisma-health artifact, and production evidence remain separate gates. The dated matrix below remains historical until refreshed at the final exact SHA.
 
-> Current Phase 9.5 status is owned by `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`; remaining completion work is owned by `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
+> The 2026-08-23 Phase 9.5 truth/backlog documents remain historical
+> reconciliation evidence for this matrix; they no longer own present status.
 
-> **HISTORICAL MATRIX — 2026-08-19.** The matrix below reflects the 2026-08-04 audit snapshot and is preserved as audit history. Current migration truth is owned by `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
+> **HISTORICAL MATRIX — 2026-08-19.** The matrix below reflects the 2026-08-04
+> audit snapshot and is preserved as audit history. Applied-migration claims in
+> this matrix must not be projected onto current staging.
 
 | Field | Value |
 | --- | --- |
@@ -22,7 +31,13 @@
 | **Admin responsive (final)** | **14/14** |
 | **Overall verdict** | **STAGING MIGRATION COMPLETE** |
 
-All staging migration, deployment, acceptance, and email delivery gates were reported closed as of the historical 2026-08-19 checkpoint. The 2026-08-04 audit finding ("STAGING OPERATIONAL READINESS REMEDIATION REQUIRED" / migration-29 pending) is superseded within that historical record. The current release-lead migration snapshot is 36/36 applied with no pending migration; deployment, provider, Prisma-health artifact, and acceptance evidence remain separate gates. Production migration is NOT authorized.
+All staging migration, deployment, acceptance, and email delivery gates were
+reported closed as of the historical 2026-08-19 checkpoint. The 2026-08-04
+audit finding ("STAGING OPERATIONAL READINESS REMEDIATION REQUIRED" /
+migration-29 pending) is superseded within that historical record. A later
+release-lead snapshot reported 36/36 applied with no pending migration; that
+snapshot is historical and does not establish current staging. Production
+migration is NOT authorized by this matrix.
 
 ---
 

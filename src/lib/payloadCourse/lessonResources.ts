@@ -130,17 +130,17 @@ async function getCourseSequence(
   })
 
   const sequence: Array<{ module: PayloadDocument; lesson: PayloadDocument }> = []
-  for (const module of modules.sort(bySortOrder)) {
+  for (const courseModule of modules.sort(bySortOrder)) {
     const lessons = await findAll(payload, 'payload_lessons', {
       where: {
-        module: { equals: String(module.id) },
+        module: { equals: String(courseModule.id) },
       },
       sort: 'sortOrder',
       limit: 200,
     })
 
     for (const lesson of lessons.sort(bySortOrder)) {
-      sequence.push({ module, lesson })
+      sequence.push({ module: courseModule, lesson })
     }
   }
 
@@ -158,10 +158,10 @@ async function getLessonContext(
   if (!lesson) return null
 
   const moduleId = relationshipId(lesson.module)
-  const module = await findByIdSafe(payload, 'payload_course_modules', moduleId)
-  const courseId = relationshipId(module?.course)
+  const courseModule = await findByIdSafe(payload, 'payload_course_modules', moduleId)
+  const courseId = relationshipId(courseModule?.course)
   const course = await findByIdSafe(payload, 'payload_courses', courseId)
-  if (!module || !course) return null
+  if (!courseModule || !course) return null
 
   const sequence = await getCourseSequence(payload, course.id)
   const index = sequence.findIndex((entry) => String(entry.lesson.id) === String(lesson.id))

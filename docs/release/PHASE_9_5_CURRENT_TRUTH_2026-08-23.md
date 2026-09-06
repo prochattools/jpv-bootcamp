@@ -1,5 +1,12 @@
 # JPV Bootcamp Phase 9.5 — Authoritative Current Truth
 
+> **SUPERSEDED AS CURRENT AUTHORITY — 2026-09-06.** This document is retained
+> as the Phase 9.5 reconciliation record from 2026-08-23. Current repository
+> truth is now
+> `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`. Migration counts and
+> environment claims below are historical and must not be used to infer the
+> present staging database state.
+
 **Date:** 2026-08-23
 **Status:** ACTIVE FEATURE-BRANCH RECONCILIATION — NOT PRODUCTION CUTOVER
 **Branch:** `feature/course-branding-and-preview`

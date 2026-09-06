@@ -1,10 +1,14 @@
 # Feature-Branch Reconciliation — 2026-08-23
 
+> **HISTORICAL BRANCH RECONCILIATION.** The current branch/worktree disposition
+> and no-data-loss cleanup record are maintained in
+> `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`.
+
 **Status:** repository cleanup and review record; no merge, push, deploy, migration, or production operation performed
 
 **Current baseline dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`
-**Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`
-**Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`
+**Historical Phase 9.5 truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`
+**Historical Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`
 
 ## Authoritative working context
 

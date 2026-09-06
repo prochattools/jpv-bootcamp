@@ -1,5 +1,12 @@
 # JPV Bootcamp — Production Readiness & Cutover Preparation Package
 
+> **HISTORICAL PREPARATION PACKAGE.** This package records the 2026-08-23
+> candidate and does not describe current repository, staging, or production
+> state. Current repository truth is
+> `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`; current staging
+> applied migration state remains unknown until a fresh read-only exact-state
+> probe is captured.
+
 **Status:** PREPARATION ONLY — production is not authorized  
 **Date:** 2026-08-23  
 **Candidate branch:** `feature/course-branding-and-preview`  

@@ -98,7 +98,6 @@ function enforceGuards(): void {
 async function hashPassword(password: string): Promise<string> {
   try {
     // Try to use bcryptjs if available (Payload's actual hasher)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const bcrypt = require('bcryptjs') as { hash: (pw: string, rounds: number) => Promise<string> }
     return bcrypt.hash(password, 10)
   } catch {

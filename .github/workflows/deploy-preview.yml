@@ -647,7 +647,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tailscale ping --timeout=10s 10.0.2.4
+          ROUTE="$(ip route get 10.0.2.4 2>/dev/null || true)"
+          if [[ "$ROUTE" != *"dev tailscale0"* ]]; then
+            echo "PLAN-DENIED: staging database address is not routed through tailscale0" >&2
+            exit 1
+          fi
           nc -z -w 5 10.0.2.4 5433
           echo "Approved staging database path is reachable"
 
@@ -1139,7 +1143,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tailscale ping --timeout=10s 10.0.2.4
+          ROUTE="$(ip route get 10.0.2.4 2>/dev/null || true)"
+          if [[ "$ROUTE" != *"dev tailscale0"* ]]; then
+            echo "PLAN-DENIED: staging database address is not routed through tailscale0" >&2
+            exit 1
+          fi
           nc -z -w 5 10.0.2.4 5433
           echo "Approved staging database path is reachable"
 
@@ -1355,7 +1363,7 @@ jobs:
           fi
           echo "::add-mask::$DATABASE_URL"
 
-      # ── Network: Tailscale → ping → TCP probe ─────────────────────────────
+      # ── Network: Tailscale subnet route → TCP probe ───────────────────────
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
@@ -1364,16 +1372,17 @@ jobs:
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci-reader
 
-      - name: Ping staging host via Tailscale (connectivity probe)
+      - name: Verify staging subnet route via Tailscale (connectivity probe)
         shell: bash
         run: |
           set -euo pipefail
           STAGING_HOST="10.0.2.4"
-          if ! tailscale ping --timeout=10s "$STAGING_HOST" 2>/dev/null; then
-            echo "PLAN-DENIED: Tailscale ping to $STAGING_HOST failed — check tailnet, subnet route, and ACL tag:ci-reader -> $STAGING_HOST:5433" >&2
+          ROUTE="$(ip route get "$STAGING_HOST" 2>/dev/null || true)"
+          if [[ "$ROUTE" != *"dev tailscale0"* ]]; then
+            echo "PLAN-DENIED: $STAGING_HOST is not routed through tailscale0 — the protected subnet route is unavailable" >&2
             exit 1
           fi
-          echo "Tailscale ping to $STAGING_HOST confirmed"
+          echo "Tailscale subnet route to $STAGING_HOST confirmed"
 
       - name: Verify TCP path to staging host port 5433 (fail closed)
         shell: bash
@@ -1604,7 +1613,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tailscale ping --timeout=10s 10.0.2.4
+          ROUTE="$(ip route get 10.0.2.4 2>/dev/null || true)"
+          if [[ "$ROUTE" != *"dev tailscale0"* ]]; then
+            echo "PLAN-DENIED: staging database address is not routed through tailscale0" >&2
+            exit 1
+          fi
           nc -z -w 5 10.0.2.4 5433
           echo "Approved staging database path is reachable"
 
@@ -1814,7 +1827,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tailscale ping --timeout=10s 10.0.2.4
+          ROUTE="$(ip route get 10.0.2.4 2>/dev/null || true)"
+          if [[ "$ROUTE" != *"dev tailscale0"* ]]; then
+            echo "PLAN-DENIED: staging database address is not routed through tailscale0" >&2
+            exit 1
+          fi
           nc -z -w 5 10.0.2.4 5433
           echo "Approved staging database path is reachable"
 
@@ -2041,7 +2058,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tailscale ping --timeout=10s 10.0.2.4
+          ROUTE="$(ip route get 10.0.2.4 2>/dev/null || true)"
+          if [[ "$ROUTE" != *"dev tailscale0"* ]]; then
+            echo "PLAN-DENIED: staging database address is not routed through tailscale0" >&2
+            exit 1
+          fi
           nc -z -w 5 10.0.2.4 5433
           tailscale ping --timeout=10s 100.71.47.24
           nc -z -w 5 100.71.47.24 22

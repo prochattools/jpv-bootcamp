@@ -1,5 +1,10 @@
 # JPV P2-05 Staging Migration Operator Handoff
 
+> **HISTORICAL / NON-OPERATIVE — 2026-09-06.** This handoff targets the old
+> 2026-08-24 migration-37 candidate. It is not valid for current staging. See
+> `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md` before preparing any
+> replacement operator handoff.
+
 Status: **WAITING FOR OPERATOR AUTHORIZATION**
 
 Prepared: 2026-08-24

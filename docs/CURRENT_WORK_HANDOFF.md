@@ -2,6 +2,16 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+> **CURRENT REPOSITORY AUTHORITY — 2026-09-06:** Repository assessment,
+> hardening, branch/worktree reconciliation, cleanup, and release-readiness
+> status are now owned by
+> `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`, with
+> remaining work in
+> `docs/release/REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md`.
+> The dated sections below are preserved as historical release evidence. They
+> must not be used to infer current staging migration state or present release
+> authorization.
+
 ---
 
 ## CURRENT A6 GATE 2 PRODUCTION CLOSEOUT — 2026-08-30
@@ -293,11 +303,14 @@ and `docs/architecture/JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
 - **Protected residue:** pre-existing `.claude/worktrees/**` changes and `newrelic_agent.log` remain untouched.
 - **Current staging:** frozen exact-SHA baseline is live and healthy. Public endpoint checks returned 200 for health, home, sign-in, portal, courses, community, account, and billing. LiveKit token validation correctly rejected malformed unauthenticated requests with 400; authenticated token/browser evidence remains historical.
 - **Production boundary:** production remains unauthorized and untouched; Phase 10 has not started.
-- **Phase 9.5 authority:** use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` for current status and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` for remaining work.
+- **Historical Phase 9.5 references:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` describe this 2026-08-23 checkpoint; current status is owned by the 2026-09-06 authority at the top of this handoff.
 
 ## Historical staging checkpoint — 2026-08-19/21 (NOT CURRENT LIVE EVIDENCE)
 
-This section records the 2026-08-19/21 historical checkpoint. At that checkpoint, all staging migration and acceptance gates were reported closed; that claim is not current-live evidence. The Phase 9.5 current-truth document is authoritative for the present state.
+This section records the 2026-08-19/21 historical checkpoint. At that checkpoint,
+all staging migration and acceptance gates were reported closed; that claim is
+not current-live evidence. Present state is owned by the 2026-09-06 repository
+authority at the top of this handoff.
 
 | Item | Value |
 |---|---|

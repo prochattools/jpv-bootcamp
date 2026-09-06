@@ -1,5 +1,11 @@
 # JPV Bootcamp environment and database boundaries
 
+> **HISTORICAL ENVIRONMENT SNAPSHOT — 2026-08-29.** Use
+> `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md` for
+> current repository authority. Values below record the environment observed at
+> their dated checkpoint and do not establish current staging or production
+> migration state.
+
 Verified 2026-08-29 from live staging, production, legacy, DNS, TLS, and health
 evidence on the authorized host. This
 document records runtime facts only; passwords and other secret values are never

@@ -1,5 +1,10 @@
 # JPV Bootcamp Phase 9.5 — Prioritized Final Implementation Backlog
 
+> **SUPERSEDED FOR ACTIVE EXECUTION — 2026-09-06.** Retain this backlog as
+> historical Phase 9.5 evidence. Active repository reconciliation work is now
+> defined in `REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md` and
+> current truth in `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`.
+
 **Status:** OPEN — feature branch reconciliation and completion
 **Scope:** `feature/course-branding-and-preview` only
 **Explicit exclusions:** production, `main`, cutover, unrelated improvements, and unapproved staging/provider mutations

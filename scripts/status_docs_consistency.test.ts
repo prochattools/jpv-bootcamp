@@ -4,6 +4,9 @@ import { RELEASE_TEST_MANIFEST } from './release/releaseTestManifest'
 
 async function main(): Promise<void> {
   const releaseCount = RELEASE_TEST_MANIFEST.filter((entry) => entry.requirement === 'required').length
+  const conditionalReleaseCount = RELEASE_TEST_MANIFEST.filter((entry) => entry.requirement === 'conditional').length
+  const releaseManifestCount = RELEASE_TEST_MANIFEST.length
+  const currentManifestLine = `Current reconciliation release manifest: \`${releaseManifestCount}\` entries; \`${releaseCount}\` required and \`${conditionalReleaseCount}\` conditional.`
   const files = {
     approvalPacket: 'docs/client/MIGRATION_APPROVAL_PACKET.md',
     approvalStatus: 'docs/client/MIGRATION_APPROVAL_STATUS.md',
@@ -102,7 +105,7 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /20260804_050000_member_account_action_reservations/)
   assert.match(docs.roadmap, /M0-01 through M0-09/)
   assert.match(docs.roadmap, /M1-01 through M1-06/)
-  assert.match(docs.roadmap, new RegExp(String.raw`\`pnpm test:release\` passed \`${releaseCount}\/${releaseCount}\``))
+  assert.ok(docs.roadmap.includes(currentManifestLine))
   assert.match(docs.roadmap, /pnpm test:e2e.*188 collected.*148 passed.*40 skipped/i)
   assert.match(docs.roadmap, /`pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`\./)
   assert.match(docs.roadmap, /`pnpm staging:migration-preflight`/)
@@ -124,7 +127,7 @@ async function main(): Promise<void> {
   assert.match(docs.operatorHandoff, /Local simulated smoke: `pnpm staging:smoke-simulated`/)
   assert.match(docs.operatorHandoff, /Migration inventory.*31215369413.*sole.*missing.*Payload migration/is)
   assert.match(docs.operatorHandoff, /20260804_050000_member_account_action_reservations/)
-  assert.match(docs.operatorHandoff, new RegExp(String.raw`Deterministic release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))
+  assert.ok(docs.operatorHandoff.includes(currentManifestLine))
   assert.match(docs.operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(Playwright: 188 collected, 148 passed, 40 skipped/)
   assert.match(docs.operatorHandoff, /Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`/)
   assert.match(docs.operatorHandoff, /Repository-owned staging operations contract/)
@@ -227,7 +230,7 @@ async function main(): Promise<void> {
   assert.match(docs.previewReadiness, /DECISION-READY, EXTERNAL APPROVALS PENDING/)
   assert.match(docs.previewReadiness, /35\/35 applied|35 Payload migrations applied/)
   assert.match(docs.previewReadiness, /20260804_050000_member_account_action_reservations|reservation\/finalization/)
-  assert.match(docs.previewReadiness, new RegExp(String.raw`\`pnpm test:release\` passed \`${releaseCount}\/${releaseCount}\``))
+  assert.ok(docs.previewReadiness.includes(currentManifestLine))
   assert.match(docs.previewReadiness, /pnpm test:e2e.*188 collected.*148 passed.*40 skipped/i)
   assert.match(docs.previewReadiness, /`pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`/)
   assert.match(docs.previewReadiness, /`pnpm staging:migration-preflight`/)
@@ -236,7 +239,11 @@ async function main(): Promise<void> {
   assert.match(docs.previewReadiness, /`pnpm staging:smoke-plan`/)
   assert.match(docs.previewReadiness, /`pnpm staging:smoke-simulated`/)
   assert.match(docs.previewReadiness, /`pnpm release:evidence:dry-run`/)
-  assert.match(docs.previewReadiness, /Prisma migration target state \| Staging operational supplied/i)
+  assert.match(
+    docs.previewReadiness,
+    /Prisma migration target state \| Historical staging operational state supplied; fresh raw Prisma-health field not present/i,
+  )
+  assert.match(docs.previewReadiness, /Current staging applied state is unknown until a fresh read-only exact-state probe is captured/i)
   assert.match(docs.previewReadiness, /M2-01 remains post-core/i)
 
   for (const currentDoc of [docs.previewReadiness, docs.roadmap, docs.operatorHandoff]) {

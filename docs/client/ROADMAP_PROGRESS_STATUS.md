@@ -1,6 +1,35 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
+## CURRENT REPOSITORY ROADMAP — 2026-09-06
+
+Repository reconciliation is the active local engineering track. Current truth
+is owned by
+`docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`; the
+remaining implementation sequence is owned by
+`docs/release/REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md`.
+
+Current reconciliation release manifest: `183` entries; `182` required and `1` conditional.
+After the status-document contracts were refreshed, the full local
+`pnpm test:release` gate passed `182/182` required checks on 2026-09-06. This
+closes the repository release-test gate only; current staging applied migration
+state remains unknown until a fresh read-only exact-state probe is captured.
+
+| Gate | Status | Meaning |
+| --- | --- | --- |
+| Implementation complete | **IN PROGRESS** | Hardening and reconciliation changes are present locally; final docs scan, validation, review, and commit remain. |
+| Staging verified | **OPEN** | Current staging applied migration state is unknown until a fresh read-only exact-state probe and exact-SHA evidence packet are captured. |
+| Production authorized | **NOT AUTHORIZED BY THIS TRACK** | Requires a separate production operation and approval after staging evidence. |
+
+Safe cleanup has reclaimed approximately 6.3 GB from seven independently
+verified clean worktrees while preserving every branch ref. Dirty, unique, and
+credential-bearing worktrees plus the 180 MB recovery archive remain intact.
+
+The repository migration registry currently ends with
+`20260901_210000_notification_event_key` and
+`20260901_220000_member_follows`. Older applied-migration counts below are
+historical environment evidence only.
+
+## Historical Rooms production release — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**
 
@@ -85,15 +114,16 @@ sequencing; it is not being deleted or silently reprioritized by this packet.
 - **Evidence rule:** dated records below remain historical unless marked as current frozen-candidate evidence.
 - **Current staging migration state:** fresh read-only plan run `32731856849` confirms 36 Payload migrations applied, `20260824_120000_engagement_reactions` as the sole pending migration, Prisma healthy, and zero unexpected/duplicate/malformed records. The service is currently rolled back to the previously observed `f1aad077...` image; the last exact-SHA staging release remains `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Current baseline dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
-- **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
-- **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
+- **Historical Phase 9.5 truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
+- **Historical Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
 - **Current project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion, with product-experience refinement active; Phase 10 production preparation is documentation-only and Phase 11 cutover execution has not started.
 - **Canonical baseline rule:** `9d87c4a3eeeffb9afb78a38964054792330ea1cb` is the only canonical last verified staging release and documented deployment SHA. The current branch candidate `1966197058721ffdfe0d94f24bc3e8e468d4e23b` is not deployed; every other SHA below is historical. Production remains unauthorized.
 
 ## Historical sequencing and active work — 2026-08-24
 
-This is the current roadmap interpretation. Older dated sections below remain
-audit history and must not override this sequence.
+This was the roadmap interpretation at the 2026-08-24 checkpoint. Older dated
+sections below remain audit history; current sequencing is owned by the
+2026-09-06 implementation plan above.
 
 | Track | Status | Meaning |
 | --- | --- | --- |

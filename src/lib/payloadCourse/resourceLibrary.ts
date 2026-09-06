@@ -37,14 +37,14 @@ export async function getAdminResourceLibrary(payload: PayloadCourseAccessAPI): 
   const moduleById = new Map(modules.map((module) => [String(module.id), module]))
   const groups = new Map<string, ResourceLibraryGroup>()
   for (const lesson of lessons) {
-    const module = moduleById.get(String(typeof lesson.module === 'object' && lesson.module ? lesson.module.id : lesson.module))
-    const course = module && courseById.get(String(typeof module.course === 'object' && module.course ? module.course.id : module.course))
-    if (!module || !course || !isResourcesLibraryCourse(course)) continue
+    const courseModule = moduleById.get(String(typeof lesson.module === 'object' && lesson.module ? lesson.module.id : lesson.module))
+    const course = courseModule && courseById.get(String(typeof courseModule.course === 'object' && courseModule.course ? courseModule.course.id : courseModule.course))
+    if (!courseModule || !course || !isResourcesLibraryCourse(course)) continue
     const resources = await listPublishedLessonResources(payload, lesson.id)
     if (!resources.length) continue
     const key = String(course.id)
     const group: ResourceLibraryGroup = groups.get(key) ?? { courseTitle: String(course.title ?? 'Course'), courseSlug: typeof course.slug === 'string' ? course.slug : null, resources: [] }
-    group.resources.push(...resources.map((resource) => ({ ...resource, courseTitle: group.courseTitle, courseSlug: group.courseSlug, moduleTitle: String(module.title ?? 'Module'), lessonTitle: String(lesson.title ?? 'Lesson') })))
+    group.resources.push(...resources.map((resource) => ({ ...resource, courseTitle: group.courseTitle, courseSlug: group.courseSlug, moduleTitle: String(courseModule.title ?? 'Module'), lessonTitle: String(lesson.title ?? 'Lesson') })))
     groups.set(key, group)
   }
   return Array.from(groups.values())
@@ -61,10 +61,10 @@ export async function getMemberResourceLibrary(
     if (!course.allowed || !isResourcesLibraryCourse(course)) continue
 
     const lessonMeta: { moduleTitle: string; lessonTitle: string; lessonId: PayloadId }[] = []
-    for (const module of course.modules) {
-      for (const lesson of module.lessons) {
+    for (const courseModule of course.modules) {
+      for (const lesson of courseModule.lessons) {
         if (lesson.lockState === 'locked') continue
-        lessonMeta.push({ moduleTitle: module.title, lessonTitle: lesson.title, lessonId: lesson.id })
+        lessonMeta.push({ moduleTitle: courseModule.title, lessonTitle: lesson.title, lessonId: lesson.id })
       }
     }
 

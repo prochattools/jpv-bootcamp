@@ -1,5 +1,11 @@
 # JPV P2-05 Staging Authorization Packet
 
+> **HISTORICAL / NON-OPERATIVE — 2026-09-06.** This packet was prepared for the
+> 2026-08-24 migration-37 candidate and must not be used for a current staging
+> operation. See `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`; a
+> fresh read-only exact-state probe is required before any new migration plan or
+> authorization packet is assembled.
+
 Status: **TEMPLATE ONLY — BLOCKED pending operator authorization**
 Prepared: 2026-08-24
 Scope: authorization preparation for migration 37 in staging. This document does not authorize or execute a migration, deployment, database write, or production action.

@@ -1,5 +1,11 @@
 # JPV Bootcamp — Final Staging Baseline Report
 
+> **HISTORICAL BASELINE.** This 2026-08-23 staging report is preserved as
+> evidence only. Current repository truth is
+> `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`.
+> Current staging applied migration state is unknown until a fresh read-only
+> exact-state probe is captured.
+
 **Audit date:** 2026-08-23  
 **Status:** FROZEN STAGING BASELINE VERIFIED — NOT PRODUCTION AUTHORIZATION
 **Project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion
@@ -50,12 +56,12 @@ The following documents were inspected:
 - `docs/client/JPV_STAGING_LAUNCH_READINESS_EVIDENCE_PACKAGE.md`
 - `docs/client/ROADMAP_PROGRESS_STATUS.md`
 
-Authority is reconciled as follows:
+Authority at the 2026-08-23 checkpoint was reconciled as follows:
 
-- Phase 9.5 current truth is the controlling implementation/reconciliation
-  document.
-- The production-readiness package is the controlling future cutover-prep
-  assessment and states production NO-GO.
+- The Phase 9.5 truth document controlled implementation/reconciliation for
+  that checkpoint.
+- The production-readiness package controlled that checkpoint's future
+  cutover-prep assessment and recorded production NO-GO.
 - The staging launch package is historical and explicitly says it is not
   current live evidence.
 - The roadmap retains historical SHA, migration, and acceptance records; those
@@ -148,8 +154,8 @@ response; historical authenticated token/browser evidence remains historical.
 |---|---|
 | Current docs cited older candidate SHAs | `9d87c4a` is the frozen exact-SHA staging candidate; older values remain historical. |
 | Some roadmap sections say “current deployed SHA” and “complete” | Those entries are retained as dated historical checkpoints; current exact-SHA proof is still absent. |
-| Historical 35/35, 29-pending, and current supplied 36/36 migration records | They refer to different dated states; current supplied staging position is 36/36, but it lacks a fresh raw artifact. |
-| Historical staging package says readiness while newer truth says not verified | The package is explicitly historical; Phase 9.5 current truth controls present interpretation. |
+| Historical 35/35, 29-pending, and later supplied 36/36 migration records | They refer to different dated states; the later supplied 36/36 position is historical and does not establish current staging without a fresh raw artifact. |
+| Historical staging package says readiness while newer truth says not verified | The package is explicitly historical; the dated Phase 9.5 truth controlled the 2026-08-23 interpretation. Current interpretation uses the 2026-09-06 repository authority. |
 | CI and live staging evidence are different layers | Both are recorded separately: local release gate `164/164`, deployment run `32649230612`, and read-only plan run `32649782528`. |
 
 ## 9. Remaining blockers

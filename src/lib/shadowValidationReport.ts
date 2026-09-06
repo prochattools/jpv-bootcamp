@@ -504,8 +504,8 @@ export function validateShadowValidationSnapshot(snapshot: ReconciliationSnapsho
   for (const course of snapshot.courses) {
     slugCounts.set(course.slug, (slugCounts.get(course.slug) ?? 0) + 1)
   }
-  for (const module of snapshot.modules) {
-    slugCounts.set(module.slug, (slugCounts.get(module.slug) ?? 0) + 1)
+  for (const courseModule of snapshot.modules) {
+    slugCounts.set(courseModule.slug, (slugCounts.get(courseModule.slug) ?? 0) + 1)
   }
   for (const lesson of snapshot.lessons) {
     slugCounts.set(lesson.slug, (slugCounts.get(lesson.slug) ?? 0) + 1)
@@ -527,9 +527,9 @@ export function validateShadowValidationSnapshot(snapshot: ReconciliationSnapsho
   const applicationIds = new Set(snapshot.partnerApplications.map((application) => application.id))
   const referralIds = new Set(snapshot.affiliateReferrals.map((referral) => referral.id))
 
-  for (const module of snapshot.modules) {
-    if (!module.courseId || !courseIds.has(module.courseId)) {
-      issues.push(issue('entitlements', 'entitlement_orphan_module', 'error', `Module ${module.id} is missing a valid course parent.`, { resourceId: module.id }))
+  for (const courseModule of snapshot.modules) {
+    if (!courseModule.courseId || !courseIds.has(courseModule.courseId)) {
+      issues.push(issue('entitlements', 'entitlement_orphan_module', 'error', `Module ${courseModule.id} is missing a valid course parent.`, { resourceId: courseModule.id }))
     }
   }
   for (const lesson of snapshot.lessons) {

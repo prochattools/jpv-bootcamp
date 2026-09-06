@@ -111,7 +111,6 @@ export async function queueEmail(params: QueueEmailParams): Promise<string> {
 	assertStagingRecipientAllowed(params.recipient)
 
 	try {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const event = await (prisma as any).emailEvent.create({
 			data: {
 				type: params.type,
@@ -135,7 +134,6 @@ export async function queueEmail(params: QueueEmailParams): Promise<string> {
 				type: params.type,
 			})
 			// Return the existing event id
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const existing = await (prisma as any).emailEvent.findUnique({
 				where: { idempotencyKey: params.idempotencyKey },
 				select: { id: true },
@@ -247,7 +245,6 @@ type ProcessResult = {
 export async function processEmailQueue(eventId?: string): Promise<ProcessResult> {
 	const result: ProcessResult = { processed: 0, sent: 0, failed: 0, skipped: 0 }
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const prismaAny = prisma as any
 
 	// Fetch candidates — may include rows another worker will also see.
@@ -627,7 +624,6 @@ export async function sendWelcomeEmail({
 	const result = await processEmailQueue(eventDbId)
 
 	if (result.failed > 0) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const prismaAny = prisma as any
 		const event = await prismaAny.emailEvent.findUnique({
 			where: { id: eventDbId },

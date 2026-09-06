@@ -2,11 +2,14 @@
  * Dry-run-default GitHub environment configurator for staging-migration-plan.
  *
  * Configures (or verifies) the GitHub environment required by the read-only-plan
- * dispatch lane: branch policy, PLAN_READY_FOR_DISPATCH variable, SOLO_OPERATOR_MODE
- * variable, and environment secrets (DATABASE_URL, TAILSCALE_OAUTH_CLIENT_ID,
- * TAILSCALE_OAUTH_SECRET).
+ * dispatch lane: protected branch policy, PLAN_READY_FOR_DISPATCH variable,
+ * SOLO_OPERATOR_MODE operator gate, and environment secrets (DATABASE_URL,
+ * TAILSCALE_OAUTH_CLIENT_ID, TAILSCALE_OAUTH_SECRET).
  *
- * Solo-operator mode: zero reviewers, no wait timer, no prevent_self_review.
+ * The live environment uses a protected reviewer/branch-policy gate. The
+ * SOLO_OPERATOR_MODE variable is retained as an explicit operator gate for the
+ * established workflow; it never means that reviewer or branch protections may
+ * be removed.
  *
  * DEFAULTS TO DRY-RUN. Apply only when called with:
  *   --confirmation=configure_staging_migration_plan_environment
@@ -34,6 +37,7 @@ import { isAllowedStagingSourceRef } from '../../src/lib/environmentTopology'
 const ENV_NAME = 'staging-migration-plan'
 const REQUIRED_REPO = 'prochattools/jpv-bootcamp'
 const ALLOWED_RELEASE_BRANCH_DESCRIPTION = 'feature/*, fix/*, or release/* (never main)'
+const REQUIRED_BRANCH_POLICIES = ['feature/*', 'fix/*', 'release/*']
 const REQUIRED_PLAN_READY_VALUE = 'true'
 const REQUIRED_SOLO_OPERATOR_VALUE = 'true'
 const REQUIRED_ENV_SECRETS = ['DATABASE_URL', 'TAILSCALE_OAUTH_CLIENT_ID', 'TAILSCALE_OAUTH_SECRET']
@@ -50,6 +54,7 @@ const GUARDED_PATHS = [
   'scripts/staging-gates/configureStagingMigrationPlanEnvironment.ts',
   'scripts/staging-gates/configureStagingMigrationPlanEnvironmentCli.ts',
   'scripts/staging-gates/configureStagingMigrationPlanEnvironment.test.ts',
+  'scripts/staging-gates/stagingPayloadMigrationInfraPreflight.mts',
   'scripts/staging-gates/stagingPayloadMigrationPlanWorkflowContract.test.ts',
   'scripts/release/buildStagingMigrationStatus.ts',
   'scripts/release/buildStagingMigrationStatus.test.ts',
@@ -86,6 +91,20 @@ export type ConfigureEnvDependencies = {
   repoName?: RepoNameExecutor
   currentHead?: CurrentHeadExecutor
   currentBranch?: CurrentBranchExecutor
+}
+
+type EnvironmentProtectionState = {
+  name?: string
+  protection_rules?: Array<{
+    type: string
+    reviewers?: Array<{ type?: string; id?: number }>
+    prevent_self_review?: boolean
+  }>
+  deployment_branch_policy?: { protected_branches: boolean; custom_branch_policies: boolean } | null
+}
+
+type BranchPolicyState = {
+  branch_policies?: Array<{ id?: number; name?: string }>
 }
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -279,6 +298,39 @@ function isValidSha40(s: string | undefined): boolean {
   return /^[0-9a-f]{40}$/.test(s ?? '')
 }
 
+function protectedEnvironmentMismatch(
+  environment: EnvironmentProtectionState | null,
+  branchPolicies: BranchPolicyState | null,
+): string | null {
+  if (!environment || environment.name !== ENV_NAME || !branchPolicies) {
+    return 'environment_protection_mismatch'
+  }
+
+  const requiredReviewerCount = (environment.protection_rules ?? [])
+    .filter((rule) => rule.type === 'required_reviewers')
+    .reduce((count, rule) => count + (rule.reviewers ?? []).length, 0)
+  if (requiredReviewerCount < 1) return 'environment_protection_mismatch'
+
+  const deploymentPolicy = environment.deployment_branch_policy
+  if (!deploymentPolicy || deploymentPolicy.protected_branches || !deploymentPolicy.custom_branch_policies) {
+    return 'environment_protection_mismatch'
+  }
+
+  const actualPolicies = (branchPolicies.branch_policies ?? [])
+    .map((policy) => policy.name)
+    .filter((name): name is string => typeof name === 'string')
+    .sort()
+  const expectedPolicies = [...REQUIRED_BRANCH_POLICIES].sort()
+  if (
+    actualPolicies.length !== expectedPolicies.length ||
+    actualPolicies.some((name, index) => name !== expectedPolicies[index])
+  ) {
+    return 'environment_protection_mismatch'
+  }
+
+  return null
+}
+
 async function checkCleanPaths(gitStatusExec: GitStatusExecutor): Promise<string | null> {
   const statusMap = gitStatusExec(GUARDED_PATHS)
   if (!statusMap) return 'git_status_failed'
@@ -376,9 +428,10 @@ export async function configureStagingMigrationPlanEnvironment(
 
   // ── Dry-run plan ──────────────────────────────────────────────────────────
   if (input.dryRun) {
-    result.actions.push(`[DRY-RUN] Would create/update environment '${ENV_NAME}'`)
-    result.actions.push(`[DRY-RUN] Would set zero reviewers (solo-operator mode)`)
-    result.actions.push(`[DRY-RUN] Would set zero wait timer`)
+    result.actions.push(`[DRY-RUN] Would verify the existing protected environment '${ENV_NAME}'`)
+    result.actions.push(
+      `[DRY-RUN] Would preserve the required protected reviewer and branch policies: ${ALLOWED_RELEASE_BRANCH_DESCRIPTION}`,
+    )
     result.actions.push(
       `[DRY-RUN] Would accept release source ref: ${ALLOWED_RELEASE_BRANCH_DESCRIPTION}`,
     )
@@ -396,36 +449,24 @@ export async function configureStagingMigrationPlanEnvironment(
     return result
   }
 
-  // ── Apply: create/update environment with zero reviewers, no branch policy ─
-  // GitHub custom deployment branch policies are not supported on public repositories
-  // with a free org plan — they block deployment rather than enforcing the policy.
-  // Branch enforcement is handled in-workflow via explicit guards.
-  const envBody = JSON.stringify({
-    wait_timer: 0,
-    prevent_self_review: false,
-    reviewers: [],
-    deployment_branch_policy: null,
-  })
-
-  const createEnvResult = apiMutate({
-    args: [
-      'api',
-      '--method',
-      'PUT',
-      `repos/${repo}/environments/${ENV_NAME}`,
-      '--header',
-      'Accept: application/vnd.github+json',
-      '--input',
-      '-',
-    ],
-    stdin: envBody,
-  })
-
-  if (!createEnvResult.ok) {
-    result.blockers.push('github_api_call_failed')
+  // ── Apply: verify protection before changing readiness state ──────────────
+  // This path intentionally never PUTs the environment. The live reviewer and
+  // deployment branch policy are the security boundary and must not be removed
+  // or replaced by a weaker solo-operator configuration.
+  const existingEnv = apiRead({
+    args: ['api', `repos/${repo}/environments/${ENV_NAME}`],
+  }) as EnvironmentProtectionState | null
+  const existingPolicies = apiRead({
+    args: ['api', `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`],
+  }) as BranchPolicyState | null
+  const protectionError = protectedEnvironmentMismatch(existingEnv, existingPolicies)
+  if (protectionError) {
+    result.blockers.push(protectionError)
     return result
   }
-  result.actions.push(`Created/updated environment '${ENV_NAME}' with zero reviewers (branch guards in-workflow)`)
+  result.actions.push(
+    `Verified protected environment '${ENV_NAME}'; reviewer and branch-policy protections will not be changed`,
+  )
 
   // ── Apply: set PLAN_READY_FOR_DISPATCH and SOLO_OPERATOR_MODE variables ───
   const existingVars = apiRead({
@@ -494,11 +535,7 @@ export async function configureStagingMigrationPlanEnvironment(
   // ── Verify applied state ───────────────────────────────────────────────────
   const verifyEnv = apiRead({
     args: ['api', `repos/${repo}/environments/${ENV_NAME}`],
-  }) as {
-    name?: string
-    protection_rules?: Array<{ type: string; reviewers?: Array<{ type?: string; id?: number }>; prevent_self_review?: boolean }>
-    deployment_branch_policy?: { protected_branches: boolean; custom_branch_policies: boolean } | null
-  } | null
+  }) as EnvironmentProtectionState | null
 
   if (!verifyEnv) {
     result.blockers.push('environment_verification_failed')
@@ -511,26 +548,19 @@ export async function configureStagingMigrationPlanEnvironment(
   }
   result.verifiedState.push(`Environment: ${verifyEnv.name}`)
 
-  // Solo-operator mode: verify zero reviewers
-  const reviewerRules = (verifyEnv.protection_rules ?? []).filter((r) => r.type === 'required_reviewers')
-  const reviewerCount = reviewerRules.length > 0 ? (reviewerRules[0].reviewers ?? []).length : 0
-  if (reviewerCount !== 0) {
+  const verifyPolicies = apiRead({
+    args: ['api', `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`],
+  }) as BranchPolicyState | null
+  if (protectedEnvironmentMismatch(verifyEnv, verifyPolicies)) {
     result.blockers.push('environment_verification_failed')
     return result
   }
-  result.verifiedState.push(`Required reviewers: 0 (solo-operator mode)`)
-
-  // Verify no deployment branch policy is set — it blocks deployments on public repos with free org plan.
-  // Branch enforcement is in-workflow only.
-  if (
-    verifyEnv.deployment_branch_policy !== null &&
-    verifyEnv.deployment_branch_policy !== undefined
-  ) {
-    result.blockers.push('environment_verification_failed')
-    return result
-  }
+  const reviewerCount = (verifyEnv.protection_rules ?? [])
+    .filter((rule) => rule.type === 'required_reviewers')
+    .reduce((count, rule) => count + (rule.reviewers ?? []).length, 0)
+  result.verifiedState.push(`Required reviewers: ${reviewerCount} (protected staging path)`)
   result.verifiedState.push(
-    `Branch policy: none (in-workflow guards enforce ${ALLOWED_RELEASE_BRANCH_DESCRIPTION})`,
+    `Branch policy: ${ALLOWED_RELEASE_BRANCH_DESCRIPTION} (protected environment gate)`,
   )
 
   const verifyVars = apiRead({

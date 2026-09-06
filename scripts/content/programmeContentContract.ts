@@ -1040,9 +1040,9 @@ function getRepositoryModel(): RepositoryModel {
 
   for (const course of courseSeeds) {
     model.courseSlugs.add(course.slug)
-    for (const module of course.modules) {
-      model.moduleKeys.add(`${course.slug}:${module.title.toLowerCase()}`)
-      for (const lesson of module.lessons) {
+    for (const courseModule of course.modules) {
+      model.moduleKeys.add(`${course.slug}:${courseModule.title.toLowerCase()}`)
+      for (const lesson of courseModule.lessons) {
         model.lessonSlugs.add(lesson.slug)
       }
     }

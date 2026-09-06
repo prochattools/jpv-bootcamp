@@ -2,7 +2,7 @@
 
 import { Bell } from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type NotificationType = 'new_post' | 'new_comment' | 'mention' | 'system' | 'announcement' | 'live_session' | 'room_invitation'
 
@@ -24,6 +24,12 @@ type NotificationsData = {
 type Tab = 'recent' | 'unread' | 'mentions'
 
 const TABS: Tab[] = ['recent', 'unread', 'mentions']
+
+async function loadNotifications(tab: Tab, signal?: AbortSignal): Promise<NotificationsData | null> {
+  const res = await fetch(`/api/portal/notifications?tab=${tab}`, { signal })
+  if (!res.ok) return null
+  return (await res.json()) as NotificationsData
+}
 
 function formatRelativeTime(dateStr: string): string {
   try {
@@ -49,26 +55,28 @@ export function NotificationBell() {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const panelId = 'portal-notifications-panel'
 
-  const fetchNotifications = useCallback(async (tab: Tab) => {
-    try {
-      const res = await fetch(`/api/portal/notifications?tab=${tab}`)
-      if (res.ok) {
-        const json = (await res.json()) as NotificationsData
-        setData(json)
-      }
-    } catch {
-      // silent — network errors should not break the UI
-    }
-  }, [])
-
   // Initial fetch + 30-second polling
   useEffect(() => {
-    void fetchNotifications(activeTab)
+    const controller = new AbortController()
+    const refresh = () => {
+      void loadNotifications(activeTab, controller.signal)
+        .then((nextData) => {
+          if (nextData) setData(nextData)
+        })
+        .catch(() => {
+          // silent — network errors should not break the UI
+        })
+    }
+
+    refresh()
     const interval = setInterval(() => {
-      void fetchNotifications(activeTab)
+      refresh()
     }, 30_000)
-    return () => clearInterval(interval)
-  }, [fetchNotifications, activeTab])
+    return () => {
+      controller.abort()
+      clearInterval(interval)
+    }
+  }, [activeTab])
 
   // Close panel on outside click
   useEffect(() => {
@@ -104,7 +112,8 @@ export function NotificationBell() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_all_read' }),
       })
-      await fetchNotifications(activeTab)
+      const nextData = await loadNotifications(activeTab)
+      if (nextData) setData(nextData)
     } catch {
       // silent
     }
@@ -133,7 +142,6 @@ export function NotificationBell() {
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab)
-    void fetchNotifications(tab)
   }
 
   const unreadCount = data?.unreadCount ?? 0

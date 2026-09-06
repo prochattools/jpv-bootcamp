@@ -1,10 +1,16 @@
 # JPV Bootcamp — Frozen Phase 9.5 Feature-Branch Release Baseline — 2026-08-23
 
+> **HISTORICAL FROZEN BASELINE.** This dossier remains audit evidence for the
+> 2026-08-23 feature-branch state. Current repository reconciliation truth is
+> `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`; do not treat the
+> migration/deployment counts below as current environment state.
+
 **Status: FROZEN RECONCILIATION BASELINE / NOT A RELEASE CANDIDATE / NOT A PRODUCTION GO**
 
-The Phase 9.5 current-status authority is now
-`docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`; the prioritized remaining
-work is in `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
+For this 2026-08-23 historical baseline, the Phase 9.5 interpretation is
+recorded in `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` and its dated
+backlog. Present repository status is owned by the 2026-09-06 authority linked
+above.
 
 This dossier is the single authoritative frozen baseline for the current Phase
 9.5 feature-branch reconciliation. It consolidates the release-manager review,

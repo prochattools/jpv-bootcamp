@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import { PublicInformationShell } from '@/components/public/PublicInformationShell'
@@ -68,7 +69,7 @@ export default function UpgradePage() {
       </label>
 
       <div className='flex flex-wrap gap-4'>
-        <a className='jpv-button-secondary min-h-11' href='/'>Back to main site</a>
+        <Link className='jpv-button-secondary min-h-11' href='/'>Back to main site</Link>
       </div>
     </PublicInformationShell>
   )

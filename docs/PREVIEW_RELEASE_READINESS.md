@@ -1,5 +1,17 @@
 # JPV Bootcamp Preview Release Readiness
 
+> **HISTORICAL READINESS RECORD.** Current repository truth is
+> `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`. Current
+> staging applied migration state is unknown until a fresh read-only exact-state
+> probe is captured. The dated readiness claims below are audit evidence only.
+
+Current reconciliation release manifest: `183` entries; `182` required and `1` conditional.
+After the status-document contracts were refreshed, the full local
+`pnpm test:release` gate passed `182/182` required checks on 2026-09-06. This
+is repository validation only; it does not establish the current staging
+applied migration state, which remains unknown until a fresh read-only
+exact-state probe is captured.
+
 ## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**
@@ -38,13 +50,16 @@ those sections remain retained as audit history.
 - **Evidence distinction:** registration inventory is not applied database state; the 36/36 position is the separately supplied sanitized staging snapshot, not evidence that the dirty feature worktree is deployed. The general `pnpm staging:migration-status` adapter remains read-only and evidence-gated.
 - **External state:** exact-SHA staging deployment, provider verification, production deployment, production migration, and cutover approval were not performed or reverified by this pass. Keep the final status `NO-GO` until those separate gates have fresh evidence at the final SHA.
 - **Cutover procedure:** `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`.
-- **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
-- **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
+- **Historical Phase 9.5 truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
+- **Historical Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
 - **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`; `pnpm test:release` passed `181/181` required checks (182 manifest entries including one deferred browser gate). This is local/CI validation only and does not constitute staging or production evidence.
 
 ## Historical staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
 
-This section records the 2026-08-19 historical checkpoint. At that checkpoint, all staging migration and acceptance gates were reported closed; this is not current-live evidence. The Phase 9.5 current-truth document is authoritative for the present state.
+This section records the 2026-08-19 historical checkpoint. At that checkpoint,
+all staging migration and acceptance gates were reported closed; this is not
+current-live evidence. Present state is owned by the 2026-09-06 repository
+authority at the top of this document.
 
 - **Status:** `STAGING MIGRATION COMPLETE`
 - **Branch:** `feature/course-branding-and-preview`
@@ -163,10 +178,10 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 | Gate | Current status | Evidence owner | Notes |
 | --- | --- | --- | --- |
-| Migration evidence and apply path | Current sanitized position: 36/36 applied, pending `[]`; exact-SHA artifact refresh required later | `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`, `scripts/release/runStagingPayloadMigration.ts` | Current-state read-only gate expects 36 applied and no pending batch. Historical migration-29/pre-apply evidence remains audit-only. |
+| Migration evidence and apply path | Historical sanitized position: 36/36 applied, pending `[]`; fresh exact-state evidence required for current staging | `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`, `scripts/release/runStagingPayloadMigration.ts` | The 36/36 contract describes that historical checkpoint only. Current staging applied state is unknown until a fresh read-only exact-state probe is captured. |
 | Decision packets and owners | Ready for external approval review | `docs/decisions/`, `pnpm staging:decision-readiness` | Repository-owned decision records, owner assignments, dependency order, and rollback statements are now complete and internally validated. |
 | Migration rehearsal and rollback ownership | Static rehearsal passed; disposable execution not yet run | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`, `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md` | Repository-owned static rehearsal and evidence are complete; localhost-only disposable execution stays opt-in and target-environment rehearsal remains gated. |
-| Prisma migration target state | Staging operational supplied; fresh raw Prisma-health field not present in this local snapshot | Phase 9.5 current truth | Retain explicit Prisma-health evidence in the later exact-SHA sanitized packet; no migration operation is implied. |
+| Prisma migration target state | Historical staging operational state supplied; fresh raw Prisma-health field not present in this local snapshot | Historical Phase 9.5 truth | Retain explicit Prisma-health evidence in a future exact-SHA sanitized packet; no migration operation is implied. |
 | Provider/email verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md`, `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` | Mocked/local provider simulation is repository-owned and complete; live verification still requires credentials and operator evidence. |
 | Stripe checkout/webhook/billing portal live verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md` | Local validation and provider simulation passed safely; live verification is separate. |
 | Representative programme and public-copy approval | Blocked | `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`, `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` | Programme remains preview-only until approved content exists. |
@@ -242,7 +257,7 @@ The previous preview workflow published an image from ordinary feature-branch pu
 
 **Manual dispatch path (`deploy-preview`):** Triggered by `workflow_dispatch` with `operation=deploy-preview`. Requires `expected_sha` (full 40-char SHA matching the current remote feature tip) and `confirmation=deploy-staging-feature-tip`. Checks out the exact current remote tip, verifies the SHA matches, then builds, publishes to GHCR, deploys to Dokploy staging, and runs the authenticated admin responsive gate. All Docker actions are SHA-pinned. The canonical Dokploy allow-list (`clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`) is enforced.
 
-**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation=run-read-only-staging-payload-migration-plan`. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (zero-reviewer solo-operator environment, branch policy, variable, and secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps. The `staging-migration-plan` environment operates in solo-operator mode: zero required reviewers, zero wait timer, custom branch policy for `feature/course-branding-and-preview` only, `PLAN_READY_FOR_DISPATCH=true`, and `SOLO_OPERATOR_MODE=true`.
+**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation=run-read-only-staging-payload-migration-plan`. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (required-reviewer protection, exact custom branch-policy verification, workflow variables, and secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps. The `staging-migration-plan` environment remains protected by at least one required reviewer and exact custom deployment branch policies `feature/*`, `fix/*`, and `release/*`. `PLAN_READY_FOR_DISPATCH=true` and `SOLO_OPERATOR_MODE=true` are retained as workflow/operator state; `SOLO_OPERATOR_MODE` does not authorize weakening reviewer or branch protections.
 
 Commits with `[migration-plan-only]` in the message suppress the push-triggered validate job so a migration-plan dispatch can be the sole authorized action for that tip.
 

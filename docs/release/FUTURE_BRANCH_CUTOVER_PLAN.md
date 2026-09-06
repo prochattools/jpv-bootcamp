@@ -1,12 +1,18 @@
 # Production Cutover Plan — Feature Branch to Main
 
+> **HISTORICAL CUTOVER PLAN.** This 2026-08-23 feature-branch plan is preserved
+> for provenance. Current repository reconciliation, branch disposition, and
+> release gates are owned by
+> `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md` and
+> `REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md`.
+
 **Status:** PLAN ONLY — no git operation, merge, push, deployment, migration, or production change has been executed by this plan
 **Prepared:** 2026-08-23
 **Working branch:** `feature/course-branding-and-preview`
 **Related reconciliation:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`
 **Current baseline dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`
-**Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`
-**Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`
+**Historical Phase 9.5 truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`
+**Historical Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`
 
 ## Recommendation
 

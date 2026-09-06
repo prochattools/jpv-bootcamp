@@ -71,7 +71,6 @@ async function test(name: string, fn: TestFn) {
 // the real exported function with controlled mocks and env.
 
 // Load the module once; env mutations below are per-test via setup/teardown.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { stagingAutoProvision } = await import('../lib/staging-auto-provision.js').catch(
   () => import('../lib/staging-auto-provision.ts'),
 ) as { stagingAutoProvision: (payload: unknown) => Promise<void> }

@@ -1,5 +1,10 @@
 # JPV P2-05 Staging Migration Authorization Readiness
 
+> **HISTORICAL / NON-OPERATIVE — 2026-09-06.** “Ready for authorization” below
+> applies only to the dated 2026-08-24 migration-37 candidate. It is not a
+> current authorization state. See
+> `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`.
+
 Status: **READY FOR AUTHORIZATION — execution remains blocked pending operational inputs**
 
 Prepared: 2026-08-24

@@ -88,7 +88,6 @@ export function MemberCoverImageForm({
     <div className='space-y-4'>
       <div className='overflow-hidden rounded-jpv-panel border border-jpv-border bg-jpv-surface'>
         {currentCover ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={currentCover.url}
             alt={currentCover.alt}

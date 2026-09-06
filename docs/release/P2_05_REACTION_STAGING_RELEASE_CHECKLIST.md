@@ -1,5 +1,9 @@
 # JPV P2-05 Reaction System — Staging Release Checklist
 
+> **HISTORICAL / NON-OPERATIVE — 2026-09-06.** The branch, SHA, staging origin,
+> and migration assumptions below belong to the 2026-08-24 candidate. Current
+> repository truth is `REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`.
+
 Status: **BLOCKED — preparation complete; staging migration not authorized**
 Prepared: 2026-08-24
 Scope: staging preparation only. This document does not authorize a migration, deployment, production action, or member-data change.

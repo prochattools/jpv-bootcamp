@@ -59,7 +59,6 @@ export function MemberPublishedContentView({
           <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
             <div
               className='jpv-rich-text member-content-body max-w-none text-sm leading-7 text-jpv-ink [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_a]:text-jpv-brand-deep [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-jpv-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-3'
-              // eslint-disable-next-line react/no-danger
               dangerouslySetInnerHTML={{ __html: content.contentHtml }}
             />
           </section>

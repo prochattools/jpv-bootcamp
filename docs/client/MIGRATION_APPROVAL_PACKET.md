@@ -2,8 +2,9 @@
 
 > **Historical/non-operative packet.** This packet records an older 11-entry,
 > no-migrations-applied checkpoint and must not be used for current action.
-> Phase 9.5 current migration truth is 36/36 applied with pending `[]`; see
-> `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
+> The later 36/36 checkpoint is historical as well. Current staging applied
+> state is unknown until a fresh read-only exact-state probe is captured; see
+> `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`.
 
 ## Scope
 

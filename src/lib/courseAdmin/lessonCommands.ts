@@ -74,8 +74,8 @@ export async function createLessonCommand(
   if (await findOne(persistence, 'payload_lessons', { slug: { equals: slug } })) {
     throw new PortalAdminActionError('conflict', 'A lesson with this slug already exists.')
   }
-  const module = await findModuleById(persistence, input.moduleId)
-  if (!module) throw new PortalAdminActionError('not_found', 'Module not found.')
+  const courseModule = await findModuleById(persistence, input.moduleId)
+  if (!courseModule) throw new PortalAdminActionError('not_found', 'Module not found.')
 
   const data: Record<string, unknown> = {
     module: normalizeRelationshipId(input.moduleId),
@@ -110,7 +110,7 @@ export async function createLessonCommand(
     targetId: String(document.id),
     after: { title, slug, moduleId: input.moduleId },
   })
-  const course = await findCourseForModule(persistence, module).catch((error): null => {
+  const course = await findCourseForModule(persistence, courseModule).catch((error): null => {
     void error
     return null
   })
@@ -184,12 +184,12 @@ export async function reorderLessonsCommand(
     targetId: moduleId,
     after: { order: orderedIds },
   })
-  const module = await findModuleById(persistence, moduleId).catch((error): null => {
+  const courseModule = await findModuleById(persistence, moduleId).catch((error): null => {
     void error
     return null
   })
-  const course = module
-    ? await findCourseForModule(persistence, module).catch((error): null => {
+  const course = courseModule
+    ? await findCourseForModule(persistence, courseModule).catch((error): null => {
       void error
       return null
     })

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Heading } from "@/components";
 import {
   Accordion,
@@ -59,16 +59,6 @@ const StaticData = {
 const Faq = ({ data, isHomePage }: any) => {
   const StaticFAQs = StaticData.faqs;
   const faqData = data?.length > 0 ? data : StaticFAQs;
-
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  if (!hasMounted) {
-    return null; // Avoid rendering until after the initial mount
-  }
 
   return (
     <div className="flex justify-center items-center bg-white dark:bg-[#010814] my-16 w-full">

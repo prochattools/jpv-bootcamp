@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { jpvBrand } from "@/lib/brand/jpvDesignSystem";
 
 export const metadata = {
@@ -119,12 +120,12 @@ export default function BuildersBootcampPage() {
             ))}
           </nav>
           <div className="hidden items-center gap-4 md:flex">
-            <a
+            <Link
               href="/"
               className="text-sm font-medium text-jpv-gray-300 transition-colors hover:text-white"
             >
               Main site
-            </a>
+            </Link>
             <a
               href="https://www.eventbrite.com/e/inheritance-builders-bootcamp-tickets-1981871918258?aff=oddtdtcreator"
               target="_blank"

@@ -42,7 +42,6 @@ export default async function PortalCoursesPage() {
               >
                 {course.coverImage ? (
                   <div className='aspect-video w-full overflow-hidden bg-jpv-surface'>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       alt={course.coverImage.alt}
                       className='h-full w-full object-cover'
@@ -151,7 +150,6 @@ export default async function PortalCoursesPage() {
                   {/* Cover image — left column on desktop */}
                   {featuredCourse.coverImage ? (
                     <div className='aspect-video w-full flex-shrink-0 overflow-hidden bg-jpv-surface md:aspect-auto md:w-72'>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         alt={featuredCourse.coverImage.alt}
                         className='h-full w-full object-cover'
@@ -240,7 +238,6 @@ export default async function PortalCoursesPage() {
                   {/* Cover image */}
                   {course.coverImage ? (
                     <div className='aspect-video w-full overflow-hidden bg-jpv-surface'>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         alt={course.coverImage.alt}
                         className='h-full w-full object-cover'

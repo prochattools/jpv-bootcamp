@@ -2,7 +2,6 @@
 import { Heading } from "@/components";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import AvatarOne from "@/assets/images/avatar1.svg"
 import AvatarTwo from "@/assets/images/avatar2.svg"
 import TestimonialImage from "@/assets/images/testimonial.svg"
@@ -107,14 +106,6 @@ const TestimonialCard = ({ item }) => {
 };
 
 const Testimonials = () => {
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) return null; // Render nothing if not client-side
-
   return (
     <div className="flex justify-center items-center bg-white dark:bg-[#010814] my-16 w-full">
       <div className="max-w-[1440px] w-full px-4 sm:px-12">

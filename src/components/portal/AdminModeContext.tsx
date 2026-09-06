@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 
 export type AdminModeContextValue = {
   isAdmin: boolean
@@ -22,10 +22,7 @@ export function AdminModeProvider({
   isAdmin: boolean
 }) {
   const [adminModeOn, setAdminModeOn] = useState(isAdmin)
-
-  useEffect(() => {
-    if (!isAdmin) setAdminModeOn(false)
-  }, [isAdmin])
+  const effectiveAdminModeOn = isAdmin && adminModeOn
 
   const toggleAdminMode = useCallback(() => {
     if (isAdmin) setAdminModeOn((current) => !current)
@@ -37,7 +34,7 @@ export function AdminModeProvider({
         isAdmin,
         // This is a presentation flag only. The server rechecks admin access
         // for every mutation, including when an administrator turns the mode off.
-        adminModeOn,
+        adminModeOn: effectiveAdminModeOn,
         toggleAdminMode,
       }}
     >

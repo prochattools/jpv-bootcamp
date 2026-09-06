@@ -403,17 +403,17 @@ export async function getAdminLessonDetail(
   if (!lesson) return null
 
   const moduleId = relationshipId(lesson.module)
-  const module = await findOne(payload, 'payload_course_modules', { id: { equals: moduleId } })
-  const courseId = relationshipId(module?.course)
+  const courseModule = await findOne(payload, 'payload_course_modules', { id: { equals: moduleId } })
+  const courseId = relationshipId(courseModule?.course)
   const course = await findOne(payload, 'payload_courses', {
     and: [{ id: { equals: courseId } }, { slug: { equals: courseSlug } }],
   })
 
-  if (!module || !course) return null
+  if (!courseModule || !course) return null
 
   if (isHiddenLegacyWelcomeLesson({
     courseSlug: asString(course.slug),
-    moduleTitle: asString(module.title),
+    moduleTitle: asString(courseModule.title),
     lessonSlug: asString(lesson.slug),
     lessonTitle: asString(lesson.title),
   })) return null
@@ -438,9 +438,9 @@ export async function getAdminLessonDetail(
       status: asCourseStatus(course.status),
     },
     module: {
-      id: String(module.id),
-      title: asString(module.title) ?? 'Untitled module',
-      sortOrder: typeof module.sortOrder === 'number' ? module.sortOrder : 0,
+      id: String(courseModule.id),
+      title: asString(courseModule.title) ?? 'Untitled module',
+      sortOrder: typeof courseModule.sortOrder === 'number' ? courseModule.sortOrder : 0,
     },
     lesson: {
       id: String(lesson.id),
@@ -475,17 +475,17 @@ function buildAdminLessonNavigation(
 
   for (const entry of sequence) {
     const moduleId = String(entry.module.id)
-    let module = modules.find((item) => item.id === moduleId)
-    if (!module) {
-      module = {
+    let courseModule = modules.find((item) => item.id === moduleId)
+    if (!courseModule) {
+      courseModule = {
         id: moduleId,
         title: asString(entry.module.title) ?? 'Untitled module',
         lessons: [],
       }
-      modules.push(module)
+      modules.push(courseModule)
     }
 
-    module.lessons.push({
+    courseModule.lessons.push({
       id: String(entry.lesson.id),
       title: asString(entry.lesson.title) ?? 'Untitled lesson',
       slug: asString(entry.lesson.slug),

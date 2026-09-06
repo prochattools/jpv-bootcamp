@@ -1,5 +1,16 @@
 # Operator Handoff Summary
 
+> **HISTORICAL OPERATOR HANDOFF.** The latest repository authority is
+> `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`. Do not
+> use the dated migration, deployment, or readiness claims below as present
+> environment evidence or authorization.
+
+Current reconciliation release manifest: `183` entries; `182` required and `1` conditional.
+After the status-document contracts were refreshed, the full local
+`pnpm test:release` gate passed `182/182` required checks on 2026-09-06. This
+is local repository evidence only and does not replace a fresh staging
+exact-state or exact-SHA evidence packet.
+
 ## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
 
 **ROOMS FEATURE: COMPLETE**
@@ -21,7 +32,7 @@
 - **Migrations applied:** `36/36 Payload migrations applied`; pending migrations: `[]` (read-only plan run `32648793013`).
 - **Operational boundary:** no production operation or migration execution occurred. The only external mutation was the authorized staging deployment of this candidate.
 - **Handoff order:** preserve this evidence as the frozen staging checkpoint. Phase 10 requires separate explicit production authorization.
-- **Phase 9.5 authority:** use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` for current truth and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` for remaining work.
+- **Historical Phase 9.5 references:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` describe that dated checkpoint; they are not current repository or environment authority.
 - **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`. Deterministic release gate: `pnpm test:release` (`181/181`). The manifest contains 182 entries including one deferred browser gate. This is local/CI validation only and does not constitute staging or production evidence.
 
 <!-- Reconciliation note 2026-08-08: Verify the exact feature tip with `git rev-parse HEAD`. The release manifest contains 164 required gates. The live staging baseline remains `9c045fa5a5c327014c20fe9377f7d5368b550573`; guarded read-only plan run `31215369413` established the clean pre-apply state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`. -->

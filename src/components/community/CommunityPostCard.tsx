@@ -87,7 +87,6 @@ export function CommunityPostCard({ href, post }: CommunityPostCardProps) {
         <h3 className='mt-5 text-xl font-bold leading-snug text-jpv-brand-deep group-hover:text-jpv-brand'>{post.title}</h3>
         {imageAttachment && 'previewUrl' in imageAttachment ? (
           <div className='mt-4 overflow-hidden rounded-jpv-card border border-jpv-border bg-jpv-surface'>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               alt={imageAttachment.altText ?? imageAttachment.title}
               className='aspect-video w-full object-cover'

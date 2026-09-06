@@ -24,7 +24,6 @@ async function fetchPortalNavigation(): Promise<{
 }> {
   try {
     const payload = await getCachedPayload()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (payload as any).find({
       collection: 'payload_portal_nav_items',
       where: { status: { equals: 'active' } },
@@ -33,7 +32,6 @@ async function fetchPortalNavigation(): Promise<{
       depth: 0,
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items: any[] = result.docs
     if (items.length === 0) {
       return buildNavFromDefaults()

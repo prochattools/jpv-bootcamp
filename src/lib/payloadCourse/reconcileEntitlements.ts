@@ -255,11 +255,11 @@ export async function reconcilePayloadEntitlements(
 
     const lesson = lessonId ? lessonsById.get(lessonId) : null
     const moduleId = idOf(lesson?.module as RelationshipValue)
-    const module = moduleId ? modulesById.get(moduleId) : null
-    const courseId = idOf(module?.course as RelationshipValue)
+    const courseModule = moduleId ? modulesById.get(moduleId) : null
+    const courseId = idOf(courseModule?.course as RelationshipValue)
     const course = courseId ? coursesById.get(courseId) : null
 
-    if (!lesson || !module || !course) {
+    if (!lesson || !courseModule || !course) {
       issues.push({
         code: 'orphan_lesson_resource_parent_missing',
         severity: 'error',

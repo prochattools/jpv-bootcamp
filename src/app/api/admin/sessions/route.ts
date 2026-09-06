@@ -53,7 +53,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const body = await req.json() as Record<string, unknown>
     const title = typeof body.title === 'string' ? body.title.trim() : ''
     const course = asOptionalRelationship(body.course)
-    const module = asOptionalRelationship(body.module)
+    const courseModule = asOptionalRelationship(body.module)
     const lesson = asOptionalRelationship(body.lesson)
     const scheduledDate = new Date(String(body.scheduledAt ?? ''))
     const capacity = Number(body.capacity ?? 50)
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       data: {
         title,
         course,
-        module,
+        module: courseModule,
         lesson,
         hostUser: session.administratorId,
         scheduledAt: scheduledDate.toISOString(),
