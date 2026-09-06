@@ -64,4 +64,12 @@ export const PRODUCTION_ROOMS_HISTORICAL_ANOMALY_WINDOW = [
 	{ id: 52, name: '20260827_090000_membership_support_relationship_tables', batch: 19 },
 ] as const
 
+// buildStagingMigrationStatus reports only the backwards transition itself,
+// while the Rooms runner also records the wider historical registry mismatch
+// window. Production verification may suppress this one blocker only after the
+// exact immutable historical row fingerprint above has been proven.
+export const PRODUCTION_ROOMS_PROTECTED_ORDERING_ANOMALIES = [
+	'20260826_100000_administrator_member_identity',
+] as const
+
 export type ProductionRoomsMigrationMode = 'plan' | 'apply' | 'finalize'

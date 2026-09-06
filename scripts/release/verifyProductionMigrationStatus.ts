@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { Client } from 'pg'
 
 import {
@@ -18,10 +19,32 @@ import {
   type PgClientLike,
   type PrismaMigrationRow,
 } from './buildStagingMigrationStatus'
+import {
+  PRODUCTION_ROOMS_HISTORICAL_ANOMALY_WINDOW,
+  PRODUCTION_ROOMS_HISTORICAL_BASELINE_SHA256,
+  PRODUCTION_ROOMS_PROTECTED_ORDERING_ANOMALIES,
+} from './productionRoomsMigrationConstants'
 
 const PRODUCTION = ENVIRONMENT_TOPOLOGY.production
 const FULL_SHA = /^[0-9a-f]{40}$/
 const PRODUCTION_HEALTH_URL = `${PRODUCTION.origin}/api/health/deployment`
+const HISTORICAL_BASELINE_ROW_COUNT = PRODUCTION_ROOMS_HISTORICAL_ANOMALY_WINDOW.at(-1)!.id
+const HISTORICAL_WINDOW_START_INDEX = PRODUCTION_ROOMS_HISTORICAL_ANOMALY_WINDOW[0].id - 1
+const ORDERING_BLOCKER = 'Payload migration ordering anomalies exist'
+
+type ProductionPayloadMigrationRow = PayloadMigrationRow & {
+  id: number | string
+}
+
+export type ProductionHistoricalBaselineAssessment = {
+  expectedSha256: string
+  observedSha256: string | null
+  matches: boolean
+}
+
+export type ProductionHistoricalBaselineVerifier = (
+  rows: readonly PayloadMigrationRow[],
+) => ProductionHistoricalBaselineAssessment
 
 export type ProductionRevisionEvidence = {
   expectedSha: string
@@ -49,6 +72,7 @@ export type ProductionMigrationStatusReport = {
       duplicate: string[]
       malformedRows: number
       orderingAnomalies: string[]
+      historicalBaseline: ProductionHistoricalBaselineAssessment
     }
     prisma: {
       expected: string[]
@@ -73,6 +97,55 @@ export type ProductionReadOnlyAdapterOptions = {
   connectionTimeoutMillis?: number
   statementTimeoutMillis?: number
   clientFactory?: PgClientFactory
+}
+
+function normalizePositiveInteger(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) && value >= 1 ? value : null
+  }
+  if (typeof value === 'string' && /^[1-9]\d*$/.test(value)) {
+    const parsed = Number.parseInt(value, 10)
+    return Number.isSafeInteger(parsed) ? parsed : null
+  }
+  return null
+}
+
+export function verifyProductionHistoricalPayloadBaseline(
+  rows: readonly PayloadMigrationRow[],
+  expectedSha256: string = PRODUCTION_ROOMS_HISTORICAL_BASELINE_SHA256,
+): ProductionHistoricalBaselineAssessment {
+  if (!/^[0-9a-f]{64}$/.test(expectedSha256) || rows.length < HISTORICAL_BASELINE_ROW_COUNT) {
+    return { expectedSha256, observedSha256: null, matches: false }
+  }
+
+  const normalized: Array<{ id: number; name: string; batch: number }> = []
+  for (let index = 0; index < HISTORICAL_BASELINE_ROW_COUNT; index += 1) {
+    const row = rows[index] as PayloadMigrationRow & { id?: unknown }
+    const id = normalizePositiveInteger(row.id)
+    const batch = normalizePositiveInteger(row.batch)
+    const nameValid =
+      typeof row.name === 'string' &&
+      row.name.length > 0 &&
+      !/[\x00-\x1f\x7f]/.test(row.name)
+    if (id === null || batch === null || !nameValid) {
+      return { expectedSha256, observedSha256: null, matches: false }
+    }
+    normalized.push({ id, name: row.name, batch })
+  }
+
+  const observedSha256 = createHash('sha256').update(JSON.stringify(normalized)).digest('hex')
+  const historicalWindow = normalized.slice(
+    HISTORICAL_WINDOW_START_INDEX,
+    HISTORICAL_WINDOW_START_INDEX + PRODUCTION_ROOMS_HISTORICAL_ANOMALY_WINDOW.length,
+  )
+  const historicalWindowMatches =
+    JSON.stringify(historicalWindow) === JSON.stringify(PRODUCTION_ROOMS_HISTORICAL_ANOMALY_WINDOW)
+
+  return {
+    expectedSha256,
+    observedSha256,
+    matches: observedSha256 === expectedSha256 && historicalWindowMatches,
+  }
 }
 
 function defaultPgClientFactory(config: {
@@ -163,8 +236,8 @@ export function createProductionReadOnlyAdapter(
           throw new Error('Database-reported production identity mismatch')
         }
 
-        const payloadResult = await client.query<PayloadMigrationRow>(
-          `SELECT name, batch FROM ${schemaIdentifier}.payload_migrations ORDER BY id ASC`,
+        const payloadResult = await client.query<ProductionPayloadMigrationRow>(
+          `SELECT id, name, batch FROM ${schemaIdentifier}.payload_migrations ORDER BY id ASC`,
         )
         const prismaResult = await client.query<PrismaMigrationRow>(
           `SELECT migration_name, started_at, finished_at, rolled_back_at, applied_steps_count, (logs IS NOT NULL) AS has_logs FROM ${schemaIdentifier}._prisma_migrations ORDER BY started_at ASC`,
@@ -173,6 +246,7 @@ export function createProductionReadOnlyAdapter(
         return {
           schemaIdentity: identity.schema,
           payloadMigrations: payloadResult.rows.map((row) => ({
+            id: row.id,
             name: row.name,
             batch: row.batch,
           })),
@@ -255,6 +329,11 @@ function blankReport(result: ProductionMigrationStatusReport['result'], blockers
         duplicate: [],
         malformedRows: 0,
         orderingAnomalies: [],
+        historicalBaseline: {
+          expectedSha256: PRODUCTION_ROOMS_HISTORICAL_BASELINE_SHA256,
+          observedSha256: null,
+          matches: false,
+        },
       },
       prisma: {
         expected: [...REGISTERED_PRISMA_MIGRATIONS],
@@ -279,6 +358,7 @@ export async function buildProductionMigrationStatus(
   expectedSchema: string,
   expectedSha: string,
   revisionReader: ProductionRevisionReader | null = readProductionRevision,
+  historicalBaselineVerifier: ProductionHistoricalBaselineVerifier = verifyProductionHistoricalPayloadBaseline,
 ): Promise<ProductionMigrationStatusReport> {
   const safeExpectedSchema = validateDatabaseSchemaIdentifier(expectedSchema)
   if (safeExpectedSchema !== PRODUCTION.schema) throw new Error('Production schema mismatch')
@@ -296,9 +376,15 @@ export async function buildProductionMigrationStatus(
     (value): value is string => value !== null,
   )
   const revisionMatches = observedRevisions.length > 0 && observedRevisions.every((value) => value === expectedSha)
+  let evidence: MigrationEvidence
   let status
   try {
-    status = await buildStagingMigrationStatus(adapter, safeExpectedSchema)
+    evidence = await adapter.collectMigrationEvidence(safeExpectedSchema)
+    status = await buildStagingMigrationStatus({
+      async collectMigrationEvidence() {
+        return evidence
+      },
+    }, safeExpectedSchema)
   } catch {
     return {
       ...blankReport('ERROR', ['Production migration evidence could not be collected']),
@@ -306,7 +392,18 @@ export async function buildProductionMigrationStatus(
     }
   }
 
-  const blockers = [...status.blockers]
+  const historicalBaseline = historicalBaselineVerifier(evidence.payloadMigrations)
+  const protectedOrderingAnomaliesMatch =
+    historicalBaseline.matches &&
+    JSON.stringify(status.orderingAnomalies) === JSON.stringify(PRODUCTION_ROOMS_PROTECTED_ORDERING_ANOMALIES)
+  const blockers = status.blockers.filter(
+    (blocker) => blocker !== ORDERING_BLOCKER || !protectedOrderingAnomaliesMatch,
+  )
+  if (!historicalBaseline.matches) {
+    blockers.push('Protected production Payload migration historical baseline does not match')
+  } else if (!protectedOrderingAnomaliesMatch) {
+    blockers.push('Protected production Payload migration ordering fingerprint does not match')
+  }
   if (!revisionMatches) blockers.unshift('Deployed production revision does not match the expected revision')
   const report: ProductionMigrationStatusReport = {
     result: blockers.length === 0 ? 'VERIFIED' : 'MISMATCH',
@@ -327,6 +424,7 @@ export async function buildProductionMigrationStatus(
         duplicate: status.duplicatePayloadMigrations,
         malformedRows: status.malformedPayloadMigrationRecords.length,
         orderingAnomalies: status.orderingAnomalies,
+        historicalBaseline,
       },
       prisma: {
         expected: status.registeredPrismaMigrations,
@@ -364,8 +462,14 @@ export function parseProductionCliArgs(args: string[]): ProductionMigrationStatu
     acknowledgeReadOnly: false,
   }
   const seen = new Set<string>()
+  let separatorSeen = false
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
+    if (arg === '--') {
+      if (separatorSeen) throw new Error('Duplicate argument separator')
+      separatorSeen = true
+      continue
+    }
     if (arg === '--help' || arg === '-h') {
       if (seen.has('help')) throw new Error('Duplicate help flag')
       seen.add('help')
