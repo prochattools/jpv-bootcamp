@@ -66,6 +66,18 @@ on:
         description: Exact apply phrase; use only after all gates pass
         required: false
         type: string
+      run_migration_status_preflight:
+        description: Run the disposable read-only migration-status preflight instead of Info Forum control
+        required: false
+        default: 'no'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+      expected_candidate_sha:
+        description: Exact staging-tested release candidate SHA for migration-status preflight
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -76,6 +88,7 @@ concurrency:
 
 jobs:
   guarded-consolidation:
+    if: inputs.run_migration_status_preflight != 'yes'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: root-domain-image-publish
@@ -131,3 +144,51 @@ jobs:
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_API_BASE_URL: https://dokploy.prochat.tools/api
         run: pnpm production:info-forum:control
+
+  production-migration-status-read-only:
+    if: inputs.run_migration_status_preflight == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: root-domain-image-publish
+    env:
+      EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+      EXPECTED_CANDIDATE_SHA: ${{ inputs.expected_candidate_sha }}
+      EXPECTED_PRODUCTION_SHA: ${{ inputs.expected_production_sha }}
+
+    steps:
+      - name: Check out exact disposable control source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.expected_source_sha }}
+          fetch-depth: 0
+
+      - name: Validate immutable control boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "codex/production-migration-preflight-20260907"
+          test "$GITHUB_REF" = "refs/heads/codex/production-migration-preflight-20260907"
+          test "$GITHUB_SHA" = "$EXPECTED_SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test "$(git ls-remote origin refs/heads/codex/production-migration-preflight-20260907 | awk '{print $1}')" = "$EXPECTED_SOURCE_SHA"
+          test "$EXPECTED_CANDIDATE_SHA" = "8b1f459fed358776fda791553ef225cc9f03b2ae"
+          test "$EXPECTED_PRODUCTION_SHA" = "f93ffac7dd299c39d8daf242d6a436272cc79188"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install exact dependency graph
+        run: pnpm install --frozen-lockfile
+
+      - name: Run exact-target read-only production migration preflight
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        run: pnpm exec tsx scripts/release/productionMigrationStatusControl.mts
