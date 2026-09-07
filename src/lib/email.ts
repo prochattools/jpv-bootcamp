@@ -395,13 +395,8 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 
 		let sendResult: Awaited<ReturnType<typeof resend.emails.send>>
 		try {
-			const existingHeaders = (sendParams as { headers?: Record<string, string> }).headers
-			sendResult = await resend.emails.send({
-				...sendParams,
-				headers: {
-					...existingHeaders,
-					'Idempotency-Key': event.idempotencyKey,
-				},
+			sendResult = await resend.emails.send(sendParams, {
+				idempotencyKey: event.idempotencyKey,
 			})
 		} catch (networkError) {
 			// Network / transient error — release claim back to 'pending', increment retry

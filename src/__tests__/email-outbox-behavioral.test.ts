@@ -643,7 +643,9 @@ describe('email outbox behavioral tests', () => {
 
 			const recoveryCall = mockEmailEventUpdateMany.mock.calls[0][0]
 			expect(recoveryCall.data.retryCount).toBeUndefined()
-			expect(mockResendSend.mock.calls[0][0].headers['Idempotency-Key']).toBe(event.idempotencyKey)
+			expect(mockResendSend.mock.calls[0][1]).toEqual({
+				idempotencyKey: event.idempotencyKey,
+			})
 		})
 	})
 })
