@@ -15,7 +15,10 @@ import {
   buildPreflightRunIdentity,
   buildRemoteVerifierBundle,
   buildServerScript,
+  runReadOnlySchedule,
+  scheduleIdFromCreateResponse,
   selectCorrelatedDeploymentId,
+  validateReviewedControlParents,
   validateProductionMigrationStatusReport,
   validateStaticProductionTargetContract,
 } from './productionMigrationStatusControl.mts'
@@ -27,7 +30,8 @@ const verifier = readFileSync('scripts/release/verifyProductionMigrationStatus.t
 
 validateStaticProductionTargetContract()
 
-assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlBranch, 'codex/production-migration-preflight-20260907')
+assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlTag, 'production-migration-preflight-20260907-reviewed')
+assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.reviewedBaselineControlSha, '05d3adc66e584b2fd8a8da482896e69a7ca9c8f8')
 assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.candidateSha, '8b1f459fed358776fda791553ef225cc9f03b2ae')
 assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.productionSha, 'f93ffac7dd299c39d8daf242d6a436272cc79188')
 assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.origin, 'https://jpvbootcamp.com')
@@ -52,7 +56,8 @@ assert.match(workflow, /environment: root-domain-image-publish/)
 assert.match(workflow, /run_migration_status_preflight:/)
 assert.match(workflow, /if: inputs\.run_migration_status_preflight != 'yes'/)
 assert.match(workflow, /if: inputs\.run_migration_status_preflight == 'yes'/)
-assert.match(workflow, /codex\/production-migration-preflight-20260907/)
+assert.match(workflow, /production-migration-preflight-20260907-reviewed/)
+assert.match(workflow, /05d3adc66e584b2fd8a8da482896e69a7ca9c8f8/)
 assert.match(workflow, /8b1f459fed358776fda791553ef225cc9f03b2ae/)
 assert.match(workflow, /f93ffac7dd299c39d8daf242d6a436272cc79188/)
 assert.match(workflow, /pnpm install --frozen-lockfile/)
@@ -65,7 +70,9 @@ assert.match(controller, /schedule\.create/)
 assert.match(controller, /schedule\.runManually/)
 assert.match(controller, /schedule\.delete/)
 assert.match(controller, /migration_registry_differs_from_serving_image/)
-assert.match(controller, /remote_control_branch_moved/)
+assert.match(controller, /remote_control_tag_moved/)
+assert.match(controller, /control_not_direct_child_of_reviewed_baseline/)
+assert.match(controller, /schedule_create_identity_mismatch/)
 assert.doesNotMatch(controller, /process\.env\.DATABASE_URL|DATABASE_URL\s*=/)
 
 assert.match(verifier, /BEGIN TRANSACTION READ ONLY/)
@@ -74,6 +81,72 @@ assert.match(verifier, /method: 'GET'/)
 assert.doesNotMatch(verifier, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE)\s+/i)
 assert.doesNotMatch(verifier, /\bprisma\s+migrate\b|\bmigrate\s+deploy\b|\b(?:db|payload):(?:reset|seed|cleanup|init)\b/i)
 assert.doesNotMatch(remoteEntry, /DATABASE_URL|password|secret/i)
+
+validateReviewedControlParents(['05d3adc66e584b2fd8a8da482896e69a7ca9c8f8'])
+assert.throws(() => validateReviewedControlParents([]), /control_not_direct_child_of_reviewed_baseline/)
+assert.throws(
+  () => validateReviewedControlParents([
+    '05d3adc66e584b2fd8a8da482896e69a7ca9c8f8',
+    '0000000000000000000000000000000000000000',
+  ]),
+  /control_not_direct_child_of_reviewed_baseline/,
+)
+assert.throws(
+  () => validateReviewedControlParents(['0000000000000000000000000000000000000000']),
+  /control_not_direct_child_of_reviewed_baseline/,
+)
+
+assert.equal(
+  scheduleIdFromCreateResponse(
+    { scheduleId: 'schedule-created' },
+    'expected-schedule',
+    'expected-description',
+  ),
+  'schedule-created',
+)
+assert.equal(
+  scheduleIdFromCreateResponse(
+    { name: 'expected-schedule', description: 'expected-description', id: 'schedule-created' },
+    'expected-schedule',
+    'expected-description',
+  ),
+  'schedule-created',
+)
+assert.equal(
+  scheduleIdFromCreateResponse(
+    { name: 'other-schedule', description: 'expected-description', id: 'schedule-unrelated' },
+    'expected-schedule',
+    'expected-description',
+  ),
+  null,
+)
+assert.equal(
+  scheduleIdFromCreateResponse(
+    { name: 'expected-schedule', description: 'other-description', id: 'schedule-unrelated' },
+    'expected-schedule',
+    'expected-description',
+  ),
+  null,
+)
+assert.equal(
+  scheduleIdFromCreateResponse(
+    { id: 'schedule-unbound' },
+    'expected-schedule',
+    'expected-description',
+  ),
+  null,
+)
+assert.throws(
+  () => scheduleIdFromCreateResponse(
+    [
+      { name: 'expected-schedule', description: 'expected-description', id: 'schedule-a' },
+      { name: 'expected-schedule', description: 'expected-description', id: 'schedule-b' },
+    ],
+    'expected-schedule',
+    'expected-description',
+  ),
+  /schedule_create_response_ambiguous/,
+)
 
 const bundle = buildRemoteVerifierBundle()
 assert.ok(bundle.bytes.length > 0)
@@ -87,6 +160,7 @@ const runIdentity = buildPreflightRunIdentity({
 })
 assert.deepEqual(runIdentity, {
   scheduleName: 'jpv-production-migration-read-only-34119571332-a2-1234567890ab',
+  scheduleDescription: 'Disposable read-only production migration-status preflight 34119571332-a2-1234567890ab',
   logMarker: 'JPV_PRODUCTION_MIGRATION_PREFLIGHT_RUN_34119571332-a2-1234567890ab_START',
 })
 assert.throws(() => buildPreflightRunIdentity({
@@ -120,6 +194,91 @@ assert.throws(
   ),
   /schedule_run_deployment_ambiguous/,
 )
+
+
+async function assertScheduleIdentitySafety(): Promise<void> {
+  const scheduleEnvironment = {
+    DOKPLOY_API_KEY: 'test-api-key',
+    GITHUB_RUN_ID: '34119571332',
+    GITHUB_RUN_ATTEMPT: '2',
+    EXPECTED_SOURCE_SHA: '1234567890abcdef1234567890abcdef12345678',
+  }
+  const originalFetch = globalThis.fetch
+  const jsonResponse = (value: unknown, status = 200): Response =>
+    new Response(JSON.stringify(value), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    })
+
+  try {
+    let deletedScheduleId: string | null = null
+    let runCalled = false
+    globalThis.fetch = (async (input, init) => {
+      const url = new URL(String(input))
+      if (url.pathname.endsWith('/application.one')) {
+        return jsonResponse({
+          applicationId: PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.dokployApplicationId,
+          dockerImage: PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.image,
+        })
+      }
+      if (url.pathname.endsWith('/schedule.create')) return jsonResponse({ scheduleId: 'schedule-created' })
+      if (url.pathname.endsWith('/schedule.one')) {
+        assert.equal(url.searchParams.get('scheduleId'), 'schedule-created')
+        return jsonResponse({
+          scheduleId: 'schedule-created',
+          name: runIdentity.scheduleName,
+          description: runIdentity.scheduleDescription,
+        })
+      }
+      if (url.pathname.endsWith('/schedule.list')) {
+        return jsonResponse([{
+          scheduleId: 'schedule-listed-other',
+          name: runIdentity.scheduleName,
+          description: runIdentity.scheduleDescription,
+        }])
+      }
+      if (url.pathname.endsWith('/schedule.runManually')) {
+        runCalled = true
+        return jsonResponse({})
+      }
+      if (url.pathname.endsWith('/schedule.delete')) {
+        deletedScheduleId = JSON.parse(String(init?.body)).scheduleId as string
+        return jsonResponse({})
+      }
+      throw new Error(`unexpected mock request: ${url.pathname}`)
+    }) as typeof fetch
+
+    await assert.rejects(
+      () => runReadOnlySchedule(bundle, scheduleEnvironment),
+      /schedule_create_identity_mismatch/,
+    )
+    assert.equal(runCalled, false)
+    assert.equal(deletedScheduleId, 'schedule-created')
+
+    const touchedPaths: string[] = []
+    globalThis.fetch = (async (input) => {
+      const url = new URL(String(input))
+      touchedPaths.push(url.pathname)
+      if (url.pathname.endsWith('/application.one')) {
+        return jsonResponse({
+          applicationId: PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.dokployApplicationId,
+          dockerImage: PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.image,
+        })
+      }
+      if (url.pathname.endsWith('/schedule.create')) return jsonResponse({})
+      throw new Error(`unsafe follow-up request after unbound create: ${url.pathname}`)
+    }) as typeof fetch
+
+    await assert.rejects(
+      () => runReadOnlySchedule(bundle, scheduleEnvironment),
+      /schedule_create_identity_missing/,
+    )
+    assert.deepEqual(touchedPaths, ['/api/application.one', '/api/schedule.create'])
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+
+}
 
 const serverScript = buildServerScript(bundle, runIdentity.logMarker)
 assert.match(serverScript, /clients-jpv-bootcamp-app-tp9xrk/)
@@ -213,4 +372,9 @@ assert.throws(() => validateProductionMigrationStatusReport({
   },
 }), /migration_status_read_only_contract_mismatch/)
 
-console.log('productionMigrationStatusControl.test.ts passed')
+void assertScheduleIdentitySafety()
+  .then(() => console.log('productionMigrationStatusControl.test.ts passed'))
+  .catch((error) => {
+    console.error(error)
+    process.exitCode = 1
+  })

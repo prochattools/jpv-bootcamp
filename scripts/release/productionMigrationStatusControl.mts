@@ -27,7 +27,8 @@ const fullSha = /^[0-9a-f]{40}$/
 const base64Payload = /^[A-Za-z0-9+/]+={0,2}$/
 
 export const PRODUCTION_MIGRATION_PREFLIGHT_CONTROL = Object.freeze({
-  controlBranch: 'codex/production-migration-preflight-20260907',
+  controlTag: 'production-migration-preflight-20260907-reviewed',
+  reviewedBaselineControlSha: '05d3adc66e584b2fd8a8da482896e69a7ca9c8f8',
   candidateSha: '8b1f459fed358776fda791553ef225cc9f03b2ae',
   productionSha: 'f93ffac7dd299c39d8daf242d6a436272cc79188',
   origin: 'https://jpvbootcamp.com',
@@ -92,38 +93,26 @@ function findDeploymentIds(value: unknown, result = new Set<string>()): Set<stri
   return result
 }
 
-function findScheduleIdsByName(
+function findScheduleIdsByIdentity(
   value: unknown,
   scheduleName: string,
+  scheduleDescription: string,
   result = new Set<string>(),
 ): Set<string> {
   if (isRecord(value)) {
-    if (value.name === scheduleName) {
+    if (value.name === scheduleName && value.description === scheduleDescription) {
       for (const key of ['scheduleId', 'id'] as const) {
         if (typeof value[key] === 'string' && value[key]) result.add(value[key])
       }
     }
     for (const child of Object.values(value)) {
-      findScheduleIdsByName(child, scheduleName, result)
+      findScheduleIdsByIdentity(child, scheduleName, scheduleDescription, result)
     }
   }
   if (Array.isArray(value)) {
     for (const child of value) {
-      findScheduleIdsByName(child, scheduleName, result)
+      findScheduleIdsByIdentity(child, scheduleName, scheduleDescription, result)
     }
-  }
-  return result
-}
-
-function findScheduleIds(value: unknown, result = new Set<string>()): Set<string> {
-  if (isRecord(value)) {
-    if (typeof value.scheduleId === 'string' && value.scheduleId) {
-      result.add(value.scheduleId)
-    }
-    for (const child of Object.values(value)) findScheduleIds(child, result)
-  }
-  if (Array.isArray(value)) {
-    for (const child of value) findScheduleIds(child, result)
   }
   return result
 }
@@ -133,18 +122,18 @@ function uniqueId(ids: Set<string>, ambiguousError: string): string | null {
   return ids.values().next().value ?? null
 }
 
-function scheduleIdFromCreateResponse(value: unknown, scheduleName: string): string | null {
-  const namedId = uniqueId(
-    findScheduleIdsByName(value, scheduleName),
+export function scheduleIdFromCreateResponse(
+  value: unknown,
+  scheduleName: string,
+  scheduleDescription: string,
+): string | null {
+  if (isRecord(value) && typeof value.scheduleId === 'string' && value.scheduleId) {
+    return value.scheduleId
+  }
+  return uniqueId(
+    findScheduleIdsByIdentity(value, scheduleName, scheduleDescription),
     'schedule_create_response_ambiguous',
   )
-  if (namedId) return namedId
-
-  const scheduleId = uniqueId(findScheduleIds(value), 'schedule_create_response_ambiguous')
-  if (scheduleId) return scheduleId
-
-  if (isRecord(value) && typeof value.id === 'string' && value.id) return value.id
-  return null
 }
 
 function logText(value: unknown): string {
@@ -165,6 +154,24 @@ function currentCommit(): string {
   }).trim()
 }
 
+function currentCommitParents(): string[] {
+  const output = execFileSync('git', ['rev-list', '--parents', '-n', '1', 'HEAD'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  }).trim()
+  const [, ...parents] = output.split(/\s+/).filter(Boolean)
+  return parents
+}
+
+export function validateReviewedControlParents(parents: readonly string[]): void {
+  if (
+    parents.length !== 1 ||
+    parents[0] !== PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.reviewedBaselineControlSha
+  ) {
+    throw new Error('control_not_direct_child_of_reviewed_baseline')
+  }
+}
+
 function commandSucceeded(command: string, args: string[]): boolean {
   const result = spawnSync(command, args, {
     cwd: repoRoot,
@@ -182,14 +189,14 @@ function exactChangedFiles(baseSha: string): string[] {
   return output ? output.split('\n').filter(Boolean).sort() : []
 }
 
-function remoteControlBranchHead(): string {
+function remoteControlTagHead(): string {
   const output = execFileSync(
     'git',
-    ['ls-remote', 'origin', `refs/heads/${PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlBranch}`],
+    ['ls-remote', 'origin', `refs/tags/${PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlTag}`],
     { cwd: repoRoot, encoding: 'utf8' },
   ).trim()
   const sha = output.split(/\s+/)[0] ?? ''
-  return assertFullSha(sha, 'remote_control_branch_sha')
+  return assertFullSha(sha, 'remote_control_tag_sha')
 }
 
 export function validateStaticProductionTargetContract(): void {
@@ -221,19 +228,20 @@ export function validateControlSourceBoundary(
     'expected_candidate_sha',
   )
 
-  if (environment.GITHUB_REF_NAME !== PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlBranch) {
-    throw new Error('control_branch_mismatch')
+  if (environment.GITHUB_REF_NAME !== PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlTag) {
+    throw new Error('control_tag_mismatch')
   }
-  if (environment.GITHUB_REF !== `refs/heads/${PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlBranch}`) {
+  if (environment.GITHUB_REF !== `refs/tags/${PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlTag}`) {
     throw new Error('control_ref_mismatch')
   }
   if (currentCommit() !== expectedSourceSha) throw new Error('control_source_sha_mismatch')
   if (required('GITHUB_SHA', environment) !== expectedSourceSha) {
     throw new Error('workflow_source_sha_mismatch')
   }
-  if (remoteControlBranchHead() !== expectedSourceSha) {
-    throw new Error('remote_control_branch_moved')
+  if (remoteControlTagHead() !== expectedSourceSha) {
+    throw new Error('remote_control_tag_moved')
   }
+  validateReviewedControlParents(currentCommitParents())
   if (expectedProductionSha !== PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.productionSha) {
     throw new Error('production_sha_mismatch')
   }
@@ -275,6 +283,7 @@ export function validateControlSourceBoundary(
 
 export type PreflightRunIdentity = {
   scheduleName: string
+  scheduleDescription: string
   logMarker: string
 }
 
@@ -290,6 +299,7 @@ export function buildPreflightRunIdentity(
   const correlation = `${runId}-a${runAttempt}-${sourceSha.slice(0, 12)}`
   return {
     scheduleName: `jpv-production-migration-read-only-${correlation}`,
+    scheduleDescription: `Disposable read-only production migration-status preflight ${correlation}`,
     logMarker: `JPV_PRODUCTION_MIGRATION_PREFLIGHT_RUN_${correlation}_START`,
   }
 }
@@ -517,25 +527,50 @@ async function assertDokployApplicationTarget(apiKey: string): Promise<void> {
   }
 }
 
-async function listScheduleIdByName(apiKey: string, scheduleName: string): Promise<string | null> {
+async function listScheduleIdByIdentity(
+  apiKey: string,
+  scheduleName: string,
+  scheduleDescription: string,
+): Promise<string | null> {
   const listed = await dokployRequest(
     apiKey,
     `/schedule.list?id=${encodeURIComponent(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.dokployApplicationId)}&scheduleType=dokploy-server`,
   )
   if (listed.status < 200 || listed.status >= 300) throw new Error('schedule_list_failed')
-  return uniqueId(findScheduleIdsByName(listed.data, scheduleName), 'schedule_name_ambiguous')
+  return uniqueId(
+    findScheduleIdsByIdentity(listed.data, scheduleName, scheduleDescription),
+    'schedule_identity_ambiguous',
+  )
 }
 
-async function runReadOnlySchedule(bundle: RemoteVerifierBundle): Promise<void> {
-  const apiKey = required('DOKPLOY_API_KEY')
+async function assertScheduleIdentityById(
+  apiKey: string,
+  scheduleId: string,
+  scheduleName: string,
+  scheduleDescription: string,
+): Promise<void> {
+  const schedule = await dokployRequest(
+    apiKey,
+    `/schedule.one?scheduleId=${encodeURIComponent(scheduleId)}`,
+  )
+  if (schedule.status < 200 || schedule.status >= 300) throw new Error('schedule_identity_lookup_failed')
+  const ids = findScheduleIdsByIdentity(schedule.data, scheduleName, scheduleDescription)
+  if (ids.size !== 1 || !ids.has(scheduleId)) throw new Error('schedule_identity_mismatch')
+}
+
+export async function runReadOnlySchedule(
+  bundle: RemoteVerifierBundle,
+  environment: NodeJS.ProcessEnv = process.env,
+): Promise<void> {
+  const apiKey = required('DOKPLOY_API_KEY', environment)
   await assertDokployApplicationTarget(apiKey)
-  const { scheduleName, logMarker } = buildPreflightRunIdentity()
+  const { scheduleName, scheduleDescription, logMarker } = buildPreflightRunIdentity(environment)
   const serverScript = buildServerScript(bundle, logMarker)
   const created = await dokployRequest(apiKey, '/schedule.create', {
     method: 'POST',
     body: JSON.stringify({
       name: scheduleName,
-      description: 'Disposable read-only production migration-status preflight',
+      description: scheduleDescription,
       cronExpression: '0 0 1 1 *',
       command: 'true',
       script: serverScript,
@@ -546,13 +581,21 @@ async function runReadOnlySchedule(bundle: RemoteVerifierBundle): Promise<void> 
     }),
   })
   if (created.status < 200 || created.status >= 300) throw new Error('schedule_create_failed')
-  let scheduleId = scheduleIdFromCreateResponse(created.data, scheduleName)
+  const createdScheduleId = scheduleIdFromCreateResponse(
+    created.data,
+    scheduleName,
+    scheduleDescription,
+  )
+  if (!createdScheduleId) throw new Error('schedule_create_identity_missing')
+  const scheduleId = createdScheduleId
+  let cleanupIdentityVerified = false
 
   try {
-    if (!scheduleId) {
-      scheduleId = await listScheduleIdByName(apiKey, scheduleName)
-    }
-    if (!scheduleId) throw new Error('schedule_id_missing')
+    await assertScheduleIdentityById(apiKey, scheduleId, scheduleName, scheduleDescription)
+    cleanupIdentityVerified = true
+    const listedScheduleId = await listScheduleIdByIdentity(apiKey, scheduleName, scheduleDescription)
+    if (!listedScheduleId) throw new Error('schedule_id_missing')
+    if (scheduleId !== listedScheduleId) throw new Error('schedule_create_identity_mismatch')
 
     const baselineDeployments = await dokployRequest(
       apiKey,
@@ -616,17 +659,13 @@ async function runReadOnlySchedule(bundle: RemoteVerifierBundle): Promise<void> 
     }
     throw new Error('schedule_completion_marker_missing')
   } finally {
-    if (!scheduleId) {
-      scheduleId = await listScheduleIdByName(apiKey, scheduleName)
-    }
-    if (scheduleId) {
+    if (cleanupIdentityVerified) {
+      await assertScheduleIdentityById(apiKey, scheduleId, scheduleName, scheduleDescription)
       const deleted = await dokployRequest(apiKey, '/schedule.delete', {
         method: 'POST',
         body: JSON.stringify({ scheduleId }),
       })
       if (deleted.status < 200 || deleted.status >= 300) throw new Error('schedule_cleanup_failed')
-    } else {
-      throw new Error('schedule_cleanup_target_missing')
     }
   }
 }
