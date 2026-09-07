@@ -1,13 +1,36 @@
 # JPV Bootcamp environment and database boundaries
 
-Verified 2026-08-29 from live staging, production, legacy, DNS, TLS, and health
-evidence on the authorized host. This
-document records runtime facts only; passwords and other secret values are never
-stored here.
+Verified through 2026-09-07. The latest full staging/production/legacy topology
+inventory is the 2026-08-29 E1 closeout below; the latest production migration
+status is the guarded read-only verification recorded here. This document records
+runtime facts only; passwords and other secret values are never stored here.
 
-## CURRENT E1 FINAL CLOSEOUT — 2026-08-29
+## CURRENT PRODUCTION MIGRATION STATUS — 2026-09-07
 
-The following read-only evidence is current. The production application is
+GitHub Actions run `34147184195` completed the guarded production migration
+status control successfully. It verified the serving production revision as
+`f93ffac7dd299c39d8daf242d6a436272cc79188`, with Payload and Prisma expected
+migration sets fully applied, pending `[]`, unexpected `[]`, duplicate `[]`, and
+zero malformed Payload rows. The control reported `mutationPerformed=false`,
+`readOnlyTransaction=true`, `action=none`, and no blockers. The guarded apply
+path was skipped, so this verification did not mutate production data or schema.
+
+The production Payload ledger contains exactly one protected historical ordering
+anomaly: `20260826_100000_administrator_member_identity`. The verifier accepts
+that condition only when the anomaly list matches the protected constant exactly
+and the observed historical baseline SHA-256 equals
+`0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c`. A new
+anomaly, a changed anomaly set, or a changed historical prefix fails closed. The
+historical row ordering must therefore not be rewritten merely to make the
+ledger appear sequential.
+
+A fresh post-run production health probe still returned `commitSha=null` and
+`imageTag=f93ffac7dd299c39d8daf242d6a436272cc79188`, so the live revision evidence
+was unchanged by the status run. No production migration is currently required.
+
+## LATEST FULL TOPOLOGY CLOSEOUT — 2026-08-29
+
+The following read-only evidence was current at the 2026-08-29 closeout. The production application is
 `clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`. The staging
 authority is `clients-jpv-bootcamp-preview-wjfqfd` at
 `https://staging.jpvbootcamp.com`, deployed with
