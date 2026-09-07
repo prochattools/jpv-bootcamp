@@ -375,6 +375,50 @@ describe('email outbox behavioral tests', () => {
 			expect(mockResendSend).not.toHaveBeenCalled()
 		})
 
+		it.each(['pending', 'processing'])('does not report delivery for a duplicate welcome event still %s', async (status) => {
+			const p2002Error = Object.assign(new Error('Unique constraint failed'), {
+				code: 'P2002',
+			})
+
+			mockEmailEventCreate.mockRejectedValueOnce(p2002Error)
+			mockEmailEventFindUnique
+				.mockResolvedValueOnce({ id: 'existing-inflight-event' })
+				.mockResolvedValueOnce({ status, errorMessage: null })
+			mockEmailEventFindMany.mockResolvedValueOnce([])
+
+			await expect(
+				sendWelcomeEmail({
+					to: 'user@example.com',
+					plan: 'basic',
+					resetUrl: 'https://jpvbootcamp.com/reset?token=abc',
+					meta: { dedupeKey: 'duplicate-inflight-event' },
+				})
+			).rejects.toThrow(new RegExp(`delivery not confirmed.*status=${status}`))
+			expect(mockResendSend).not.toHaveBeenCalled()
+		})
+
+		it('does not report delivery when the synchronous send falls back to pending after a transient error', async () => {
+			mockEmailEventCreate.mockResolvedValueOnce({ id: 'new-transient-event' })
+			mockEmailEventFindMany.mockResolvedValueOnce([
+				makePendingEvent({ id: 'new-transient-event' }),
+			])
+			mockEmailEventUpdate.mockResolvedValue({})
+			mockResendSend.mockRejectedValueOnce(new Error('ECONNRESET'))
+			mockEmailEventFindUnique.mockResolvedValueOnce({
+				status: 'pending',
+				errorMessage: 'transient: ECONNRESET',
+			})
+
+			await expect(
+				sendWelcomeEmail({
+					to: 'user@example.com',
+					plan: 'basic',
+					resetUrl: 'https://jpvbootcamp.com/reset?token=abc',
+					meta: { dedupeKey: 'new-transient-event' },
+				})
+			).rejects.toThrow(/delivery not confirmed.*status=pending.*ECONNRESET/)
+		})
+
 		it('rethrows non-P2002 errors from create', async () => {
 			const otherError = new Error('Database connection lost')
 			mockEmailEventCreate.mockRejectedValueOnce(otherError)

@@ -624,24 +624,40 @@ export async function sendWelcomeEmail({
 	// Process synchronously (inline) so callers get the same throw-on-failure
 	// semantics as the previous direct-send approach. A background worker can
 	// call processEmailQueue() independently to retry failures.
-	const result = await processEmailQueue(eventDbId)
+	await processEmailQueue(eventDbId)
 
-	if (result.failed > 0 || result.processed === 0) {
-		const prismaAny = prisma as any
-		const event = await prismaAny.emailEvent.findUnique({
-			where: { id: eventDbId },
-			select: { status: true, errorMessage: true },
-		})
-		if (
-			result.failed > 0 ||
-			event?.status === 'failed' ||
-			event?.status === 'dead_letter'
-		) {
-			throw new Error(
-				`sendWelcomeEmail failed: ${event?.errorMessage ?? 'unknown error'}`
-			)
-		}
+	// Returning from this function is used by provisioning as proof that the
+	// notification was delivered. Verify the durable outbox state after every
+	// attempt so a transient retry, a lost claim race, or an already-processing
+	// duplicate can never be mistaken for a successful delivery.
+	const prismaAny = prisma as any
+	const event = await prismaAny.emailEvent.findUnique({
+		where: { id: eventDbId },
+		select: { status: true, errorMessage: true },
+	})
+
+	if (!event) {
+		throw new Error('sendWelcomeEmail failed: outbox event missing after queue')
 	}
+
+	if (event.status === 'sent') {
+		return
+	}
+
+	if (event.status === 'failed' || event.status === 'dead_letter') {
+		throw new Error(
+			`sendWelcomeEmail failed: ${event.errorMessage ?? `outbox status ${event.status}`}`
+		)
+	}
+
+	if (event.status === 'pending' || event.status === 'processing') {
+		const detail = event.errorMessage ? `: ${event.errorMessage}` : ''
+		throw new Error(
+			`sendWelcomeEmail transient: delivery not confirmed (status=${event.status})${detail}`
+		)
+	}
+
+	throw new Error(`sendWelcomeEmail failed: unexpected outbox status ${String(event.status)}`)
 }
 
 function escapeHtml(value: string): string {

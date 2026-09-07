@@ -1353,7 +1353,8 @@ export async function provisionFromCheckoutSession(
 					emailAttempts++
 					lastEmailError = error as Error
 					const errorMsg = (error as Error).message ?? 'unknown_error'
-					const isTransient = errorMsg.includes('timeout') ||
+					const isTransient = errorMsg.includes('sendWelcomeEmail transient:') ||
+						errorMsg.includes('timeout') ||
 						errorMsg.includes('ECONNREFUSED') ||
 						errorMsg.includes('ECONNRESET') ||
 						errorMsg.includes('ETIMEDOUT')
