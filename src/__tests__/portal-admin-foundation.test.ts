@@ -54,7 +54,7 @@ describe('portal administrator authorization foundation', () => {
       actor: context.actor,
       privilegedAccess: { overrideAccess: true },
     })
-    expect(requirePortalAccess).toHaveBeenCalledWith('/portal/courses')
+    expect(requirePortalAccess).toHaveBeenCalledWith('/portal/courses', {})
   })
 
   it('does not transform a shared unauthenticated failure into a success', async () => {

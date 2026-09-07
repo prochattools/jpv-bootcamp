@@ -98,7 +98,7 @@ function subscriptionStatusBadgeClass(status: string | null | undefined): string
   const tone = subscriptionStatusTone(status)
   if (tone === 'good') return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700'
   if (tone === 'danger') return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700'
-  if (tone === 'warn') return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-orange-50 text-orange-950'
+  if (tone === 'warn') return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-jpv-sunshine/30 text-jpv-brand-deep'
   return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-jpv-surface text-jpv-ink'
 }
 
@@ -331,7 +331,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                     accountStatusTone(accountStatus) === 'good'
                       ? 'bg-emerald-50 text-emerald-700'
                       : accountStatusTone(accountStatus) === 'warn'
-                        ? 'bg-orange-50 text-orange-950'
+                        ? 'bg-jpv-sunshine/30 text-jpv-brand-deep'
                         : 'bg-jpv-surface text-jpv-ink'
                   }`}
                 >
@@ -349,7 +349,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
               <dt className='text-sm font-medium text-neutral-500'>Email verified</dt>
               <dd className='mt-2 text-base font-semibold text-neutral-950'>
                 {emailVerifiedAt ? formatDate(emailVerifiedAt) : (
-                  <span className='inline-flex rounded-full px-3 py-1 text-xs font-medium bg-orange-50 text-orange-950'>Not verified</span>
+                  <span className='inline-flex rounded-full px-3 py-1 text-xs font-medium bg-jpv-sunshine/30 text-jpv-brand-deep'>Not verified</span>
                 )}
               </dd>
             </div>
@@ -730,7 +730,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                           ? 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700'
                           : billingStatus.billingAccessState === 'inactive'
                             ? 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-neutral-100 text-neutral-500'
-                            : 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-orange-50 text-orange-950'
+                            : 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-jpv-sunshine/30 text-jpv-brand-deep'
                     }>
                       {billingStatus.billingAccessState === 'available'
                         ? 'Available'

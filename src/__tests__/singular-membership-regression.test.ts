@@ -40,7 +40,8 @@ describe('Singular Membership Regression Tests', () => {
   it('requires the canonical membership for LiveKit access', () => {
     const source = readSource('src/app/api/livekit/token/route.ts')
 
-    expect(source).toContain("plan === 'jpv_bootcamp_membership'")
+    expect(source).toContain("import { normalizePlan } from '@/lib/plans'")
+    expect(source).toContain("normalizePlan(body.plan ?? null) === 'jpv_bootcamp_membership'")
   })
 
   it('returns the canonical membership from entitlements', () => {

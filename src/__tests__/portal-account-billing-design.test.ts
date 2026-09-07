@@ -27,7 +27,7 @@ describe('portal account and billing design coherence', () => {
     expect(accountSection).not.toContain("href: '#email'")
     expect(billingSection).toContain("href: '#status'")
     expect(billingSection).toContain("href: '#manage'")
-    expect(billingSection).toContain("href: '#projection'")
+    expect(billingSection).toContain("href: '#details'")
   })
 
   it('humanizes membership naming', () => {

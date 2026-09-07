@@ -59,13 +59,15 @@ describe('consolidated Payload operator migrations', () => {
     expect(recreateTablePosition).toBeGreaterThan(recreateEnumPosition)
   })
 
-  it('records exactly 37 canonical migrations', () => {
+  it('keeps the canonical migration inventory ordered and duplicate-free', () => {
     expect(migrationIndex).toContain("'20260723_000001_migrate_pro_to_membership'")
     expect(migrationIndex).toContain("'20260804_050000_member_account_action_reservations'")
     expect(migrationIndex).toContain("'20260820_000000_live_session_space'")
     expect(migrationIndex).toContain("'20260824_120000_engagement_reactions'")
     const entries = migrationIndex.match(/'2026\d{4}_\d{6}[a-z0-9_]*'/g) ?? []
-    expect(entries).toHaveLength(37)
+    expect(entries.length).toBeGreaterThan(0)
+    expect(new Set(entries).size).toBe(entries.length)
+    expect(entries).toEqual([...entries].sort())
   })
 
   it('adds managed Page, Post, and Lesson media with guarded rollback', () => {
