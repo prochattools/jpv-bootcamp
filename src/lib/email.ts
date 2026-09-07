@@ -218,12 +218,64 @@ function buildWelcomeEmailContent(params: {
 // ---------------------------------------------------------------------------
 
 const MAX_EMAIL_RETRIES = 5
+const STALE_EMAIL_LEASE_MS = 5 * 60 * 1000
 
 type ProcessResult = {
 	processed: number
 	sent: number
 	failed: number
 	skipped: number
+}
+
+async function recoverStaleEmailLeases(
+	prismaAny: any,
+	eventId: string | undefined,
+	now: Date
+): Promise<number> {
+	const cutoff = new Date(now.getTime() - STALE_EMAIL_LEASE_MS)
+	const where = eventId !== undefined
+		? { id: eventId, status: 'processing', updatedAt: { lt: cutoff } }
+		: { status: 'processing', updatedAt: { lt: cutoff } }
+
+	const recovered = await prismaAny.emailEvent.updateMany({
+		where,
+		data: {
+			status: 'pending',
+			updatedAt: now,
+			errorMessage: 'stale_lease_recovered',
+		},
+	})
+
+	const count = recovered?.count ?? 0
+	if (count > 0) {
+		console.warn('email_queue_stale_lease_recovered', {
+			eventId: eventId ?? null,
+			count,
+		})
+	}
+
+	return count
+}
+
+async function updateClaimedEmailEvent(
+	prismaAny: any,
+	eventId: string,
+	leaseTimestamp: Date,
+	data: Record<string, unknown>
+): Promise<boolean> {
+	const updated = await prismaAny.emailEvent.updateMany({
+		where: {
+			id: eventId,
+			status: 'processing',
+			updatedAt: leaseTimestamp,
+		},
+		data: {
+			...data,
+			updatedAt: new Date(),
+		},
+	})
+
+	return (updated?.count ?? 0) === 1
 }
 
 /**
@@ -250,6 +302,11 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 
 	const prismaAny = prisma as any
 
+	// A process can die after claiming a row but before releasing or completing
+	// it. Requeue only leases older than the bounded timeout. The conditional
+	// UPDATE is atomic, so a fresh processing lease cannot be reclaimed.
+	await recoverStaleEmailLeases(prismaAny, eventId, new Date())
+
 	// Fetch candidates — may include rows another worker will also see.
 	// The atomic claim below resolves the race.
 	const where = eventId !== undefined
@@ -262,9 +319,10 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 		// ── Atomic claim via conditional UPDATE ──────────────────────────────
 		// Set status='processing' only when it is still 'pending'. If another
 		// worker already claimed this row, updateMany returns count=0 and we skip.
+		const leaseTimestamp = new Date()
 		const claimResult = await prismaAny.emailEvent.updateMany({
 			where: { id: event.id, status: 'pending' },
-			data: { status: 'processing' },
+			data: { status: 'processing', updatedAt: leaseTimestamp },
 		})
 		if ((claimResult?.count ?? 0) === 0) {
 			// Already claimed or processed by another worker — skip silently.
@@ -277,14 +335,12 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 		// Dead-letter check: if the event has already hit the retry cap, mark it
 		// and skip rather than attempting another send.
 		if ((event.retryCount ?? 0) >= MAX_EMAIL_RETRIES) {
-			await prismaAny.emailEvent.update({
-				where: { id: event.id },
-				data: {
-					status: 'dead_letter',
-					errorMessage: `max_retries_exceeded: ${event.retryCount} attempts`,
-				},
+			const updated = await updateClaimedEmailEvent(prismaAny, event.id, leaseTimestamp, {
+				status: 'dead_letter',
+				errorMessage: `max_retries_exceeded: ${event.retryCount} attempts`,
 			})
-			result.failed++
+			if (updated) result.failed++
+			else result.skipped++
 			console.error('email_queue_dead_letter', {
 				eventId: event.id,
 				type: event.type,
@@ -297,14 +353,12 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 			assertStagingRecipientAllowed(event.recipient)
 		} catch (guardError) {
 			// If staging guard blocks, mark failed immediately — do not retry
-			await prismaAny.emailEvent.update({
-				where: { id: event.id },
-				data: {
-					status: 'failed',
-					errorMessage: (guardError as Error).message,
-				},
+			const updated = await updateClaimedEmailEvent(prismaAny, event.id, leaseTimestamp, {
+				status: 'failed',
+				errorMessage: (guardError as Error).message,
 			})
-			result.failed++
+			if (updated) result.failed++
+			else result.skipped++
 			console.warn('email_queue_staging_guard_blocked', {
 				eventId: event.id,
 				type: event.type,
@@ -330,14 +384,12 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 			})
 		} catch (buildError) {
 			// Unknown event type or malformed payload — permanent failure
-			await prismaAny.emailEvent.update({
-				where: { id: event.id },
-				data: {
-					status: 'failed',
-					errorMessage: `build_error: ${(buildError as Error).message}`,
-				},
+			const updated = await updateClaimedEmailEvent(prismaAny, event.id, leaseTimestamp, {
+				status: 'failed',
+				errorMessage: `build_error: ${(buildError as Error).message}`,
 			})
-			result.failed++
+			if (updated) result.failed++
+			else result.skipped++
 			continue
 		}
 
@@ -353,13 +405,10 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 			})
 		} catch (networkError) {
 			// Network / transient error — release claim back to 'pending', increment retry
-			await prismaAny.emailEvent.update({
-				where: { id: event.id },
-				data: {
-					status: 'pending',
-					retryCount: { increment: 1 },
-					errorMessage: `transient: ${(networkError as Error).message}`,
-				},
+			await updateClaimedEmailEvent(prismaAny, event.id, leaseTimestamp, {
+				status: 'pending',
+				retryCount: { increment: 1 },
+				errorMessage: `transient: ${(networkError as Error).message}`,
 			})
 			result.skipped++
 			console.warn('email_queue_transient_error', {
@@ -378,14 +427,12 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 			const isPermanent = statusCode >= 400 && statusCode < 500
 
 			if (isPermanent) {
-				await prismaAny.emailEvent.update({
-					where: { id: event.id },
-					data: {
-						status: 'failed',
-						errorMessage: `resend_${statusCode}: ${error.message}`,
-					},
+				const updated = await updateClaimedEmailEvent(prismaAny, event.id, leaseTimestamp, {
+					status: 'failed',
+					errorMessage: `resend_${statusCode}: ${error.message}`,
 				})
-				result.failed++
+				if (updated) result.failed++
+				else result.skipped++
 				console.error('email_queue_permanent_error', {
 					eventId: event.id,
 					type: event.type,
@@ -394,13 +441,10 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 				})
 			} else {
 				// Transient — release claim back to 'pending', increment retry
-				await prismaAny.emailEvent.update({
-					where: { id: event.id },
-					data: {
-						status: 'pending',
-						retryCount: { increment: 1 },
-						errorMessage: `transient_${statusCode}: ${error.message}`,
-					},
+				await updateClaimedEmailEvent(prismaAny, event.id, leaseTimestamp, {
+					status: 'pending',
+					retryCount: { increment: 1 },
+					errorMessage: `transient_${statusCode}: ${error.message}`,
 				})
 				result.skipped++
 			}
@@ -416,28 +460,23 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 				eventId: event.id,
 				type: event.type,
 			})
-			await prismaAny.emailEvent.update({
-				where: { id: event.id },
-				data: {
-					status: 'pending',
-					retryCount: { increment: 1 },
-					errorMessage: 'ambiguous_response: no resend id returned',
-				},
+			await updateClaimedEmailEvent(prismaAny, event.id, leaseTimestamp, {
+				status: 'pending',
+				retryCount: { increment: 1 },
+				errorMessage: 'ambiguous_response: no resend id returned',
 			})
 			result.skipped++
 			continue
 		}
 
-		await prismaAny.emailEvent.update({
-			where: { id: event.id },
-			data: {
-				status: 'sent',
-				resendId,
-				sentAt: new Date(),
-				errorMessage: null,
-			},
+		const updated = await updateClaimedEmailEvent(prismaAny, event.id, leaseTimestamp, {
+			status: 'sent',
+			resendId,
+			sentAt: new Date(),
+			errorMessage: null,
 		})
-		result.sent++
+		if (updated) result.sent++
+		else result.skipped++
 	}
 
 	return result

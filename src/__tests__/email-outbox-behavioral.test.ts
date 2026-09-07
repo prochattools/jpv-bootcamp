@@ -22,7 +22,6 @@ vi.mock('server-only', () => ({}))
 const mockEmailEventCreate = vi.fn()
 const mockEmailEventFindMany = vi.fn()
 const mockEmailEventFindUnique = vi.fn()
-const mockEmailEventUpdate = vi.fn()
 // updateMany is used for the atomic claim/lease step in processEmailQueue
 const mockEmailEventUpdateMany = vi.fn()
 
@@ -32,7 +31,6 @@ vi.mock('@/libs/prisma', () => ({
 			create: (...args: unknown[]) => mockEmailEventCreate(...args),
 			findMany: (...args: unknown[]) => mockEmailEventFindMany(...args),
 			findUnique: (...args: unknown[]) => mockEmailEventFindUnique(...args),
-			update: (...args: unknown[]) => mockEmailEventUpdate(...args),
 			updateMany: (...args: unknown[]) => mockEmailEventUpdateMany(...args),
 		},
 	},
@@ -94,6 +92,19 @@ function makePendingEvent(overrides: Record<string, unknown> = {}) {
 	}
 }
 
+function findLeaseTransition(status: string) {
+	return mockEmailEventUpdateMany.mock.calls
+		.map(([call]) => call as {
+			where?: { status?: string; updatedAt?: unknown }
+			data?: Record<string, unknown>
+		})
+		.find((call) =>
+			call.where?.status === 'processing' &&
+			call.where.updatedAt instanceof Date &&
+			call.data?.status === status
+		)
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -105,8 +116,21 @@ describe('email outbox behavioral tests', () => {
 		delete process.env.STAGING_EMAIL_GUARD
 		delete process.env.STAGING_TEST_RECIPIENT_EMAIL
 		delete process.env.DISABLE_NON_WEBHOOK_EMAILS
-		// Default: atomic claim succeeds (count=1 means this worker won the row)
-		mockEmailEventUpdateMany.mockResolvedValue({ count: 1 })
+		// Default: no stale lease exists; atomic claims and lease-owned state
+		// transitions succeed.
+		mockEmailEventUpdateMany.mockImplementation(async (args: {
+			where?: { status?: string; updatedAt?: { lt?: Date } | Date }
+		}) => {
+			if (
+				args?.where?.status === 'processing' &&
+				args.where.updatedAt &&
+				!(args.where.updatedAt instanceof Date) &&
+				args.where.updatedAt.lt instanceof Date
+			) {
+				return { count: 0 }
+			}
+			return { count: 1 }
+		})
 	})
 
 	// ── Test 1: Ambiguous response stays pending ──────────────────────────────
@@ -115,7 +139,6 @@ describe('email outbox behavioral tests', () => {
 		it('increments retryCount and does not mark status=sent', async () => {
 			const event = makePendingEvent()
 			mockEmailEventFindMany.mockResolvedValueOnce([event])
-			mockEmailEventUpdate.mockResolvedValue({})
 
 			// Resend returns no error but no data.id — ambiguous
 			mockResendSend.mockResolvedValueOnce({ data: null, error: null })
@@ -127,7 +150,9 @@ describe('email outbox behavioral tests', () => {
 			expect(result.skipped).toBe(1)
 
 			// Should have released the claim back to 'pending', incremented retryCount, NOT set status='sent'
-			const updateCall = mockEmailEventUpdate.mock.calls[0][0]
+			const updateCall = findLeaseTransition('pending')
+			expect(updateCall).toBeDefined()
+			if (!updateCall) throw new Error('pending lease transition missing')
 			expect(updateCall.data.status).toBe('pending')
 			expect(updateCall.data.retryCount).toEqual({ increment: 1 })
 			expect(updateCall.data.errorMessage).toMatch(/ambiguous_response/)
@@ -140,7 +165,6 @@ describe('email outbox behavioral tests', () => {
 		it('marks status=dead_letter for event with retryCount>=5, does not call Resend', async () => {
 			const event = makePendingEvent({ retryCount: 5 })
 			mockEmailEventFindMany.mockResolvedValueOnce([event])
-			mockEmailEventUpdate.mockResolvedValue({})
 
 			const result = await processEmailQueue()
 
@@ -151,7 +175,9 @@ describe('email outbox behavioral tests', () => {
 			expect(result.failed).toBe(1)
 			expect(result.sent).toBe(0)
 
-			const updateCall = mockEmailEventUpdate.mock.calls[0][0]
+			const updateCall = findLeaseTransition('dead_letter')
+			expect(updateCall).toBeDefined()
+			if (!updateCall) throw new Error('dead-letter lease transition missing')
 			expect(updateCall.data.status).toBe('dead_letter')
 			expect(updateCall.data.errorMessage).toMatch(/max_retries_exceeded/)
 		})
@@ -159,12 +185,13 @@ describe('email outbox behavioral tests', () => {
 		it('also dead-letters when retryCount is greater than MAX_RETRIES (e.g. 7)', async () => {
 			const event = makePendingEvent({ retryCount: 7 })
 			mockEmailEventFindMany.mockResolvedValueOnce([event])
-			mockEmailEventUpdate.mockResolvedValue({})
 
 			await processEmailQueue()
 
 			expect(mockResendSend).not.toHaveBeenCalled()
-			const updateCall = mockEmailEventUpdate.mock.calls[0][0]
+			const updateCall = findLeaseTransition('dead_letter')
+			expect(updateCall).toBeDefined()
+			if (!updateCall) throw new Error('dead-letter lease transition missing')
 			expect(updateCall.data.status).toBe('dead_letter')
 		})
 	})
@@ -178,7 +205,6 @@ describe('email outbox behavioral tests', () => {
 				payload: { portalUrl: 'https://jpvbootcamp.com/billing' },
 			})
 			mockEmailEventFindMany.mockResolvedValueOnce([event])
-			mockEmailEventUpdate.mockResolvedValue({})
 
 			// Resend succeeds with a real id
 			mockResendSend.mockResolvedValueOnce({ data: { id: 'resend-123' }, error: null })
@@ -200,7 +226,6 @@ describe('email outbox behavioral tests', () => {
 				payload: {},
 			})
 			mockEmailEventFindMany.mockResolvedValueOnce([event])
-			mockEmailEventUpdate.mockResolvedValue({})
 			mockResendSend.mockResolvedValueOnce({ data: { id: 'resend-456' }, error: null })
 
 			await processEmailQueue()
@@ -255,14 +280,15 @@ describe('email outbox behavioral tests', () => {
 
 			const event = makePendingEvent({ recipient: 'other@other.com' })
 			mockEmailEventFindMany.mockResolvedValueOnce([event])
-			mockEmailEventUpdate.mockResolvedValue({})
 
 			const result = await processEmailQueue()
 
 			expect(result.failed).toBe(1)
 			expect(mockResendSend).not.toHaveBeenCalled()
 
-			const updateCall = mockEmailEventUpdate.mock.calls[0][0]
+			const updateCall = findLeaseTransition('failed')
+			expect(updateCall).toBeDefined()
+			if (!updateCall) throw new Error('failed lease transition missing')
 			expect(updateCall.data.status).toBe('failed')
 			// Canonical guard message pattern
 			expect(updateCall.data.errorMessage).toMatch(/STAGING_EMAIL_GUARD/)
@@ -402,7 +428,6 @@ describe('email outbox behavioral tests', () => {
 			mockEmailEventFindMany.mockResolvedValueOnce([
 				makePendingEvent({ id: 'new-transient-event' }),
 			])
-			mockEmailEventUpdate.mockResolvedValue({})
 			mockResendSend.mockRejectedValueOnce(new Error('ECONNRESET'))
 			mockEmailEventFindUnique.mockResolvedValueOnce({
 				status: 'pending',
@@ -440,16 +465,185 @@ describe('email outbox behavioral tests', () => {
 		it('updates status to sent with resendId when Resend returns data.id', async () => {
 			const event = makePendingEvent()
 			mockEmailEventFindMany.mockResolvedValueOnce([event])
-			mockEmailEventUpdate.mockResolvedValue({})
 			mockResendSend.mockResolvedValueOnce({ data: { id: 'resend-abc' }, error: null })
 
 			const result = await processEmailQueue()
 
 			expect(result.sent).toBe(1)
-			const updateCall = mockEmailEventUpdate.mock.calls[0][0]
+			const updateCall = findLeaseTransition('sent')
+			expect(updateCall).toBeDefined()
+			if (!updateCall) throw new Error('sent lease transition missing')
 			expect(updateCall.data.status).toBe('sent')
 			expect(updateCall.data.resendId).toBe('resend-abc')
 			expect(updateCall.data.errorMessage).toBeNull()
+		})
+	})
+
+	describe('stale processing lease recovery', () => {
+		it('does not reclaim a fresh processing lease', async () => {
+			const freshUpdatedAt = new Date()
+			mockEmailEventUpdateMany.mockImplementation(async (args: {
+				where?: { status?: string; updatedAt?: { lt?: Date } | Date }
+			}) => {
+				const updatedAt = args?.where?.updatedAt
+				if (
+					args?.where?.status === 'processing' &&
+					updatedAt &&
+					!(updatedAt instanceof Date) &&
+					updatedAt.lt instanceof Date
+				) {
+					return { count: freshUpdatedAt < updatedAt.lt ? 1 : 0 }
+				}
+				return { count: 1 }
+			})
+			mockEmailEventFindMany.mockResolvedValueOnce([])
+
+			const result = await processEmailQueue('fresh-processing')
+
+			expect(result).toEqual({ processed: 0, sent: 0, failed: 0, skipped: 0 })
+			expect(mockResendSend).not.toHaveBeenCalled()
+			const recoveryCall = mockEmailEventUpdateMany.mock.calls[0][0]
+			expect(recoveryCall.where).toMatchObject({
+				id: 'fresh-processing',
+				status: 'processing',
+			})
+			expect(recoveryCall.where.updatedAt.lt).toBeInstanceOf(Date)
+		})
+
+		it('reclaims only a stale processing lease without incrementing retry count', async () => {
+			const staleUpdatedAt = new Date(Date.now() - 10 * 60 * 1000)
+			const event = makePendingEvent({ id: 'stale-processing' })
+			mockEmailEventUpdateMany.mockImplementation(async (args: {
+				where?: { status?: string; updatedAt?: { lt?: Date } | Date }
+			}) => {
+				const updatedAt = args?.where?.updatedAt
+				if (
+					args?.where?.status === 'processing' &&
+					updatedAt &&
+					!(updatedAt instanceof Date) &&
+					updatedAt.lt instanceof Date
+				) {
+					return { count: staleUpdatedAt < updatedAt.lt ? 1 : 0 }
+				}
+				return { count: 1 }
+			})
+			mockEmailEventFindMany.mockResolvedValueOnce([event])
+			mockResendSend.mockResolvedValueOnce({ data: { id: 'resend-stale' }, error: null })
+
+			const result = await processEmailQueue('stale-processing')
+
+			expect(result.sent).toBe(1)
+			const recoveryCall = mockEmailEventUpdateMany.mock.calls[0][0]
+			expect(recoveryCall.where).toMatchObject({
+				id: 'stale-processing',
+				status: 'processing',
+			})
+			expect(recoveryCall.data).toMatchObject({
+				status: 'pending',
+				errorMessage: 'stale_lease_recovered',
+			})
+			expect(recoveryCall.data.retryCount).toBeUndefined()
+		})
+
+		it('stamps claim time and conditions completion on the same lease token', async () => {
+			const event = makePendingEvent({ id: 'lease-token-event' })
+			mockEmailEventFindMany.mockResolvedValueOnce([event])
+			mockResendSend.mockResolvedValueOnce({ data: { id: 'resend-lease' }, error: null })
+
+			await processEmailQueue('lease-token-event')
+
+			const claimCall = mockEmailEventUpdateMany.mock.calls.find(
+				([call]) => call.where?.status === 'pending'
+			)?.[0]
+			expect(claimCall?.data.updatedAt).toBeInstanceOf(Date)
+
+			const sentCall = findLeaseTransition('sent')
+			expect(sentCall).toBeDefined()
+			if (!sentCall || !claimCall) throw new Error('lease claim/completion missing')
+			expect(sentCall.where.updatedAt).toBe(claimCall.data.updatedAt)
+		})
+
+		it('does not let a worker that lost its lease overwrite durable state', async () => {
+			const event = makePendingEvent({ id: 'lost-lease-event' })
+			mockEmailEventFindMany.mockResolvedValueOnce([event])
+			mockResendSend.mockResolvedValueOnce({ data: { id: 'resend-lost-lease' }, error: null })
+			mockEmailEventUpdateMany.mockImplementation(async (args: {
+				where?: { status?: string; updatedAt?: { lt?: Date } | Date }
+				data?: { status?: string }
+			}) => {
+				const updatedAt = args?.where?.updatedAt
+				if (
+					args?.where?.status === 'processing' &&
+					updatedAt &&
+					!(updatedAt instanceof Date) &&
+					updatedAt.lt instanceof Date
+				) {
+					return { count: 0 }
+				}
+				if (args?.where?.status === 'processing' && args?.data?.status === 'sent') {
+					return { count: 0 }
+				}
+				return { count: 1 }
+			})
+
+			const result = await processEmailQueue('lost-lease-event')
+
+			expect(result.sent).toBe(0)
+			expect(result.skipped).toBe(1)
+			expect(mockResendSend).toHaveBeenCalledOnce()
+		})
+
+		it('preserves the atomic claim so a concurrent worker cannot duplicate delivery', async () => {
+			const event = makePendingEvent({ id: 'concurrent-event' })
+			mockEmailEventFindMany.mockResolvedValueOnce([event])
+			mockEmailEventUpdateMany.mockImplementation(async (args: {
+				where?: { status?: string; updatedAt?: { lt?: Date } | Date }
+			}) => {
+				const updatedAt = args?.where?.updatedAt
+				if (
+					args?.where?.status === 'processing' &&
+					updatedAt &&
+					!(updatedAt instanceof Date) &&
+					updatedAt.lt instanceof Date
+				) {
+					return { count: 0 }
+				}
+				if (args?.where?.status === 'pending') return { count: 0 }
+				return { count: 1 }
+			})
+
+			const result = await processEmailQueue('concurrent-event')
+
+			expect(result.processed).toBe(0)
+			expect(result.skipped).toBe(1)
+			expect(mockResendSend).not.toHaveBeenCalled()
+		})
+
+		it('allows sendWelcomeEmail to complete after recovering its stale duplicate', async () => {
+			const p2002Error = Object.assign(new Error('Unique constraint failed'), {
+				code: 'P2002',
+			})
+			const event = makePendingEvent({ id: 'stale-welcome-event' })
+			mockEmailEventCreate.mockRejectedValueOnce(p2002Error)
+			mockEmailEventFindUnique
+				.mockResolvedValueOnce({ id: 'stale-welcome-event' })
+				.mockResolvedValueOnce({ status: 'sent', errorMessage: null })
+			mockEmailEventUpdateMany.mockImplementation(async () => ({ count: 1 }))
+			mockEmailEventFindMany.mockResolvedValueOnce([event])
+			mockResendSend.mockResolvedValueOnce({ data: { id: 'resend-recovered-welcome' }, error: null })
+
+			await expect(
+				sendWelcomeEmail({
+					to: 'user@example.com',
+					plan: 'basic',
+					resetUrl: 'https://jpvbootcamp.com/reset?token=abc',
+					meta: { dedupeKey: 'stale-welcome-event' },
+				})
+			).resolves.toBeUndefined()
+
+			const recoveryCall = mockEmailEventUpdateMany.mock.calls[0][0]
+			expect(recoveryCall.data.retryCount).toBeUndefined()
+			expect(mockResendSend.mock.calls[0][0].headers['Idempotency-Key']).toBe(event.idempotencyKey)
 		})
 	})
 })
