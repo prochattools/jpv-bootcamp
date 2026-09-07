@@ -74,6 +74,7 @@ import {
 	processEmailQueue,
 	queueEmail,
 	assertStagingRecipientAllowed,
+	sendWelcomeEmail,
 } from '@/lib/email'
 
 // ---------------------------------------------------------------------------
@@ -303,7 +304,7 @@ describe('email outbox behavioral tests', () => {
 			expect(id).toBe('existing-evt-999')
 		})
 
-		it('returns empty string when P2002 and findUnique returns nothing', async () => {
+		it('fails closed when P2002 is raised but the existing event cannot be resolved', async () => {
 			const p2002Error = Object.assign(new Error('Unique constraint failed'), {
 				code: 'P2002',
 			})
@@ -311,14 +312,67 @@ describe('email outbox behavioral tests', () => {
 			mockEmailEventCreate.mockRejectedValueOnce(p2002Error)
 			mockEmailEventFindUnique.mockResolvedValueOnce(null)
 
-			const id = await queueEmail({
-				type: 'welcome',
-				recipient: 'user@example.com',
-				payload: {},
-				idempotencyKey: 'idem-missing',
+			await expect(
+				queueEmail({
+					type: 'welcome',
+					recipient: 'user@example.com',
+					payload: {},
+					idempotencyKey: 'idem-missing',
+				})
+			).rejects.toThrow(/duplicate.*lookup|existing.*event/i)
+		})
+
+		it('never widens an explicit empty event id into processing the whole pending queue', async () => {
+			mockEmailEventFindMany.mockResolvedValueOnce([])
+
+			await processEmailQueue('')
+
+			expect(mockEmailEventFindMany).toHaveBeenCalledWith({
+				where: { id: '', status: { in: ['pending'] } },
+			})
+		})
+
+		it.each(['failed', 'dead_letter'])('does not report success for a duplicate welcome event already in %s state', async (status) => {
+			const p2002Error = Object.assign(new Error('Unique constraint failed'), {
+				code: 'P2002',
 			})
 
-			expect(id).toBe('')
+			mockEmailEventCreate.mockRejectedValueOnce(p2002Error)
+			mockEmailEventFindUnique
+				.mockResolvedValueOnce({ id: 'existing-terminal-event' })
+				.mockResolvedValueOnce({ status, errorMessage: `${status}: prior delivery failure` })
+			mockEmailEventFindMany.mockResolvedValueOnce([])
+
+			await expect(
+				sendWelcomeEmail({
+					to: 'user@example.com',
+					plan: 'basic',
+					resetUrl: 'https://jpvbootcamp.com/reset?token=abc',
+					meta: { dedupeKey: 'duplicate-terminal-event' },
+				})
+			).rejects.toThrow(/prior delivery failure/)
+		})
+
+		it('treats an already-sent duplicate welcome event as a successful no-op', async () => {
+			const p2002Error = Object.assign(new Error('Unique constraint failed'), {
+				code: 'P2002',
+			})
+
+			mockEmailEventCreate.mockRejectedValueOnce(p2002Error)
+			mockEmailEventFindUnique
+				.mockResolvedValueOnce({ id: 'existing-sent-event' })
+				.mockResolvedValueOnce({ status: 'sent', errorMessage: null })
+			mockEmailEventFindMany.mockResolvedValueOnce([])
+
+			await expect(
+				sendWelcomeEmail({
+					to: 'user@example.com',
+					plan: 'basic',
+					resetUrl: 'https://jpvbootcamp.com/reset?token=abc',
+					meta: { dedupeKey: 'duplicate-sent-event' },
+				})
+			).resolves.toBeUndefined()
+			expect(mockResendSend).not.toHaveBeenCalled()
 		})
 
 		it('rethrows non-P2002 errors from create', async () => {

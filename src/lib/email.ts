@@ -138,7 +138,10 @@ export async function queueEmail(params: QueueEmailParams): Promise<string> {
 				where: { idempotencyKey: params.idempotencyKey },
 				select: { id: true },
 			})
-			return existing?.id ?? ''
+			if (!existing?.id) {
+				throw new Error('email_event duplicate lookup could not resolve the existing event')
+			}
+			return existing.id
 		}
 		throw error
 	}
@@ -249,7 +252,7 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 
 	// Fetch candidates — may include rows another worker will also see.
 	// The atomic claim below resolves the race.
-	const where = eventId
+	const where = eventId !== undefined
 		? { id: eventId, status: { in: ['pending'] } }
 		: { status: { in: ['pending'] } }
 
@@ -623,15 +626,21 @@ export async function sendWelcomeEmail({
 	// call processEmailQueue() independently to retry failures.
 	const result = await processEmailQueue(eventDbId)
 
-	if (result.failed > 0) {
+	if (result.failed > 0 || result.processed === 0) {
 		const prismaAny = prisma as any
 		const event = await prismaAny.emailEvent.findUnique({
 			where: { id: eventDbId },
-			select: { errorMessage: true },
+			select: { status: true, errorMessage: true },
 		})
-		throw new Error(
-			`sendWelcomeEmail failed: ${event?.errorMessage ?? 'unknown error'}`
-		)
+		if (
+			result.failed > 0 ||
+			event?.status === 'failed' ||
+			event?.status === 'dead_letter'
+		) {
+			throw new Error(
+				`sendWelcomeEmail failed: ${event?.errorMessage ?? 'unknown error'}`
+			)
+		}
 	}
 }
 
