@@ -1,186 +1,73 @@
-# Dokploy Deployment Guide — JPV Bootcamp Staging
+# Dokploy Deployment Guide — Historical Reference
 
-> **Historical/non-operative reference.** This guide contains staging-era
-> operator detail and must not be used as current environment evidence or
-> production authorization. Current repository truth and remaining work are
-> owned by
+> **NON-OPERATIVE HISTORICAL DOCUMENT.** Do not use commands, target mappings,
+> secret names, provider configuration, SSH procedures, or deployment claims
+> from older revisions of this file. They described a July 2026 preview-era
+> topology and can target the current production application incorrectly.
+>
+> Current release authority is
 > `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md` and
 > `docs/release/REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md`.
-> The older Phase 9.5 and cutover documents are historical provenance only. Do
-> not record or expose credentials; live target identity must be independently
-> verified before any authorized operation.
+> Deployment must use the checked-in guarded GitHub workflows below.
 
-**Target**: clients-jpv-bootcamp-app-tp9xrk  
-**Dokploy app ID**: `I_2Vukga3cc3ZhaG-mUzU`  
-**Domain**: `preview.jpvbootcamp.com`  
-**Dokploy URL**: `https://dokploy.prochat.tools/api`  
-**Credentials**: `/Users/Office/.config/dokploy/.env`
+## Current deployment authority — 2026-09-07
 
----
+| Environment | Runtime authority | Dokploy target | Guarded workflow |
+| --- | --- | --- | --- |
+| Staging | `https://staging.jpvbootcamp.com` | `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb` | `.github/workflows/deploy-preview.yml` |
+| Production | `https://jpvbootcamp.com` | `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` | `.github/workflows/publish-root-domain-image.yml` |
 
-## Key Facts
+Staging accepts only approved `feature/*`, `fix/*`, or `release/*` source refs;
+`main` is denied by the staging workflow. Production is bound to protected
+`main`; manual publication additionally requires the exact full SHA and the
+workflow confirmation value.
 
-- **Two JPV apps exist** in Dokploy. Only `I_2Vukga3cc3ZhaG-mUzU` (appName: `clients-jpv-bootcamp-app-tp9xrk`) serves `preview.jpvbootcamp.com`. The other (`aPR9SvYn_JvGdMTk3CzeI`, appName: `web-public-jpv-bootcamp-l66egq`) is a separate environment.
-- **Build platform**: The Dokploy host runs `linux/amd64`. Always build with `--platform linux/amd64` when building locally on Apple Silicon. ARM64 images cause `exec format error` and silent rollback.
-- **Deployment method**: Docker Swarm service update via SSH. The Dokploy REST API `application.deploy` updates config but does NOT force image re-pull. Use SSH + `docker service update --with-registry-auth`.
+The production image workflow builds and publishes an immutable
+`ghcr.io/${repository}:${github.sha}` image, updates only the production Dokploy
+application, triggers deployment, and waits for exact runtime convergence.
+Environment-variable mutation is not part of that deployment lane.
 
----
+The separate `.github/workflows/production-prisma-migrations.yml` workflow is a
+database-mutation lane. It is not part of ordinary application deployment and
+must not be run unless fresh read-only migration evidence demonstrates a pending
+migration and the migration operation is separately justified.
 
-## ABSOLUTE DENY-LIST
+For the repository-reconciliation release, staging promotion must use this
+sequence for one exact candidate SHA:
 
-`web-public-jpv-bootcamp-l66egq` is the **production application** and is deny-listed.
+1. `read-only-migration-plan` — require the expected migration inventory,
+   `0` pending migrations, zero anomalies, and healthy Prisma access.
+2. `deploy-preview` — require `/api/health` to report the exact candidate SHA
+   with `deploymentEnv=staging`.
+3. `authenticated-acceptance` — require the complete required acceptance matrix
+   to pass.
+4. Only after those checks pass may the same reviewed candidate be integrated
+   into protected `main` and published through
+   `.github/workflows/publish-root-domain-image.yml`.
 
-No automated, scripted, or manual operation in this repository may:
-- Call, query, inspect, or read logs from `web-public-jpv-bootcamp-l66egq`
-- Deploy, restart, or reconfigure `web-public-jpv-bootcamp-l66egq`
-- Use its webhook, change its env/secrets, or perform any operation against it
+Do not substitute direct SSH, Docker Swarm commands, ad-hoc Dokploy API calls,
+provider edits, environment changes, migration apply, bootstrap, backfill, seed,
+billing, credential, or DNS changes for these guarded lanes.
 
-The `deploy-preview.yml` and `deploy.yml` workflows both contain runtime guards that
-reject `web-public-jpv-bootcamp-l66egq` as an app ID. See `scripts/staging-gates/stagingPolicy.ts`.
+## Historical provenance — 2026-07-20
 
-**If the production webhook was visible in any screenshot or log, only an authorized
-production owner may rotate it. Do not record webhooks, tokens, or secrets in this repo.**
+Older revisions of this document recorded a preview deployment at
+`preview.jpvbootcamp.com`, local AMD64 image builds, direct Dokploy provider
+updates, and Docker Swarm deployment over SSH. That topology and procedure are
+retained only as provenance; they are superseded and must not be executed.
 
----
+The dated evidence recorded at that checkpoint included:
 
-## GitHub Secret Naming (Required)
+- source branch `feature/course-branding-and-preview` at `a77ecc9`;
+- deployed image SHA `de1e9c68ba18bc6d1b08894145f69d4ff555c75b`;
+- GHCR AMD64 digest
+  `sha256:ce47b0cbb54dd6d461e7238cf1e72e05d13950837d3ce0895a10dc7182247a71`;
+- health route returning HTTP 200 with that image tag;
+- unauthenticated Bunny video route returning HTTP 401;
+- invalid Bunny webhook signature returning HTTP 403;
+- 40/40 smoke checks and the then-scoped focused E2E verification passing;
+- migration `20260720_000000_locked_docs_rels_new_collections` covering missing
+  locked-document relation columns at that historical checkpoint.
 
-The staging workflow uses **`DOKPLOY_PREVIEW_APP_ID`** (not the generic `DOKPLOY_APP_ID`).
-
-Operator action required: ensure this secret exists in GitHub repository settings:
-1. `DOKPLOY_PREVIEW_APP_ID` → value: `clients-jpv-bootcamp-app-tp9xrk`
-
-The generic `DOKPLOY_APP_ID` secret is no longer used and should be removed to
-prevent accidental cross-environment targeting.
-
-No production secret configuration is permitted from this operational lane.
-The production workflow (`deploy.yml`) has been disabled and deleted.
-
----
-
-## GitHub Main Branch Protection (Recommended)
-
-The production `deploy.yml` workflow has been disabled and deleted from the feature
-branch. For additional safety, a repository owner may add branch protection to `main`
-via GitHub Settings → Branches → Add branch ruleset.
-
-No operational instructions for `main` are in scope for this staging lane.
-
----
-
-## Correct Deployment Procedure
-
-### 1. Build AMD64 image
-
-```bash
-HEAD=$(git rev-parse HEAD)
-docker buildx build \
-  --platform linux/amd64 \
-  --build-arg NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com \
-  --build-arg APP_BASE_URL=https://preview.jpvbootcamp.com \
-  --build-arg NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com \
-  -t "ghcr.io/prochattools/jpv-bootcamp:${HEAD}" \
-  -t "ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview" \
-  --push \
-  .
-```
-
-### 2. Verify AMD64 manifest
-
-```bash
-docker pull --platform linux/amd64 "ghcr.io/prochattools/jpv-bootcamp:${HEAD}"
-docker inspect "ghcr.io/prochattools/jpv-bootcamp:${HEAD}" | python3 -c \
-  "import sys,json; d=json.load(sys.stdin); print(d[0]['Architecture'], d[0]['Os'])"
-# Expected: amd64 linux
-```
-
-### 3. Update Dokploy provider config (REST API)
-
-```bash
-source /Users/Office/.config/dokploy/.env
-curl -s -X POST "${DOKPLOY_URL}/application.saveDockerProvider" \
-  -H "Content-Type: application/json" \
-  -H "${DOKPLOY_API_HEADER}: ${DOKPLOY_API_KEY}" \
-  -d "{
-    \"applicationId\": \"I_2Vukga3cc3ZhaG-mUzU\",
-    \"dockerImage\": \"ghcr.io/prochattools/jpv-bootcamp:${HEAD}\",
-    \"registryUrl\": \"ghcr.io\",
-    \"username\": \"stevewesthoek\",
-    \"password\": \"${GHCR_DOKPLOY_PULL_PAT}\"
-  }"
-```
-
-### 4. Deploy via SSH (required — REST deploy doesn't force pull)
-
-```bash
-ssh dokploy \
-  "docker service update \
-    --image ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview \
-    --with-registry-auth \
-    clients-jpv-bootcamp-app-tp9xrk"
-```
-
-The `--with-registry-auth` flag passes GHCR credentials to the Swarm node.
-
-### 5. Verify deployment
-
-```bash
-# Health
-curl https://preview.jpvbootcamp.com/api/health
-# Expected: {"ok":true,"status":"live",...}  HTTP 200
-
-# Bunny video route — must return 401 (not 404)
-curl "https://preview.jpvbootcamp.com/api/bunny/video?lessonId=test"
-# Expected: {"error":"Unauthorized"}  HTTP 401
-
-# Webhook route — must return 403 with invalid sig
-curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
-  -H "Content-Type: application/json" \
-  -H "x-bunnystream-signature-version: v1" \
-  -H "x-bunnystream-signature-algorithm: hmac-sha256" \
-  -H "x-bunnystream-signature: invalidsig" \
-  -d '{}'
-# Expected: {"error":"Signature verification failed"}  HTTP 403
-```
-
----
-
-## REST API Reference (Correct Endpoints)
-
-All endpoints under `https://dokploy.prochat.tools/api/` (NOT `/api/trpc`).
-
-| Operation | Method | Endpoint | Body |
-|-----------|--------|----------|------|
-| Read app config | GET | `/application.one?applicationId=<id>` | — |
-| Update docker provider | POST | `/application.saveDockerProvider` | `{applicationId, dockerImage, registryUrl, username, password}` |
-| Trigger deploy (config only) | POST | `/application.deploy` | `{"applicationId":"<id>"}` |
-| List deployments | GET | `/deployment.all?applicationId=<id>` | — |
-| Reload container | POST | `/application.reload` | `{applicationId, appName, type}` |
-
----
-
-## Historical State (2026-07-20 — NOT CURRENT LIVE EVIDENCE)
-
-- **HEAD**: `a77ecc9` (feature/course-branding-and-preview)
-- **Deployed image HEAD**: `de1e9c68ba18bc6d1b08894145f69d4ff555c75b`
-- **GHCR digest (AMD64)**: `sha256:ce47b0cbb54dd6d461e7238cf1e72e05d13950837d3ce0895a10dc7182247a71`
-- **Running service**: `clients-jpv-bootcamp-app-tp9xrk` (replicated 1/1, healthy)
-- **Verified routes**: `/api/bunny/video` → 401, `/api/webhook/bunny` → 403, `/api/health` → 200 `{imageTag: "de1e9c68..."}`
-
-## Deployed Proof Results (2026-07-20)
-
-All 7 DEPLOYED PROOF items verified:
-
-1. **Health returns imageTag** ✓ — `{"imageTag":"de1e9c68ba18bc6d1b08894145f69d4ff555c75b"}`
-2. **Staging video record created** ✓ — webhook wrote `bunny_videos` row id=4, status=ready
-3. **Valid signed webhook received** ✓ — `VideoFinishedProcessing` with HMAC-SHA256 → 200 `{ok:true}`
-4. **Ready state persisted** ✓ — DB confirms `status=ready, duration=300`
-5. **Duplicate idempotency** ✓ — second identical webhook call → 200 `{ok:true}`
-6. **Invalid sig → 403** ✓ | **Unauthenticated video → 401** ✓
-7. **40/40 smoke tests** ✓ | **Focused E2E verification** ✓
-
-## Migration Note
-
-`payload_locked_documents_rels` was missing FK columns for new collections added
-after initial schema setup. Migration `20260720_000000_locked_docs_rels_new_collections`
-adds all missing columns. This migration runs as part of the staging application startup.
+None of those historical hostnames, image tags, procedures, or validation counts
+establish current staging or production state.

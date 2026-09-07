@@ -9,20 +9,25 @@ remaining implementation sequence is owned by
 `docs/release/REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md`.
 
 Current reconciliation release manifest: `183` entries; `182` required and `1` conditional.
-After the status-document contracts were refreshed, the full local
-`pnpm test:release` gate passed `182/182` required checks on 2026-09-06. This
-closes the repository release-test gate. Gate 2 then verified exact staging
-candidate `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`: migration-plan run
-`34026196340` reported `55` applied and `0` pending with zero anomalies and
-healthy Prisma state; deploy run `34026379042` made that exact candidate live in
-staging; authenticated acceptance run `34027526347` passed `24/24` Playwright
-checks.
+After the latest production migration-status verifier hardening,
+focused verifier coverage passed, full Vitest passed `52/52` files and `466/466`
+tests, `pnpm test:release` passed `182/182` required checks, and lint plus
+`git diff --check` were green. These checks will be rerun once more after the
+final candidate commit.
+
+The prior Gate 2 packet remains exact historical evidence for staging candidate
+`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`: migration-plan run `34026196340`
+reported `55` applied and `0` pending with zero anomalies and healthy Prisma;
+deploy run `34026379042` made that exact candidate live in staging; authenticated
+acceptance run `34027526347` passed `24/24` Playwright checks. Source changed
+after that packet, so the final candidate requires a fresh Gate 2 run and the old
+evidence cannot be reused for production promotion.
 
 | Gate | Status | Meaning |
 | --- | --- | --- |
-| Implementation complete | **COMPLETE** | Source implementation `dcd8911` and Gate 1 closure candidate `8c74235` are committed; `182/182` release validation and adversarial review are green. |
-| Staging verified | **COMPLETE** | Exact SHA `8c74235` is live in staging; plan `34026196340` is `55` applied / `0` pending; deploy `34026379042` is live; A6 `34027526347` passed `24/24`. |
-| Production authorized | **NOT AUTHORIZED BY THIS TRACK** | Requires a separate production operation and approval after staging evidence. |
+| Implementation complete | **COMPLETE, FINAL RERUN PENDING** | Latest verifier hardening is regression-covered; `52/52` Vitest files, `466/466` tests, `182/182` release checks, lint, and diff check are green. Rerun after the final commit before staging. |
+| Staging verified | **PENDING FOR FINAL CANDIDATE** | Historical SHA `8c74235` passed plan/deploy/A6, but source advanced afterward. Final candidate must repeat read-only plan, exact-SHA deploy, and authenticated acceptance. |
+| Production authorized | **AUTHORIZED, EVIDENCE-GATED** | User authorized staging then production for the final reviewed SHA. Production remains blocked until the fresh final-candidate staging packet and protected-main integration are green. |
 
 Safe cleanup has reduced the workspace to 3 worktrees and 5 local branches.
 Every removed dirty worktree/ref has lossless custody in the verified
@@ -37,11 +42,24 @@ Gate 2 read-only evidence confirms all `55` are applied in staging with none
 pending. Older applied-migration counts below are historical environment
 evidence only.
 
-Gate 2 performed no migration apply, bootstrap, backfill, QA seed, provider or
-billing mutation, or production action. Authenticated acceptance used normal
-Payload login behavior, which can update bounded staging login/session metadata
-for its two test actors. Live-provider smoke remains deferred and is not part of
-this reconciliation Gate 2 closeout.
+The historical Gate 2 packet performed no migration apply, bootstrap, backfill,
+QA seed, provider or billing mutation, or production action. Authenticated
+acceptance used normal Payload login behavior, which can update bounded staging
+login/session metadata for its two test actors. The new promotion must preserve
+that boundary. Any final-candidate migration-plan result other than `55` applied,
+`0` pending, zero anomalies, and healthy Prisma is a stop condition for
+investigation rather than an implicit migration-apply trigger.
+
+Production deployment authority is `.github/workflows/publish-root-domain-image.yml`
+on protected `main`, targeting `https://jpvbootcamp.com` and Dokploy
+`clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`. Staging authority
+is `.github/workflows/deploy-preview.yml`, targeting
+`https://staging.jpvbootcamp.com` and Dokploy
+`clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`. Older
+preview-domain operational instructions below are historical only.
+
+Everything below this current repository roadmap section is retained as dated
+audit history unless the current-truth document explicitly re-adopts it.
 
 ## Historical Rooms production release — 2026-08-30
 
@@ -248,7 +266,7 @@ gate, or a completed Phase 10 preparation document.
 
 ## Historical staging checkpoint — 2026-08-19/21 (NOT CURRENT LIVE EVIDENCE)
 
-- **ONLY PERMITTED OPERATIONAL LANE:** `feature/course-branding-and-preview` → `https://preview.jpvbootcamp.com` → Dokploy `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` → PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
+- **HISTORICAL OPERATIONAL LANE (SUPERSEDED; DO NOT EXECUTE):** `feature/course-branding-and-preview` → `https://preview.jpvbootcamp.com` → Dokploy `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` → PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
 - **STAGING MIGRATION COMPLETE — 2026-08-19:** All 35 Payload migrations applied and verified on staging. Legacy import 935/935 complete. Members 51 total (12 active, all with emailVerifiedAt; 39 blocked). Staging email operational. Public media 24/24, private media 25/25. Lesson resources 25/25 published. Playwright tests 84/84 passed. Admin responsive 14/14. Migration contract test PASS. `DEPLOYMENT_ENV=staging` confirmed. Production NOT performed or authorized.
 - **RECORDED DEPLOYED BASELINE:** SHA `9c0debe3bdf0fc5a9c9be99a6697eb6bbff3419d`, deploy run 32462177363, deployed 2026-08-21. The record reports Phase 9 with LiveKit activation, migration 36/36, and green staging acceptance; none of those values is current-live evidence for the 2026-08-23 feature tip.
 - **COMPLETE LAUNCH-SCOPE REPOSITORY WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, partner/sponsored staging boundaries, and durable account-action reservation/finalization source hardening. All 35 migrations applied.
@@ -258,7 +276,7 @@ gate, or a completed Phase 10 preparation document.
 - **PRODUCTION OPERATION:** NOT performed, NOT authorized. Staging migration itself has NO remaining engineering blocker.
 - **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed launch scope unless separately promoted; they are not blockers for the next roadmap phase.
 
-Historical baseline chain: the 10 July 2026 audit at `236227c fix: require portal auth for member content`, readiness checkpoint `af6de62 docs: record core go-live readiness`, programme-content checkpoint `d55229f test: enforce programme content readiness`, membership checkpoint `8927df9 docs: checkpoint membership implementation readiness`, and earlier staging-smoke checkpoint `690c5f4 docs(release): update GO/NO-GO checklist — staging smoke 58/58 confirmed`. These are retained as history only. The authoritative staging baseline is the exact SHA recorded in the current checkpoint above; verify the branch tip with `git log --oneline -1` before any operator action.
+Historical baseline chain: the 10 July 2026 audit at `236227c fix: require portal auth for member content`, readiness checkpoint `af6de62 docs: record core go-live readiness`, programme-content checkpoint `d55229f test: enforce programme content readiness`, membership checkpoint `8927df9 docs: checkpoint membership implementation readiness`, and earlier staging-smoke checkpoint `690c5f4 docs(release): update GO/NO-GO checklist — staging smoke 58/58 confirmed`. These are retained as history only. They do not establish a current staging baseline or operator procedure; use the repository-reconciliation current-truth document for current authority.
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 

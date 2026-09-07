@@ -339,6 +339,23 @@ async function main(): Promise<void> {
     },
   }))
 
+  for (const override of [
+    'host=127.0.0.1',
+    'port=9999',
+    'user=other_role',
+    'password=other_secret',
+    'database=other_database',
+    'db=other_database',
+  ]) {
+    assert.throws(() => createProductionReadOnlyAdapter({
+      databaseUrl: `${PRODUCTION_DATABASE_URL}&${override}`,
+      expectedSchema: 'jpvbootcamp',
+      clientFactory: () => {
+        throw new Error('client must not be constructed')
+      },
+    }), /Production database boundary mismatch/)
+  }
+
   let constructed = 0
   const output: string[] = []
   const missingDbExit = await runProductionMigrationStatusCli(validArgs(), {

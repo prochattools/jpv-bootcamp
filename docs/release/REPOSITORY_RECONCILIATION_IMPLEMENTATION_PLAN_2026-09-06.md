@@ -55,11 +55,12 @@ repository authority and older dated claims remain historical evidence.
 
 ### R4. Final local validation
 
-**Status:** complete for the exact source candidate. Full local
-`pnpm test:release` passed `182/182` required checks on 2026-09-06 after the
-status-document contracts were refreshed, with the supporting lint, diff,
-type-check, build, migration, staging-plan, workflow-contract, and release
-validation checks green.
+**Status:** complete through the latest verifier hardening, subject to one final
+post-commit rerun before staging. After the production migration-status
+connection-boundary fix, focused verifier coverage passed, full Vitest passed
+`52/52` files and `466/466` tests, `pnpm test:release` passed `182/182` required
+checks, and lint plus `git diff --check` were green. The final committed release
+candidate must rerun the same deterministic gate before promotion.
 
 Run and require green results for:
 
@@ -75,23 +76,30 @@ Run and require green results for:
 
 ### R5. Final review and local landing
 
-**Status:** complete locally. The reconciliation branch itself remains local;
-the dedicated Gate 2 source ref was subsequently pushed for exact-SHA staging
-verification.
+**Status:** previous review/landing evidence is complete for the historical Gate
+2 candidate. The branch has advanced since then through inherited-regression
+reconciliation and the production migration-status verifier hardening, so one
+fresh final read-only review is required against `origin/main` before promotion.
 
-- final adversarial review reported zero findings and assessed the patch as
-  correct;
+- the previous adversarial review reported zero findings for the then-current
+  patch;
 - exact reviewed source candidate committed locally as `dcd8911`;
 - Gate 1 documentation/cleanup closure produced exact Gate 2 candidate
   `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`;
-- no PR merge or production operation occurred during Gate 1;
+- branch HEAD later advanced to
+  `27d463b449f113ee1ee7d980a83d143ca84492d8` before the verifier hardening;
+- no PR merge or production operation occurred during the previous Gate 1/2
+  packet;
 - any future push must target the reconciliation branch and preserve branch
   protection; PR #30 remains separate.
 
 ## Gate 2 — Staging verified
 
-**Status:** **COMPLETE** for exact staging candidate
-`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`.
+**Current status:** **PENDING FRESH FINAL-CANDIDATE EVIDENCE**.
+
+The prior packet remains **COMPLETE historical evidence** for exact staging
+candidate `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`, but source changed after that
+run. It cannot be reused to authorize production for the newer candidate.
 
 Captured fresh evidence:
 
@@ -112,18 +120,44 @@ login/session metadata for its two staging test actors as part of normal Payload
 authentication; it did not mutate business data, schema, provider, billing, or
 production state.
 
+For the final candidate, rerun in this order:
+
+1. `read-only-migration-plan` on the exact approved `release/*` ref; require
+   `55` applied, `0` pending, zero anomalies, and healthy Prisma;
+2. `deploy-preview` for the same exact SHA; require staging `/api/health` to
+   report that SHA with `deploymentEnv=staging`;
+3. `authenticated-acceptance` for the same SHA; require the full required
+   Playwright matrix green.
+
+Any migration-state difference, deployment mismatch, acceptance failure, or
+target-boundary mismatch stops promotion. Do not run migration apply,
+bootstrap, backfill, seed, provider, or billing lanes automatically.
+
 Live-provider smoke remains deferred because this reconciliation Gate 2 did not
 require a live-provider mutation/verification lane. It must stay a separately
 authorized operator task wherever a later release contract requires it.
 
 ## Gate 3 — Production authorized
 
-**Status:** not authorized by repository reconciliation.
+**Status:** **EXPLICITLY AUTHORIZED BY USER, EVIDENCE-GATED**.
 
-Production migration, deployment, provider mutation, Stripe/billing mutation,
-DNS/cutover, credential mutation, and destructive cleanup require their own
-authorization and exact-target preflight. Gate 2 evidence is a prerequisite; it
-is not production authorization.
+The user has authorized promotion of the final reviewed candidate through
+staging and then production. Production deployment may proceed only after fresh
+Gate 2 evidence is green for that exact SHA and the same candidate is integrated
+into protected `main` through the repository's normal process.
+
+Production deployment authority is
+`.github/workflows/publish-root-domain-image.yml`, targeting only
+`https://jpvbootcamp.com` and Dokploy
+`clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`. The separate
+`.github/workflows/production-prisma-migrations.yml` lane is not part of ordinary
+deployment and must not run unless fresh read-only evidence proves a migration
+is pending and a separate migration decision is justified.
+
+Provider mutation, Stripe/billing mutation, credential/environment changes,
+DNS/cutover, migration apply, and destructive cleanup remain outside this
+deployment authorization unless separately supported by fresh evidence and
+scope.
 
 ## Explicitly deferred work
 
@@ -131,15 +165,18 @@ is not production authorization.
 - current-staging migration apply batch from the staging-route branch;
 - stale candidate-image publication lane tied to the old `477eb1e...` candidate;
 - live-provider smoke where a later release contract requires it;
-- deployment/production smoke;
+- final-candidate staging deployment/acceptance until rerun;
+- production smoke until the authorized exact-SHA deployment completes;
 - real-device/WebRTC or other operator-only browser checks that are distinct
   from the completed A6 authenticated acceptance packet;
 - PR #30 merge while GitHub reports `REVIEW_REQUIRED`.
 
 ## Exit condition
 
-Gate 1 repository reconciliation and Gate 2 exact-SHA staging verification are
-complete. Gate 3 remains explicitly unauthorized and requires its own
-production evidence/authorization. The two preserved non-reconciliation
-worktrees are separate custody work: they must not be deleted until their unique
-or environment-local state has a lossless disposition.
+Gate 1 implementation is complete through the verifier hardening, with one final
+post-commit deterministic rerun and read-only review required. The previous Gate
+2 packet is historical; fresh exact-SHA Gate 2 evidence is required for the final
+candidate. Gate 3 deployment is authorized once those checks pass. The two
+preserved non-reconciliation worktrees are separate custody work and must not be
+deleted until their unique or environment-local state has a lossless
+disposition.

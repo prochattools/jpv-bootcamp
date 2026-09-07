@@ -176,12 +176,15 @@ function safeProductionUrl(rawUrl: string, expectedSchema: string): {
   }
 
   const schemaParams = parsed.searchParams.getAll('schema')
+  const forbiddenConnectionOverrides = ['host', 'port', 'user', 'password', 'database', 'db']
+    .filter((key) => parsed.searchParams.has(key))
   const port = parsed.port || '5432'
   const database = parsed.pathname.replace(/^\//, '')
   const role = decodeURIComponent(parsed.username || '')
   if (
     schemaParams.length !== 1 ||
     schemaParams[0] !== expectedSchema ||
+    forbiddenConnectionOverrides.length > 0 ||
     parsed.hostname !== PRODUCTION.databaseHost ||
     port !== PRODUCTION.databasePort ||
     database !== PRODUCTION.database ||

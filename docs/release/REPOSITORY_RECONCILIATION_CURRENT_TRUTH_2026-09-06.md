@@ -3,10 +3,16 @@
 **Authority date:** 2026-09-06
 **Reconciliation branch:** `codex/repository-reconciliation-20260905`
 **Starting source authority:** `origin/main` at `f93ffac7dd299c39d8daf242d6a436272cc79188`
-**Status:** Gate 1 implementation and Gate 2 exact-SHA staging verification are
-complete. Gate 3 production remains unauthorized. The reconciliation branch
-itself is not pushed; Gate 2 used the dedicated remote source ref
-`release/gate2-reconciliation-20260906`.
+**Status:** Gate 1 implementation has received an additional production
+migration-status verifier hardening fix. The prior Gate 2 exact-SHA staging
+verification remains valid historical evidence for
+`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`, but source changed after that run,
+so the final release candidate requires a fresh Gate 2 packet. The user has
+explicitly authorized Gate 3 staging-to-production promotion once the new exact
+candidate passes every required gate. Authorization does not replace evidence:
+production remains blocked until fresh staging migration planning, deployment
+convergence, authenticated acceptance, and final review are green for the same
+SHA.
 
 This document is the current repository-level authority for the assessment,
 hardening, branch reconciliation, cleanup, and release-readiness work started on
@@ -17,10 +23,14 @@ claim that describes itself as “current”, “authoritative”, “ready”, 
 ## Evidence rules
 
 The repository can prove source code, registered migrations, branch ancestry,
-local validation, and tracked documentation. Current staging state is now also
-backed by fresh exact-SHA environment evidence captured during Gate 2. Current
-production state still requires its own fresh environment probe before any
-production operation.
+local validation, and tracked documentation. The previous Gate 2 staging packet
+is retained below as exact historical evidence. The current pre-promotion
+read-only runtime baseline is production
+`f93ffac7dd299c39d8daf242d6a436272cc79188` with
+`deploymentEnv=production` and staging
+`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb` with
+`deploymentEnv=staging`. These baselines do not prove the final candidate; both
+environments must be reverified as part of the new promotion packet.
 
 Three gates must remain separate:
 
@@ -30,8 +40,10 @@ Three gates must remain separate:
    packet establishes deployment, schema/migration state, and required
    acceptance checks. Provider smoke remains separate when the release contract
    explicitly requires it.
-3. **Production authorized** — a separate approval permits production
-   mutation, migration, deployment, provider changes, or cutover.
+3. **Production authorized** — explicit approval permits the bounded production
+   deployment only after Gate 2 evidence for the same exact SHA. Migration,
+   provider, billing, credential, DNS, environment, or destructive changes
+   remain separately evidence-gated and are not implied by deployment approval.
 
 Passing an earlier gate never implies a later gate.
 
@@ -54,6 +66,9 @@ The main categories are:
   `tailscale0` before TCP reachability checks;
 - a read-only production migration-status verifier plus CI/release-manifest
   integration;
+- production migration-status connection-boundary hardening that rejects URL
+  query overrides for `host`, `port`, `user`, `password`, `database`, and `db`
+  before any database client is constructed;
 - staging migration-plan configuration and preflight hardening imported from
   the safe portion of PR #30.
 
@@ -64,19 +79,24 @@ controlled staging authentication/session metadata and reset login-attempt
 metadata on the two staging acceptance actors; no business-data migration,
 bootstrap, backfill, seed, provider mutation, or billing mutation occurred.
 
-Local release validation on 2026-09-06 passed the complete required manifest:
-`pnpm test:release` reported `182/182`. The manifest contains `183` entries in
-total: `182` required and `1` conditional. This result proves the local
-repository gate. Gate 2 staging state is established separately by the fresh
-environment evidence recorded below.
+After the verifier hardening fix, local validation passed again: focused
+verifier coverage passed via
+`pnpm exec tsx scripts/release/verifyProductionMigrationStatus.test.ts`; full
+Vitest passed `52/52` files and `466/466` tests; `pnpm test:release` passed
+`182/182` required checks from a manifest containing `183` entries (`182`
+required, `1` conditional); `pnpm lint` and `git diff --check` also passed. The
+full deterministic gate must be rerun once more after the final candidate is
+committed and before any staging deployment.
 
-The exact source implementation was committed locally as
+The original source implementation was committed locally as
 `dcd8911ebdf61a48d45525ae86f7b57d399ff2ba` (`chore: reconcile repository
 state and release hardening`). Gate 1 documentation closure then produced exact
-Gate 2 execution candidate `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`.
-The final adversarial review reported zero findings and assessed the source
-patch as correct. The dedicated Gate 2 release ref was pushed for staging
-verification; PR #30 was not merged and no production operation followed.
+historical Gate 2 execution candidate
+`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`. A later regression-reconciliation
+commit advanced the branch to `27d463b449f113ee1ee7d980a83d143ca84492d8`
+before the final verifier hardening. The final promotion candidate is therefore
+newer than the historical Gate 2 SHA and must receive fresh exact-SHA staging
+evidence before production.
 
 ## Migration source truth
 
@@ -99,11 +119,11 @@ two September 1 migrations. The fresh Gate 2 plan proves both are already
 applied and nothing is pending, so no staging migration apply was required or
 performed. The apply-batch change remains deferred.
 
-## Gate 2 staging evidence
+## Historical Gate 2 staging evidence
 
-Gate 2 is complete for the repository reconciliation candidate. The evidence is
-bound to source ref `release/gate2-reconciliation-20260906` and exact SHA
-`8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`:
+This packet is complete and remains valid evidence for the historical candidate
+only. It is bound to source ref `release/gate2-reconciliation-20260906` and exact
+SHA `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb`:
 
 - read-only migration-plan workflow `34026196340`: `plan_ok`, `55` applied,
   `0` pending, zero anomalies, Prisma healthy;
@@ -119,6 +139,12 @@ The authenticated acceptance lane can update controlled login/session metadata
 for its two staging actor records as part of normal Payload authentication. That
 bounded behavior is distinct from business-data, schema, provider, billing, or
 production mutation.
+
+Because source changed after this packet, the final release candidate must rerun
+the read-only migration plan, exact-SHA staging deploy, and authenticated
+acceptance. Expected safe migration evidence remains `55` applied, `0` pending,
+zero anomalies, and healthy Prisma. Any difference is a stop condition for
+investigation; migration apply must not be inferred or started automatically.
 
 ## Branch and worktree reconciliation
 
@@ -236,17 +262,22 @@ PR #30 must not be merged while branch protection requires review.
 - `support-request-migration-apply` remains an explicitly deferred mutation.
 - live-provider smoke remains deferred external/operator validation and was not
   required to close this repository-reconciliation Gate 2.
-- production smoke remains an external/operator validation under Gate 3.
+- fresh final-candidate staging migration planning, deployment convergence, and
+  authenticated acceptance remain required before production;
+- production exact-SHA health convergence and safe smoke remain required after
+  the authorized deployment.
 - the successful A6 workflow emitted a post-job checkout warning for a stale
   `.claude/worktrees/...` submodule path absent from `.gitmodules`; all `24/24`
   acceptance checks still passed. GitHub also emitted its Node 20-to-24 action
   runtime deprecation warning. Both are residual tooling noise, not Gate 2
   failures.
 
-The full local release suite is green at `182/182`, the exact source candidate
-is committed locally, and adversarial review has no findings. Gate 1 is
-complete. Gate 2 exact-SHA staging verification is complete. Gate 3 production
-authorization remains separate and explicitly unauthorized by this track.
+The post-verifier-fix local suite is green at `52/52` Vitest files,
+`466/466` Vitest tests, `182/182` required release checks, lint, and diff check.
+The final exact candidate still needs to be committed and rerun through those
+deterministic gates. The prior Gate 2 packet is historical for `8c74235...`;
+fresh final-candidate Gate 2 evidence is pending. Gate 3 deployment is explicitly
+authorized by the user after that evidence is green.
 
 ## Completion criteria for this reconciliation
 
@@ -262,9 +293,16 @@ following are true:
 6. the reconciliation source commit contains only reviewed, intentional files;
 7. cleanup retains lossless custody for every removed dirty worktree/ref;
 8. any future push preserves branch protection and does not merge PR #30;
-9. Gate 2 evidence is bound to the exact staging SHA and run IDs above;
-10. remaining production/deferred operator work is reported as open rather than
-    inferred complete.
+9. historical Gate 2 evidence remains bound to `8c74235...` and is never reused
+   as evidence for the newer final candidate;
+10. the final candidate receives a fresh exact-SHA staging packet before any
+    production deployment;
+11. production deployment uses `.github/workflows/publish-root-domain-image.yml`
+    against protected `main` and exact Dokploy target
+    `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`;
+12. migration apply, provider, billing, credential, environment, DNS, or
+    destructive operations remain separate and are not inferred from deployment
+    authorization.
 
 See
 [REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md](REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md)

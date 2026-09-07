@@ -1,19 +1,43 @@
 # JPV Bootcamp environment and database boundaries
 
-> **HISTORICAL ENVIRONMENT SNAPSHOT — 2026-08-29.** Use
-> `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md` for
-> current repository authority. Values below record the environment observed at
-> their dated checkpoint and do not establish current staging or production
-> migration state.
+> **CURRENT AUTHORITY OVERLAY — 2026-09-07.** Repository release authority is
+> `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md` and the
+> corresponding implementation plan. The current read-only runtime baseline is:
+> production `f93ffac7dd299c39d8daf242d6a436272cc79188` with
+> `deploymentEnv=production`; staging
+> `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb` with
+> `deploymentEnv=staging`. These are pre-promotion observations, not evidence for
+> the newer final candidate.
+>
+> Current staging authority is `https://staging.jpvbootcamp.com`, Dokploy
+> `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, database
+> `jpvbootcamp_staging`, schema `jpvbootcamp`, through
+> `.github/workflows/deploy-preview.yml`. Current production authority is
+> `https://jpvbootcamp.com`, Dokploy `clients-jpv-bootcamp-app-tp9xrk` /
+> `I_2Vukga3cc3ZhaG-mUzU`, database `jpvbootcamp`, schema `jpvbootcamp`, through
+> `.github/workflows/publish-root-domain-image.yml` on protected `main`.
+> `.github/workflows/production-prisma-migrations.yml` is a separate mutation
+> lane and is not part of ordinary deployment.
+>
+> Final-candidate promotion must first obtain a fresh read-only staging migration
+> plan. The expected reconciliation baseline is `55` applied, `0` pending, zero
+> anomalies, and healthy Prisma access. Any different result is a stop condition
+> for investigation; it does not authorize migration apply.
+
+## Historical environment snapshot — 2026-08-29
+
+The sections below record the environment observed at their dated checkpoint.
+They do not establish current staging or production migration state and must not
+override the current authority overlay above.
 
 Verified 2026-08-29 from live staging, production, legacy, DNS, TLS, and health
 evidence on the authorized host. This
 document records runtime facts only; passwords and other secret values are never
 stored here.
 
-## CURRENT E1 FINAL CLOSEOUT — 2026-08-29
+## Historical E1 final closeout — 2026-08-29
 
-The following read-only evidence is current. The production application is
+The following read-only evidence was current at that checkpoint. The production application is
 `clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`. The staging
 authority is `clients-jpv-bootcamp-preview-wjfqfd` at
 `https://staging.jpvbootcamp.com`, deployed with

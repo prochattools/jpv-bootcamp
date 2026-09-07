@@ -2,15 +2,38 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-> **CURRENT REPOSITORY AUTHORITY — 2026-09-06:** Repository assessment,
+> **CURRENT REPOSITORY AUTHORITY — updated 2026-09-07:** Repository assessment,
 > hardening, branch/worktree reconciliation, cleanup, and release-readiness
 > status are now owned by
 > `docs/release/REPOSITORY_RECONCILIATION_CURRENT_TRUTH_2026-09-06.md`, with
 > remaining work in
 > `docs/release/REPOSITORY_RECONCILIATION_IMPLEMENTATION_PLAN_2026-09-06.md`.
+> The latest production migration-status verifier hardening rejects query-string
+> overrides for connection identity fields before constructing a database
+> client. Post-fix validation is green at `52/52` Vitest files, `466/466` tests,
+> `182/182` required release checks, lint, and diff check. The historical Gate 2
+> SHA `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb` remains valid only for its own
+> staging evidence because source changed afterward. The user has explicitly
+> authorized a fresh final-candidate staging verification followed by production
+> deployment of the same SHA if every gate remains green.
+>
+> Current pre-promotion runtime baseline: production
+> `f93ffac7dd299c39d8daf242d6a436272cc79188` with
+> `deploymentEnv=production`; staging
+> `8c74235b1f2e36c19efb93251dbcb4d6e41b9abb` with
+> `deploymentEnv=staging`. Staging authority is
+> `https://staging.jpvbootcamp.com` / Dokploy
+> `clients-jpv-bootcamp-preview-wjfqfd` (`bZllV93NqsPZAFCsqDskb`). Production
+> authority is `https://jpvbootcamp.com` / Dokploy
+> `clients-jpv-bootcamp-app-tp9xrk` (`I_2Vukga3cc3ZhaG-mUzU`) through
+> `.github/workflows/publish-root-domain-image.yml` on protected `main`.
+> Migration apply, bootstrap, backfill, seed, provider, billing, credential,
+> environment, DNS, and destructive-cleanup operations are outside this bounded
+> deployment authorization unless separately justified by fresh evidence.
+>
 > The dated sections below are preserved as historical release evidence. They
-> must not be used to infer current staging migration state or present release
-> authorization.
+> must not be used to infer current staging migration state, current target
+> identity, or present release authorization.
 
 ---
 
@@ -345,16 +368,16 @@ authority at the top of this handoff.
 
 > The remainder of this section is retained as an audit record from the 2026-08-08 pre-migration lane. Its migration-29, deployed-SHA, and operator instructions are not current instructions. The current source registry and current release gaps are recorded in `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
 
-- **Only permitted branch:** `feature/course-branding-and-preview`.
-- **Only permitted runtime/deployment target:** `https://preview.jpvbootcamp.com`, Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`, app ID `I_2Vukga3cc3ZhaG-mUzU`.
-- **Only permitted database target:** host `10.0.2.4`, port `5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
-- **Current feature tip:** verify the exact operator tip with `git rev-parse HEAD`; ordinary feature pushes are validation-only and cannot deploy.
-- **Current live staging baseline:** `9c045fa5a5c327014c20fe9377f7d5368b550573` until an explicit guarded staging deployment changes it.
+- **Historical permitted branch (superseded):** `feature/course-branding-and-preview`.
+- **Historical runtime/deployment target (superseded; do not execute):** `https://preview.jpvbootcamp.com`, Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`, app ID `I_2Vukga3cc3ZhaG-mUzU`.
+- **Historical database target (superseded):** host `10.0.2.4`, port `5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
+- **Historical feature-tip procedure (superseded):** the checkpoint required verifying the operator tip with `git rev-parse HEAD`; this is retained as evidence only.
+- **Historical live staging baseline:** `9c045fa5a5c327014c20fe9377f7d5368b550573` at that checkpoint.
 - **Launch-scope implementation:** complete in repository source, including durable account-action reservation/finalization and migration `20260804_050000_member_account_action_reservations`.
 - **Authoritative staging evidence:** read-only plan run `31215369413` at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6` returned `plan_ok`: 28 Payload migrations applied, migration 29 solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. It authorized no write.
-- **Current closure boundary:** after the final documentation/CI checkpoint, rerun the guarded read-only plan against that exact final SHA. A fresh `plan_ok` makes the migration-29 apply packet ready for separate operator authorization; migration 29 is not applied by this checkpoint.
+- **Historical closure boundary:** that checkpoint required a guarded read-only plan before any separately authorized migration-29 apply packet; retained as evidence only.
 - **Deferred by design:** M2-01 and Phases 8–11 remain deferred/follow-up scope and are not launch-scope blockers.
-- **Security boundary:** no other branch, application, environment, database, or schema is permitted by current operational tooling.
+- **Historical security boundary:** the restriction recorded here applied to that checkpoint and does not define current operational tooling.
 
 ---
 
