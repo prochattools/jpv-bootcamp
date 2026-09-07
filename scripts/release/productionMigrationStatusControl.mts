@@ -27,8 +27,8 @@ const fullSha = /^[0-9a-f]{40}$/
 const base64Payload = /^[A-Za-z0-9+/]+={0,2}$/
 
 export const PRODUCTION_MIGRATION_PREFLIGHT_CONTROL = Object.freeze({
-  controlTag: 'production-migration-preflight-20260907-reviewed',
-  reviewedBaselineControlSha: '05d3adc66e584b2fd8a8da482896e69a7ca9c8f8',
+  controlTag: 'production-migration-preflight-20260907-reviewed-v2',
+  reviewedBaselineControlSha: '70c2fcc04cd2d44f6d620c8749cd91fd317ab77c',
   candidateSha: '8b1f459fed358776fda791553ef225cc9f03b2ae',
   productionSha: 'f93ffac7dd299c39d8daf242d6a436272cc79188',
   origin: 'https://jpvbootcamp.com',
@@ -390,10 +390,24 @@ export function validateProductionMigrationStatusReport(
   ) {
     throw new Error('migration_status_target_mismatch')
   }
+  const observedRevisionFields = [
+    deployedRevision.observedCommitSha,
+    deployedRevision.observedImageTag,
+  ]
+  if (
+    observedRevisionFields.some((revision) => revision !== null && typeof revision !== 'string')
+  ) {
+    throw new Error('migration_status_revision_mismatch')
+  }
+  const observedRevisions = observedRevisionFields.filter(
+    (revision): revision is string => typeof revision === 'string',
+  )
   if (
     deployedRevision.expectedSha !== PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.productionSha ||
-    deployedRevision.observedCommitSha !== PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.productionSha ||
-    deployedRevision.observedImageTag !== PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.productionSha
+    observedRevisions.length === 0 ||
+    observedRevisions.some(
+      (revision) => revision !== PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.productionSha,
+    )
   ) {
     throw new Error('migration_status_revision_mismatch')
   }

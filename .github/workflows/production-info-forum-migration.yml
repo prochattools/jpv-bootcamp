@@ -166,13 +166,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = "production-migration-preflight-20260907-reviewed"
-          test "$GITHUB_REF" = "refs/tags/production-migration-preflight-20260907-reviewed"
+          test "$GITHUB_REF_NAME" = "production-migration-preflight-20260907-reviewed-v2"
+          test "$GITHUB_REF" = "refs/tags/production-migration-preflight-20260907-reviewed-v2"
           test "$GITHUB_SHA" = "$EXPECTED_SOURCE_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
-          test "$(git ls-remote origin refs/tags/production-migration-preflight-20260907-reviewed | awk '{print $1}')" = "$EXPECTED_SOURCE_SHA"
+          test "$(git ls-remote origin refs/tags/production-migration-preflight-20260907-reviewed-v2 | awk '{print $1}')" = "$EXPECTED_SOURCE_SHA"
           test "$(git rev-list --parents -n 1 HEAD | awk '{print NF}')" = 2
-          test "$(git rev-parse HEAD^)" = "05d3adc66e584b2fd8a8da482896e69a7ca9c8f8"
+          test "$(git rev-parse HEAD^)" = "70c2fcc04cd2d44f6d620c8749cd91fd317ab77c"
           test "$EXPECTED_CANDIDATE_SHA" = "8b1f459fed358776fda791553ef225cc9f03b2ae"
           test "$EXPECTED_PRODUCTION_SHA" = "f93ffac7dd299c39d8daf242d6a436272cc79188"
 

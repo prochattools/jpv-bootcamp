@@ -30,8 +30,8 @@ const verifier = readFileSync('scripts/release/verifyProductionMigrationStatus.t
 
 validateStaticProductionTargetContract()
 
-assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlTag, 'production-migration-preflight-20260907-reviewed')
-assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.reviewedBaselineControlSha, '05d3adc66e584b2fd8a8da482896e69a7ca9c8f8')
+assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.controlTag, 'production-migration-preflight-20260907-reviewed-v2')
+assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.reviewedBaselineControlSha, '70c2fcc04cd2d44f6d620c8749cd91fd317ab77c')
 assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.candidateSha, '8b1f459fed358776fda791553ef225cc9f03b2ae')
 assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.productionSha, 'f93ffac7dd299c39d8daf242d6a436272cc79188')
 assert.equal(PRODUCTION_MIGRATION_PREFLIGHT_CONTROL.origin, 'https://jpvbootcamp.com')
@@ -56,8 +56,8 @@ assert.match(workflow, /environment: root-domain-image-publish/)
 assert.match(workflow, /run_migration_status_preflight:/)
 assert.match(workflow, /if: inputs\.run_migration_status_preflight != 'yes'/)
 assert.match(workflow, /if: inputs\.run_migration_status_preflight == 'yes'/)
-assert.match(workflow, /production-migration-preflight-20260907-reviewed/)
-assert.match(workflow, /05d3adc66e584b2fd8a8da482896e69a7ca9c8f8/)
+assert.match(workflow, /production-migration-preflight-20260907-reviewed-v2/)
+assert.match(workflow, /70c2fcc04cd2d44f6d620c8749cd91fd317ab77c/)
 assert.match(workflow, /8b1f459fed358776fda791553ef225cc9f03b2ae/)
 assert.match(workflow, /f93ffac7dd299c39d8daf242d6a436272cc79188/)
 assert.match(workflow, /pnpm install --frozen-lockfile/)
@@ -82,11 +82,11 @@ assert.doesNotMatch(verifier, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CRE
 assert.doesNotMatch(verifier, /\bprisma\s+migrate\b|\bmigrate\s+deploy\b|\b(?:db|payload):(?:reset|seed|cleanup|init)\b/i)
 assert.doesNotMatch(remoteEntry, /DATABASE_URL|password|secret/i)
 
-validateReviewedControlParents(['05d3adc66e584b2fd8a8da482896e69a7ca9c8f8'])
+validateReviewedControlParents(['70c2fcc04cd2d44f6d620c8749cd91fd317ab77c'])
 assert.throws(() => validateReviewedControlParents([]), /control_not_direct_child_of_reviewed_baseline/)
 assert.throws(
   () => validateReviewedControlParents([
-    '05d3adc66e584b2fd8a8da482896e69a7ca9c8f8',
+    '70c2fcc04cd2d44f6d620c8749cd91fd317ab77c',
     '0000000000000000000000000000000000000000',
   ]),
   /control_not_direct_child_of_reviewed_baseline/,
@@ -347,6 +347,43 @@ const validReport = {
 }
 
 assert.equal(validateProductionMigrationStatusReport(validReport), validReport)
+const imageTagOnlyRevisionReport = {
+  ...validReport,
+  deployedRevision: {
+    ...validReport.deployedRevision,
+    observedCommitSha: null,
+  },
+}
+assert.equal(
+  validateProductionMigrationStatusReport(imageTagOnlyRevisionReport),
+  imageTagOnlyRevisionReport,
+)
+const commitOnlyRevisionReport = {
+  ...validReport,
+  deployedRevision: {
+    ...validReport.deployedRevision,
+    observedImageTag: null,
+  },
+}
+assert.equal(
+  validateProductionMigrationStatusReport(commitOnlyRevisionReport),
+  commitOnlyRevisionReport,
+)
+assert.throws(() => validateProductionMigrationStatusReport({
+  ...validReport,
+  deployedRevision: {
+    ...validReport.deployedRevision,
+    observedCommitSha: null,
+    observedImageTag: null,
+  },
+}), /migration_status_revision_mismatch/)
+assert.throws(() => validateProductionMigrationStatusReport({
+  ...validReport,
+  deployedRevision: {
+    ...validReport.deployedRevision,
+    observedCommitSha: 123,
+  },
+}), /migration_status_revision_mismatch/)
 assert.throws(() => validateProductionMigrationStatusReport({
   ...validReport,
   deployedRevision: {
