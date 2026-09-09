@@ -17,7 +17,8 @@ updates only; no new product feature was promoted.
 | #35 | Payload account-unlock authorization hardening | `cb0fb0c6` | `34391403077` | Merged and deployed |
 | #34 | Deployed production-state documentation | `d55ac6a3` | `34392897174` | Merged and deployed |
 
-PR #30 and PR #33 were closed without merging. There are no open pull requests.
+PR #30 and PR #33 were closed without merging. There are no open production
+release pull requests; this documentation-only closeout is tracked in PR #37.
 
 ## Runtime evidence
 

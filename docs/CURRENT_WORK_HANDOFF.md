@@ -15,9 +15,10 @@ workflow `34392897174` passed and the live deployment-health endpoint reports
 
 No separate production migration workflow was run, no migration or schema
 files changed relative to the previous production image, and no manual
-database write was performed. PR #30 and PR #33 were closed without merging;
-there are currently no open pull requests. The pre-deployment review below is
-kept as historical evidence.
+database write was performed. PR #30 and PR #33 were closed without merging.
+There are no open production release pull requests; PR #37 is the
+documentation-only closeout follow-up. The pre-deployment review below is kept
+as historical evidence.
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE REVIEW — 2026-09-09
 

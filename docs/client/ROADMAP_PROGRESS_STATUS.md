@@ -15,8 +15,9 @@ the same image tag.
 
 No separate production migration workflow was run for this release, and no
 migration or schema files changed relative to the previous production image.
-No new feature PR was promoted. PR #30 and PR #33 were closed without merging;
-there are no open pull requests. The pre-deployment records below remain
+No new feature PR was promoted. PR #30 and PR #33 were closed without merging.
+There are no open production release pull requests; PR #37 is the
+documentation-only closeout follow-up. The pre-deployment records below remain
 historical evidence and retain their original identities.
 
 ## PRE-DEPLOYMENT PRODUCTION MIGRATION-STATUS VERIFICATION — 2026-09-07

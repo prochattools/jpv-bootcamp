@@ -24,8 +24,9 @@ No separate production migration workflow was run for this deployment, and no
 migration or schema files changed relative to the previous production image.
 PR #34 documentation, PR #35 Payload authorization hardening, and PR #36
 read-only migration verification are merged. PR #30 and PR #33 were closed
-without merging; there are no open pull requests. The pre-deployment
-validation below remains a historical record.
+without merging. There are no open production release pull requests; PR #37 is
+the documentation-only closeout follow-up. The pre-deployment validation below
+remains a historical record.
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 

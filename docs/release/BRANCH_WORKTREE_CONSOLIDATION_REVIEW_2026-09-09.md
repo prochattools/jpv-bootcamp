@@ -88,13 +88,14 @@ The local merge inventory also showed only `main` as a merged local branch. The
 merged remote refs above are ancestry observations only; no local or remote ref
 was deleted, archived, or rewritten.
 
-The current pull-request state is closed and clean:
+The production release pull-request state is closed and clean. PR #37 is the
+documentation-only closeout follow-up represented by this record:
 
 - PR #34 merged as `d55ac6a3` and is deployed.
 - PR #35 merged as `cb0fb0c6` and is deployed.
 - PR #36 merged as `7ba93c31` and is deployed.
 - PR #30 and PR #33 were closed without merging.
-- No pull requests are open.
+- No other production release pull requests are open.
 
 Remote branches associated with the merged PRs remain preserved as recovery
 references. Other remote branches with unique or unresolved work remain listed
