@@ -10,7 +10,19 @@ boundaries without storing credentials. The 2026-08-29 E1 closeout below is
 retained as dated read-only evidence and does not authorize production release,
 provider mutation, or database changes.
 
-## Live runtime identity refresh — 2026-09-09
+## Current deployed production identity — 2026-09-09
+
+Production is live from `main` at commit/image
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. Publish workflow `34375016540`
+passed image publication, Dokploy update, deployment trigger, and root
+production convergence. The live deployment-health endpoint reports
+`status=live`, `deploymentEnv=production`, and the expected image tag.
+
+No separate production migration workflow was run for this deployment, and no
+migration or schema files changed relative to the previous production image.
+The pre-deployment runtime refresh below remains a dated historical record.
+
+## Pre-deployment live runtime identity refresh — 2026-09-09
 
 Read-only probes returned HTTP 200 with `status=live` for the canonical staging
 and production origins. Staging currently reports `deploymentEnv=staging` and

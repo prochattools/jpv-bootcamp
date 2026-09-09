@@ -80,6 +80,10 @@ async function main(): Promise<void> {
   assert.match(docs.statusProcedure, /pnpm toolchain:check/)
 
   assert.match(docs.roadmap, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
+  assert.match(docs.roadmap, /CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09/)
+  assert.match(docs.roadmap, /34375016540/)
+  assert.match(docs.roadmap, /c72ad378c6cf43a2d0a474000e3e979f834f784e/)
+  assert.match(docs.roadmap, /No separate production migration workflow was run/)
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
   assert.match(docs.roadmap, /Branch \| `codex\/production-hygiene-20260907`/)
   assert.match(docs.roadmap, /Staging target \| `https:\/\/staging\.jpvbootcamp\.com`/)
@@ -118,6 +122,9 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /Repository inventory now includes deterministic release-manifest coverage and Playwright launch browser E2E\./)
 
   assert.match(docs.operatorHandoff, /Version 3\.7 current client go-live plan; Version 3\.4 is the prior progress baseline/)
+  assert.match(docs.operatorHandoff, /CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09/)
+  assert.match(docs.operatorHandoff, /34375016540/)
+  assert.match(docs.operatorHandoff, /c72ad378c6cf43a2d0a474000e3e979f834f784e/)
   assert.match(docs.operatorHandoff, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
   assert.match(docs.operatorHandoff, /30853006495/)
   assert.match(docs.operatorHandoff, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)

@@ -4,7 +4,21 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## CURRENT PRODUCTION-HYGIENE REVIEW — 2026-09-09
+## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
+
+The production release authority is `main` at
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. PR #31 merged the reviewed hygiene
+release and PR #32 merged the Bookworm production-image fix. Publish workflow
+`34375016540` passed and the live deployment-health endpoint reports
+`status=live`, `deploymentEnv=production`, and the expected image tag.
+
+No separate production migration workflow was run, no migration or schema
+files changed relative to the previous production image, and no manual
+database write was performed. PR #30 remains deferred for review; PR #33 is a
+development-only dependency update. The pre-deployment review below is kept as
+historical evidence.
+
+## PRE-DEPLOYMENT PRODUCTION-HYGIENE REVIEW — 2026-09-09
 
 The production release authority remains `main` at
 `f93ffac7dd299c39d8daf242d6a436272cc79188`. The local hygiene candidate is

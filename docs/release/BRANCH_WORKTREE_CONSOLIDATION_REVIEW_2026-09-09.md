@@ -1,12 +1,17 @@
 # JPV Bootcamp — Branch and Worktree Consolidation Review — 2026-09-09
 
-**Status:** REVIEW COMPLETE — the functional hygiene split and post-split
-handoff refreshes were created and pushed on the hygiene branch; no deployment,
-branch/worktree/ref deletion, or production mutation was performed
+**Status:** POST-DEPLOYMENT REVIEW — PR #31 and PR #32 are merged and production
+is verified on `c72ad378`; no branch/worktree/ref deletion was performed
 
 **Audit repository:** `jpv-bootcamp`
 
 **Audit branch:** `codex/production-hygiene-20260907`
+
+The reviewed hygiene release was merged as PR #31 and the production image
+Bookworm fix was merged as PR #32. Publish workflow `34375016540` passed and
+the live deployment-health endpoint reports the same production image. The
+branch and worktree inventory below is retained as the pre-deployment audit;
+unfinished and dirty work remains preserved.
 
 This review records the current Git topology and safe disposition. An ancestry
 relationship is evidence for review; it is not authorization to delete a branch,

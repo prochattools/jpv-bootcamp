@@ -1,6 +1,23 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PRODUCTION MIGRATION-STATUS VERIFICATION — 2026-09-07
+## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
+
+PR #31 merged the production-hygiene review and PR #32 fixed the production
+image build base. The protected root-domain publish workflow
+`34375016540` passed source verification, application validation, immutable
+image publication, Dokploy update, deployment trigger, and production
+convergence for `main` commit/image
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. The live deployment-health
+endpoint independently reports `status=live`, `deploymentEnv=production`, and
+the same image tag.
+
+No separate production migration workflow was run for this release, and no
+migration or schema files changed relative to the previous production image.
+No new feature PR was promoted. PR #30 remains deferred for separate review;
+PR #33 is a development-only dependency update. The pre-deployment records
+below remain historical evidence and retain their original identities.
+
+## PRE-DEPLOYMENT PRODUCTION MIGRATION-STATUS VERIFICATION — 2026-09-07
 
 **READ-ONLY VERIFIED — NO PRODUCTION MIGRATION REQUIRED**
 
@@ -28,7 +45,7 @@ source/documentation hygiene and branch reconciliation; this checkpoint does not
 justify a migration apply or deployment. Full evidence is recorded in
 `docs/release/PRODUCTION_MIGRATION_STATUS_VERIFICATION_2026-09-07.md`.
 
-## CURRENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
+## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
 `pnpm test:release` passed `183/183`; the release manifest contains 184 entries including one
 conditional browser gate. Lint, root TypeScript, the controlled production

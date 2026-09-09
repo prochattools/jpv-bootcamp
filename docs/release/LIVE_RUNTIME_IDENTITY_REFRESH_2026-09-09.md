@@ -1,13 +1,21 @@
 # JPV Bootcamp — Live Runtime Identity Refresh — 2026-09-09
 
-**Status:** READ-ONLY OBSERVATION — no deployment, migration, provider, routing,
-or database operation was performed
+**Status:** PRE-DEPLOYMENT READ-ONLY OBSERVATION — superseded by the verified
+post-deployment state below
 
 **Observed at:** `2026-09-09T12:20:47.955Z`
 
-This record captures a fresh public DNS and HTTP health probe. It establishes
-runtime identity only; it does not prove migration state, deployment convergence,
-branch provenance, or intentional DNS retirement.
+This record captures the pre-deployment public DNS and HTTP health probe. It
+remains historical evidence and does not override the post-deployment result.
+
+## Post-deployment verification — 2026-09-09
+
+Publish workflow `34375016540` completed successfully for `main` commit/image
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`, including Dokploy convergence. A
+follow-up read-only deployment-health probe returned HTTP 200 with
+`status=live`, `deploymentEnv=production`, and image tag
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. No separate production migration
+workflow was run for this deployment.
 
 ## Observed results
 
