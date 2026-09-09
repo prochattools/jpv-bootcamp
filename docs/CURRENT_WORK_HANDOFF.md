@@ -14,9 +14,10 @@ release and PR #32 merged the Bookworm production-image fix. Publish workflow
 
 No separate production migration workflow was run, no migration or schema
 files changed relative to the previous production image, and no manual
-database write was performed. PR #30 remains deferred for review; PR #33 is a
-development-only dependency update. The pre-deployment review below is kept as
-historical evidence.
+database write was performed. PR #34 records this deployed state and remains
+review-gated; follow-on security PR #35 also passed CI and remains review-gated.
+PR #30 remains deferred for review; PR #33 is a development-only dependency
+update. The pre-deployment review below is kept as historical evidence.
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE REVIEW — 2026-09-09
 

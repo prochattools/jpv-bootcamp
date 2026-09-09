@@ -22,7 +22,7 @@ remove a worktree, or rewrite history.
 | Ref | Tip | Relation to `main` | Worktree | Disposition |
 | --- | --- | --- | --- | --- |
 | `main` | `c72ad378c6cf43a2d0a474000e3e979f834f784e` | Production authority | No dedicated worktree | Preserve |
-| `codex/production-status-documentation-20260909` | `5cc21f6b1f694199d40b68a664d01edd15e21016` | 1 commit ahead; documentation-only PR #34 | `jpv-bootcamp-production-hygiene-20260907` — clean | Preserve; PR #34 requires independent review |
+| `codex/production-status-documentation-20260909` | `5ac31395bcead050ff6c4fad358a38b71abdb92b` | 3 commits ahead; documentation-only PR #34 | `jpv-bootcamp-production-hygiene-20260907` — clean | Preserve; PR #34 requires independent review |
 | `codex/production-hygiene-20260907` | `cfe4eb1f8cd321da73852906794cbe137842c9d7` | Fully contained in `main`; PR #31 merged | No dedicated worktree | Preserve until cleanup is explicitly authorized |
 | `codex/production-image-build-fix-20260909` | `78f115931ea594286a2b2cb2fee9fc44b54f7bce` | Fully contained in `main`; PR #32 merged | No dedicated worktree | Preserve until cleanup is explicitly authorized |
 | `codex/post-release-baseline-closeout` | `761087a1fedfdbefcdbe14b1ad92c1b6ebf0ac2a` | 16 commits behind and 15 ahead; contains hygiene, preflight, and reconciliation histories | `jpv-bootcamp-main` — clean | Preserve; candidate integration line requires review |
@@ -104,6 +104,9 @@ The current open review set is:
 - PR #34: `codex/production-status-documentation-20260909`, CI passed; review
   required before merge. Merging it would trigger the root production publish
   workflow because it targets `main`.
+- PR #35: `codex/payload-unlock-hardening-20260909`, CI passed; review required
+  before merge. It restricts Payload's account-unlock operation to
+  administrator-authenticated requests and does not add a migration or feature.
 - PR #30: `codex/repository-hardening-20260902`, dirty and review required;
   its dependency pins overlap the current remediation and its unique verifier
   still needs contract review.

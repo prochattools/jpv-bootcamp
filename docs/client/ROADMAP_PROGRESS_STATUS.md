@@ -13,9 +13,11 @@ the same image tag.
 
 No separate production migration workflow was run for this release, and no
 migration or schema files changed relative to the previous production image.
-No new feature PR was promoted. PR #30 remains deferred for separate review;
-PR #33 is a development-only dependency update. The pre-deployment records
-below remain historical evidence and retain their original identities.
+No new feature PR was promoted. PR #34 records the deployed state and remains
+review-gated; security PR #35 passed CI and remains review-gated. PR #30 remains
+deferred for separate review; PR #33 is a development-only dependency update.
+The pre-deployment records below remain historical evidence and retain their
+original identities.
 
 ## PRE-DEPLOYMENT PRODUCTION MIGRATION-STATUS VERIFICATION — 2026-09-07
 

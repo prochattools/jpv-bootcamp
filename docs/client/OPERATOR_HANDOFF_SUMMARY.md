@@ -22,8 +22,10 @@ root-production convergence. The live deployment-health endpoint reports
 
 No separate production migration workflow was run for this deployment, and no
 migration or schema files changed relative to the previous production image.
-PR #30 remains deferred for separate review; PR #33 is development-only. The
-pre-deployment validation below remains a historical record.
+PR #34 records this deployed state and remains review-gated. Follow-on security
+PR #35 passed CI and remains review-gated. PR #30 remains deferred for separate
+review; PR #33 is development-only. The pre-deployment validation below remains
+a historical record.
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
