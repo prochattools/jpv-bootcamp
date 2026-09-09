@@ -32,6 +32,7 @@ export const PayloadMembers: CollectionConfig = {
     read: requirePayloadAdminOrMemberSelf,
     update: requirePayloadAdminOrMemberSelf,
     delete: requirePayloadAdmin,
+    unlock: requirePayloadAdmin,
   },
   hooks: {
     beforeValidate: [

@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { requirePayloadAdmin } from '@/lib/access/payloadAccess'
 
 export const PayloadUsers: CollectionConfig = {
   slug: 'payload_users',
@@ -8,6 +9,9 @@ export const PayloadUsers: CollectionConfig = {
     plural: 'Administrators',
   },
   auth: true,
+  access: {
+    unlock: requirePayloadAdmin,
+  },
   admin: {
     useAsTitle: 'email',
     group: 'System',
