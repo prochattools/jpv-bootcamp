@@ -1,6 +1,7 @@
 # JPV Bootcamp — Branch and Worktree Consolidation Review — 2026-09-09
 
-**Status:** READ-ONLY REVIEW — no branch, worktree, ref, or working-tree
+**Status:** REVIEW COMPLETE — five local commits were created on the hygiene
+branch; no push, deployment, branch/worktree/ref deletion, or production
 mutation was performed
 
 **Audit repository:** `jpv-bootcamp`
@@ -16,20 +17,23 @@ remove a worktree, or rewrite history.
 | Ref | Tip | Relation to `main` | Worktree | Disposition |
 | --- | --- | --- | --- | --- |
 | `main` | `f93ffac7dd299c39d8daf242d6a436272cc79188` | Production authority | `jpv-bootcamp-main` is a separate closeout worktree | Preserve |
-| `codex/production-hygiene-20260907` | `373e9b1b8f6d4eda26bd435629683a2faeec573c` | 6 commits ahead; synchronized with origin | `jpv-bootcamp-production-hygiene-20260907` — 47 pending paths (45 tracked, 2 untracked) | Preserve and review before landing |
+| `codex/production-hygiene-20260907` | `59eddf98` | 11 commits ahead of `main`; 5 local commits ahead of origin | `jpv-bootcamp-production-hygiene-20260907` — clean after the five-commit split | Preserve; push only after final remote review |
 | `codex/post-release-baseline-closeout` | `761087a1fedfdbefcdbe14b1ad92c1b6ebf0ac2a` | 22 commits ahead; contains hygiene, preflight, and reconciliation histories | `jpv-bootcamp-main` — clean | Candidate integration line; no merge performed |
 | `codex/production-migration-preflight-20260907` | `16b3424c4339a355fcd9e15067d1fc6341b3ef52` | 13 commits ahead; contained in closeout | `jpv-bootcamp-production-preflight-20260907` — clean | Preserve until closeout landing is verified |
 | `codex/repository-reconciliation-20260905` | `8b1f459fed358776fda791553ef225cc9f03b2ae` | 10 commits ahead; contained in closeout | `jpv-bootcamp-reconciliation` — clean | Preserve until closeout landing is verified |
 | `codex/repository-hardening-20260902` | `31c79574854ec6fc70e3e094da3d3537c112c6cd` | 11 commits ahead; not contained in closeout | No dedicated worktree | Preserve; open PR #30 contains unique CI/docs/dependency work |
 | `codex/ux-architecture-consolidation` | `a9629399554336436393029b501e93fc4b03b98c` | Diverged; 1 commit ahead and 272 behind | `jpv-bootcamp` — 57 dirty entries | Preserve; unfinished and unique |
 
-The closeout line contains the hygiene, preflight, and reconciliation branch
-tips by ancestry. No merge or fast-forward was performed during this audit.
+The closeout line contains the pre-split hygiene tip, plus the preflight and
+reconciliation branch tips, by ancestry. It does not contain the five new
+local commits at `59eddf98`; no merge or fast-forward was performed during this
+audit.
 
 The closeout line is not dependency-current: its committed tree still declares
-Next.js `^16.3.0` and Sharp `^0.35.0`. The pending hygiene dependency closure
-must be applied exactly once on whichever landing line is selected; ancestry
-alone does not prove that the newer dependency remediation is present.
+Next.js `^16.3.0` and Sharp `^0.35.0`. The new dependency closure is committed
+on the hygiene line only and must be applied exactly once if the closeout line
+is selected; ancestry alone does not prove that the newer dependency
+remediation is present.
 
 The patch-equivalence audit confirms that the closeout line contains the
 hygiene branch, while `codex/repository-hardening-20260902` is not redundant:
@@ -51,9 +55,10 @@ The hygiene worktree currently carries the consolidated dependency closure:
 | Stripe `qs` | `6.16.0` | `6.16.0` | unchanged |
 | Remaining audited transitive pins | DOMPurify `3.4.13`, protobufjs `7.6.5`, brace-expansion `1.1.18`/`2.1.4`, OpenTelemetry `2.8.0`, esbuild `0.25.12`, js-yaml `4.3.2` | overlapping pins, with older js-yaml and an additional minimatch `brace-expansion@5` pin | unchanged |
 
-The final dependency commit should be owned by the selected hygiene or
-closeout landing line and should subsume PR #29 plus the overlapping dependency
-portion of PR #30. PR #30 still requires separate integration review for its
+The dependency commit is currently owned by the hygiene line and subsumes PR
+#29 plus the overlapping dependency portion of PR #30. If closeout is selected
+as the landing line, reproduce that dependency result exactly once. PR #30
+still requires separate integration review for its
 unique CI, migration-verifier, staging-gate, and evidence changes; those files
 must not be dropped as duplicate dependency work. No PR was closed, edited, or
 merged by this read-only review.
@@ -101,7 +106,7 @@ The open review set at audit time was:
 | --- | --- | ---: | --- |
 | `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp` | `codex/ux-architecture-consolidation` | 57 entries | Preserve; inspect and commit or archive deliberately |
 | `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-main` | `codex/post-release-baseline-closeout` | 0 entries | Preserve as clean closeout candidate |
-| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-hygiene-20260907` | `codex/production-hygiene-20260907` | 47 pending paths (45 tracked, 2 untracked) | Preserve; do not commit until branch ownership is selected |
+| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-hygiene-20260907` | `codex/production-hygiene-20260907` | clean after five local commits; branch is 5 commits ahead of origin | Preserve; do not push until branch ownership is selected |
 | `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-preflight-20260907` | `codex/production-migration-preflight-20260907` | 0 entries | Preserve until closeout landing is verified |
 | `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-reconciliation` | `codex/repository-reconciliation-20260905` | 0 entries | Preserve until closeout landing is verified |
 
@@ -120,5 +125,6 @@ The safe landing sequence is:
 5. Only after successful landing and a complete content review should any
    contained branch or clean redundant worktree be considered for removal.
 
-No branch or worktree is removed by this record. Unique dirty work remains
-preserved, and the production release authority remains `main`.
+No branch or worktree is removed by this record. The dirty UX work remains
+preserved, the five hygiene commits remain local and unpushed, and the
+production release authority remains `main`.

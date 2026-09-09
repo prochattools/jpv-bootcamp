@@ -2,15 +2,13 @@
 
 ## Current production-hygiene review — 2026-09-09
 
-This dated review snapshot was captured before the pending commit split. At
-capture time, the production release authority was `main` at
-`f93ffac7dd299c39d8daf242d6a436272cc79188`; the reviewed hygiene candidate was
-`codex/production-hygiene-20260907` at committed tip
-`373e9b1b8f6d4eda26bd435629683a2faeec573c`, synchronized with its remote and
-not deployed. The worktree has 47 pending paths (45 tracked modifications and
-2 untracked evidence records) covering dependency
-remediation, baseline response headers, runtime identity evidence, and release
-documentation. Refresh the tip and worktree count after the split is committed.
+The production release authority remains `main` at
+`f93ffac7dd299c39d8daf242d6a436272cc79188`. The reviewed hygiene candidate is
+`codex/production-hygiene-20260907` at committed tip `59eddf98`; its five
+local commits are 5 commits ahead of the remote, the worktree is clean, and
+the candidate is not deployed. The dependency remediation, baseline response
+headers, runtime identity evidence, and release documentation are committed
+and awaiting remote review.
 
 Repository validation passes `pnpm test:release` at `183/183`, static
 preflight, lint, TypeScript, build, Prisma validation, and the high-severity

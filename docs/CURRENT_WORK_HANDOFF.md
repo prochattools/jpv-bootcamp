@@ -6,15 +6,14 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ## CURRENT PRODUCTION-HYGIENE REVIEW — 2026-09-09
 
-This dated review snapshot was captured before the pending commit split. At
-capture time, the production release authority was `main` at
-`f93ffac7dd299c39d8daf242d6a436272cc79188`; the hygiene candidate under
-review was `codex/production-hygiene-20260907` at committed tip
-`373e9b1b8f6d4eda26bd435629683a2faeec573c`, synchronized with its remote and
-not deployed. The worktree contained 47 pending paths (45 tracked modifications
-and 2 untracked evidence records) covering
-dependency remediation, baseline response headers, runtime evidence, and
-documentation. Refresh the tip and worktree count after the split is committed.
+The production release authority remains `main` at
+`f93ffac7dd299c39d8daf242d6a436272cc79188`. The local hygiene candidate is
+`codex/production-hygiene-20260907` at committed tip
+`59eddf98` (11 commits ahead of `main`, 5 local commits ahead of its remote),
+not deployed, with a clean worktree. The pending dependency, response-header,
+documentation, runtime-identity, and branch/worktree evidence changes were
+landed as five local commits. They remain unpushed pending final remote review
+and release decisions.
 
 Local validation passes `pnpm test:release` at `183/183`, static preflight,
 lint, TypeScript, build, Prisma validation, and the high-severity audit gate.

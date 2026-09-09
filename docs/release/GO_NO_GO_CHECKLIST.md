@@ -4,7 +4,7 @@
 
 - **Status:** `NO-GO` for deployment and production operation.
 - **Production authority:** `main` at `f93ffac7dd299c39d8daf242d6a436272cc79188`.
-- **Reviewed candidate snapshot:** `codex/production-hygiene-20260907` at committed tip `373e9b1b8f6d4eda26bd435629683a2faeec573c`; the worktree has 47 pending paths (45 tracked modifications and 2 untracked evidence records), and the candidate is not deployed. Refresh the tip and path count after the split is committed.
+- **Reviewed candidate snapshot:** `codex/production-hygiene-20260907` at committed tip `59eddf98`; the five-commit local split is complete, the worktree is clean, the branch is 5 commits ahead of its remote, and the candidate is not deployed.
 - **Repository validation:** `pnpm test:release` passed `183/183`; static preflight, lint, TypeScript, build, Prisma validation, and the high-severity audit gate passed.
 - **Open gates:** staging deployment and smoke, live provider verification, CSP/image-allowlist review, and formal release approval remain open. The preview hostname is unresolved; current staging and production health responses report matching `commit` and `imageTag` values.
 - **Current evidence:** use `docs/CURRENT_WORK_HANDOFF.md`, `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`, and `docs/release/PRODUCTION_MIGRATION_STATUS_VERIFICATION_2026-09-07.md`.
