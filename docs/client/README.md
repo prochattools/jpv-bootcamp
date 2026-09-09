@@ -7,19 +7,19 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 ### Current deployed state — 2026-09-09
 
 Production is live from `main` at commit/image
-`c72ad378c6cf43a2d0a474000e3e979f834f784e`. The protected root-domain publish
+`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. The protected root-domain publish
 workflow passed, Dokploy convergence passed, and the live deployment-health
 endpoint reports `status=live` and `deploymentEnv=production`. PR #31 contains
 the production-hygiene release and PR #32 contains the production image
 Bookworm fix; both are merged. No separate production migration workflow was
 run for this deployment, and no new feature PR was promoted with it.
 
-The current production release is operational. PR #30 remains a stale,
-unmerged hardening branch for separate review; PR #33 is a development-only
-dependency update. PR #34 records the deployed state and PR #35 contains a
-follow-on account-unlock hardening fix; both remain review-gated. Historical
-pre-deployment snapshots below retain their original commit identities and
-claims.
+The current production release is operational. PR #30 and PR #33 were
+closed without merging. PR #34 records the deployed state, PR #35 contains the
+account-unlock authorization hardening fix, and PR #36 contains the read-only
+production migration verifier; all three are merged. There are no open pull
+requests. Historical pre-deployment snapshots below retain their original
+commit identities and claims.
 
 **JPV Bootcamp Platform Expansion & Go-Live Plan v3.7** is the current client go-live plan. Version 3.4 is the prior progress baseline.
 
@@ -31,7 +31,7 @@ The client go-live plan does not authorize migration execution. No separate
 production migration workflow was run for the 2026-09-09 deployment.
 
 The current production release authority is `main` at
-`c72ad378c6cf43a2d0a474000e3e979f834f784e`. The canonical staging target is
+`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. The canonical staging target is
 `https://staging.jpvbootcamp.com`. The 2026-09-09 hygiene candidate and its
 Bookworm image fix are now historical merged release inputs.
 The older `feature/course-branding-and-preview` deployment wording is retained
