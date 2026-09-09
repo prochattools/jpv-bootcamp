@@ -25,7 +25,7 @@ export function ContentCardImage({ src, alt, height, width }: ContentCardImagePr
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
+
     <img
       alt={alt}
       className='h-52 w-full object-cover'

@@ -525,7 +525,7 @@ function detectFormat(
   sniff: Buffer
 ): DetectResult {
   const ext = path.extname(filename).toLowerCase();
-  const sniffStr = sniff.toString("utf8").replace(/^﻿/, "");
+  const sniffStr = sniff.toString("utf8").replace(/^\uFEFF/, "");
   const warnings: string[] = [];
 
   // Check for binary PDF header regardless of hint or extension
@@ -642,7 +642,7 @@ function parseCsvHeaderCells(headerLine: string): string[] | null {
     }
   }
   if (inQuote) return null;
-  cells.push(cell.trim().replace(/^﻿/, "").toLowerCase());
+  cells.push(cell.trim().replace(/^\uFEFF/, "").toLowerCase());
   return cells;
 }
 

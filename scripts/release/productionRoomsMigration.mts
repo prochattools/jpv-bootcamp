@@ -20,6 +20,7 @@ import {
 	PRODUCTION_ROOMS_TARGET,
 	type ProductionRoomsMigrationMode,
 } from './productionRoomsMigrationConstants'
+import { throwPrimaryOrCleanupError } from './cleanupErrorPrecedence'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../')
 const migrationPath = resolve(repoRoot, 'src/migrations/20260830_090000_member_portal_rooms.ts')
@@ -405,6 +406,8 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		throw new Error('schedule_create_failed')
 	}
 	let scheduleId = findScheduleId(created.data, scheduleName) ?? findString(created.data, ['scheduleId'])
+	let scheduleResult: ProductionRoomsControlResult | null = null
+	let primaryError: Error | null = null
 	try {
 		if (!scheduleId) {
 			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=dokploy-server`)
@@ -436,7 +439,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		let logPathPresent = false
 		let deploymentErrorMessagePresent = false
 		let deploymentErrorKind = 'none'
-		for (let attempt = 1; attempt <= 36; attempt += 1) {
+		poll: for (let attempt = 1; attempt <= 36; attempt += 1) {
 			const deploymentIds = new Set(runDeploymentIds)
 			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=dokploy-server`)
 			lastScheduleListStatus = listed.status
@@ -478,23 +481,38 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 					logHasControlMarker ||= /JPV_ROOMS_(?:MIGRATION|NAV)_/.test(text)
 					logHasKnownExecutionError ||= /(?:command not found|cannot find module|no such file|permission denied|exec format error)/i.test(text)
 					const marker = extractMarker(text)
-					if (marker) return marker.result
+					if (marker) {
+						scheduleResult = marker.result
+						break poll
+					}
 				}
 			}
 			if ([...deploymentStatuses].some((status) => /^(?:error|failed|cancelled)$/i.test(status))) break
 			if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
 		}
-		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} command_failed=${logHasCommandFailed} failure_kind=${executionFailureKind} remote_exit=${remoteExitCode === null ? 'none' : remoteExitCode} deployment_error_kind=${deploymentErrorKind} deployment_error_message_present=${deploymentErrorMessagePresent} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
-		throw new Error('schedule_completion_marker_missing')
-	} finally {
-		if (scheduleId) {
+		if (!scheduleResult) {
+			console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} command_failed=${logHasCommandFailed} failure_kind=${executionFailureKind} remote_exit=${remoteExitCode === null ? 'none' : remoteExitCode} deployment_error_kind=${deploymentErrorKind} deployment_error_message_present=${deploymentErrorMessagePresent} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
+			throw new Error('schedule_completion_marker_missing')
+		}
+	} catch (error: unknown) {
+		primaryError = error instanceof Error ? error : new Error('production_rooms_control_failed')
+	}
+
+	let cleanupError: Error | null = null
+	if (scheduleId) {
+		try {
 			const deleted = await dokployRequest(apiBase, apiKey, '/schedule.delete', {
 				method: 'POST',
 				body: JSON.stringify({ scheduleId }),
 			})
-			if (deleted.status < 200 || deleted.status >= 300) throw new Error('schedule_cleanup_failed')
+			if (deleted.status < 200 || deleted.status >= 300) cleanupError = new Error('schedule_cleanup_failed')
+		} catch {
+			cleanupError = new Error('schedule_cleanup_failed')
 		}
 	}
+	throwPrimaryOrCleanupError(primaryError, cleanupError)
+	if (!scheduleResult) throw new Error('schedule_completion_marker_missing')
+	return scheduleResult
 }
 
 function currentCommit(): string {

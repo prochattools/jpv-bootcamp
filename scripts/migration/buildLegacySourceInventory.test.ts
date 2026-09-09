@@ -177,6 +177,15 @@ async function runTests(): Promise<void> {
     assert.equal(file.status, "accepted");
   });
 
+  await test("FluentCRM CSV: strips a UTF-8 BOM before format detection", async () => {
+    const fp = writeTmp("fluentcrm-bom.csv", `\uFEFF${FLUENTCRM_CSV_FIXTURE}`);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.detectedFormat, "fluentcrm-csv");
+    assert.equal(file.recordCount, 3);
+    assert.equal(file.status, "accepted");
+  });
+
   // 4. FluentCRM JSON detection and record count
   await test("FluentCRM JSON: detects fluentcrm-json and counts contacts array", async () => {
     const fp = writeTmp("fluentcrm-export.json", FLUENTCRM_JSON_FIXTURE);

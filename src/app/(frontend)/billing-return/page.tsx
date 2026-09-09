@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect } from 'react'
 
 export default function BillingPortalReturnPage() {
@@ -16,7 +17,7 @@ export default function BillingPortalReturnPage() {
         <p className='jpv-eyebrow'>JPV Bootcamp</p>
         <h1 className='mt-3 text-3xl font-semibold tracking-tight text-jpv-ink'>Returning to your billing page…</h1>
         <p className='mt-3 text-jpv-muted'>If you are not redirected automatically, continue below.</p>
-        <a className='jpv-button-primary mt-6 inline-flex' href='/portal/billing'>Continue to billing</a>
+        <Link className='jpv-button-primary mt-6 inline-flex' href='/portal/billing'>Continue to billing</Link>
       </div>
     </main>
   )

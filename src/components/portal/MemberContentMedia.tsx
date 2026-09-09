@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+
 
 import { ManagedBunnyVideoPlayer, type ManagedVideoTarget } from '@/components/portal/ManagedBunnyVideoPlayer'
 import type { MemberManagedVideo, MemberMediaAsset } from '@/lib/payloadContent/memberMedia'

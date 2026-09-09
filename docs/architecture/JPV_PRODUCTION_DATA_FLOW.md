@@ -1,14 +1,14 @@
 # JPV Bootcamp Production Data Flow
 
-**Status:** CURRENT A5.1 DATA-FLOW MAP — OWNERSHIP CLOSED; E1 FINAL CLOSEOUT COMPLETE; READY TO RESUME A6 GATE 1
+**Status:** CURRENT DATA-FLOW MAP — runtime identity refreshed 2026-09-09; E1 closeout retained as historical evidence
 
-**Date:** 2026-08-29
+**Date:** 2026-09-09 runtime identity refresh; E1 closeout 2026-08-29
 
 This document maps the current production-shaped repository flow. The E1
 closeout adds read-only staging/runtime evidence; it does not authorize
 production release or provider mutation.
 
-## E1 environment boundary
+## Historical E1 environment boundary — final read-only reconciliation (2026-08-29)
 
 Production is the root application at `https://jpvbootcamp.com` with database
 `jpvbootcamp` / schema `jpvbootcamp`. Staging is the verified Dokploy target
@@ -37,6 +37,21 @@ identifiers are retained as classified historical or immutable references. No
 E1 code change mutates the live data flow. See
 `JPV_ENVIRONMENT_TOPOLOGY_V1.md` and
 `JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
+
+## Live endpoint identity refresh — 2026-09-09
+
+Read-only probes returned HTTP 200 with `status=live` for staging and
+production. Staging reported `deploymentEnv=staging` and image tag
+`8b1f459fed358776fda791553ef225cc9f03b2ae`; production reported
+`deploymentEnv=production` and image tag
+`f93ffac7dd299c39d8daf242d6a436272cc79188`. Both reported the `commit` field
+equal to the corresponding image tag.
+The preview hostname did not resolve (`curl` HTTP `000`), while the legacy
+health route returned HTTP `404`; preview retirement remains unverified.
+
+This refresh records runtime identity only and does not authorize any deployment,
+migration, provider, routing, or database action.
+Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
 
 ## Global boundary
 

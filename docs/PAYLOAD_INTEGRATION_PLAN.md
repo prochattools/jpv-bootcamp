@@ -1,6 +1,30 @@
 # Payload CMS Integration Plan
 
-## Current repository reconciliation — 2026-08-23
+## Current production-hygiene review — 2026-09-09
+
+The production release authority remains `main` at
+`f93ffac7dd299c39d8daf242d6a436272cc79188`. The reviewed hygiene candidate is
+`codex/production-hygiene-20260907` is pushed and synchronized with the
+remote; its functional split and post-split handoff refreshes are committed,
+the worktree is clean, and the candidate is not deployed. PR #31 remains open
+for human review.
+The dependency remediation, baseline response headers, runtime identity
+evidence, and release documentation are committed and awaiting remote review.
+
+Repository validation passes `pnpm test:release` at `183/183`, static
+preflight, lint, TypeScript, build, Prisma validation, and the high-severity
+audit gate. One moderate Payload advisory remains without an upstream patched
+release. Response headers are defined and contract-tested; CSP compatibility,
+remote image allowlist tightening, deployment of this candidate, and the
+remaining live browser/provider/migration gates are still open.
+
+The current environment boundaries and read-only runtime observations are
+recorded in `docs/ENVIRONMENT_DATABASE_BOUNDARIES.md` and
+`docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`. This plan records
+the repository state only and authorizes no migration, provider, deployment,
+database, or production-data action.
+
+## Historical repository reconciliation — 2026-08-23 (superseded)
 
 - **Working branch:** `feature/course-branding-and-preview`; current repository tip `626bf3926412065fb7e5655d35c98d8f4be67a58` is documentation-only relative to the canonical staging release. The single canonical staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`; all other SHAs are historical or repository checkpoints.
 - **Current source truth:** the feature branch is the authoritative implementation under review. The registry contains 36 migrations, ending with `20260820_000000_live_session_space`; the release-lead verified sanitized staging position is 36/36 applied with pending `[]`, and the current workflow checks that post-apply state read-only.
@@ -203,9 +227,9 @@ These estimates assume no new business logic and no concurrent edits to the owne
 8. FreeResend delivery events are verified before changing message delivery state.
 9. Production schema and traffic changes require explicit approval.
 
-## Current implementation status — 10 July 2026 (Version 3.5 audit)
+## Historical implementation status — 10 July 2026 (Version 3.5 audit)
 
-Current operator branch: `feature/course-branding-and-preview`.
+Historical operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
 No migrations have been applied.
 Do not touch `main`.
@@ -604,7 +628,7 @@ The roadmap retains the eleven product phases but places the historical Version 
 - **Controlled follow-up releases:** richer partner reporting/delivery, community/private-room refinements, notifications/digests, private messaging if accepted, and later LiveKit group calls.
 - **Primary remaining work:** close P0 security/public-copy/billing/submission/dependency blockers; consolidate the member route tree; add complete release and browser tests; complete public copy/content by 15 July; run representative course/storage acceptance; verify partner/community workflows; rehearse migration and rollback; and approve cutover.
 
-## Current milestone verification — 14 July 2026
+## Historical milestone verification — 14 July 2026 (audit record)
 
 The current validated repository baseline is `d55229f test: enforce programme content readiness`. The current branch-tip checkpoint is `8927df9 docs: checkpoint membership implementation readiness`. M0-01 through M0-09 and M1-01 through M1-06 are implemented; M1-06 remains in state B, with `/portal/programme` explicitly preview-only and community interaction still deferred. The follow-up programme-content acceptance and release-candidate packet is complete at repository level, and the membership-support schema-migration plan plus generated-type isolation strategy are now documented separately.
 

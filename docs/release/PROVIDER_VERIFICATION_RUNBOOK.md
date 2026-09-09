@@ -4,7 +4,9 @@ Repository-owned verification contract for controlled staging checks. This runbo
 
 ## Scope
 
-- Branch: `feature/course-branding-and-preview`
+- Approved staging source ref: `feature/*`, `fix/*`, or `release/*`
+- Canonical staging origin: `https://staging.jpvbootcamp.com`
+- The production-hygiene review branch is repository evidence only until a separately authorized exact-SHA deployment.
 - Staging smoke plan command: `pnpm staging:smoke-plan`
 - Migration preflight command: `pnpm staging:migration-preflight`
 - Provider simulation command: `pnpm staging:provider-simulation`

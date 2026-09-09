@@ -1,6 +1,11 @@
 # Staging Migration Approval
 
-> **Reconciliation note (2026-08-02):** Current repository HEAD is `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`. Migration inventory has grown to 28 entries. Static rehearsal passed. Disposable migration execution against staging has not yet been run. This approval remains NOT_APPROVED; no approval fields have been filled.
+> **Historical reconciliation note (2026-08-02):** The repository checkpoint
+> and migration count below belong to that dated review. This approval remains
+> `NOT_APPROVED`; no approval fields have been filled. For current staging
+> operations, use an approved `feature/*`, `fix/*`, or `release/*` source ref,
+> the canonical origin `https://staging.jpvbootcamp.com`, and a fresh exact-SHA
+> read-only migration artifact.
 
 - Decision ID: `staging-migration-approval`
 - Current status: `NOT_APPROVED`
@@ -15,7 +20,7 @@
 
 ## Identity
 
-- Branch: `feature/course-branding-and-preview`
+- Approved source ref: `feature/*`, `fix/*`, or `release/*`
 - Commit: `[TO BE FILLED DURING APPROVAL]`
 - Migration path: `approved database migration path only`
 - Checksum / release packet reference: `[TO BE FILLED DURING APPROVAL]`
@@ -69,4 +74,3 @@
 - Evidence reference: `[TO BE FILLED DURING APPROVAL]`
 - Execution owner confirmation: `[TO BE FILLED DURING APPROVAL]`
 - Rollback owner confirmation: `[TO BE FILLED DURING APPROVAL]`
-

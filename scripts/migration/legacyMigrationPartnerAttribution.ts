@@ -29,6 +29,7 @@
  */
 
 import { Client } from 'pg'
+import { createHash } from 'node:crypto'
 import {
   DomainMigrationAdapter,
   DomainRecord,
@@ -39,9 +40,8 @@ import {
 } from './legacyMigrationFramework'
 
 export function partnerAttributionIdempotencyKey(sessionId: string, clickId?: string): string {
-  const crypto = require('crypto')
   const key = clickId ? `${sessionId}:${clickId}` : sessionId
-  return `partner_attribution_v1_${crypto.createHash('sha256').update(key).digest('hex')}`
+  return `partner_attribution_v1_${createHash('sha256').update(key).digest('hex')}`
 }
 
 export class PartnerAttributionAdapter implements DomainMigrationAdapter {

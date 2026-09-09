@@ -326,13 +326,13 @@ describe('Staging-only invariant', () => {
     it('validate-only job contains no Docker push step', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
       // Find the validate-only job section (before deploy-preview job)
-      const validateSection = yml.match(/validate-only:[\s\S]*?(?=\n  [a-z-]+:[\n ])/)?.[0] ?? yml
+      const validateSection = yml.match(/validate-only:[\s\S]*?(?=\n {2}[a-z-]+:[\n ])/)?.[0] ?? yml
       expect(validateSection).not.toContain('push: true')
     })
 
     it('validate-only job contains no Dokploy call', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
-      const validateSection = yml.match(/validate-only:[\s\S]*?(?=\n  deploy-preview:)/)?.[0] ?? ''
+      const validateSection = yml.match(/validate-only:[\s\S]*?(?=\n {2}deploy-preview:)/)?.[0] ?? ''
       expect(validateSection).not.toContain('application.deploy')
       expect(validateSection).not.toContain('application.update')
     })
@@ -340,27 +340,27 @@ describe('Staging-only invariant', () => {
     it('deploy-preview job only runs on workflow_dispatch', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
       // deploy-preview job must have if condition requiring workflow_dispatch
-      const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
+      const deployJob = yml.match(/ {2}deploy-preview:[\s\S]*?(?=\n {2}read-only-plan:)/)?.[0] ?? ''
       expect(deployJob).toContain('workflow_dispatch')
       expect(deployJob).toContain("inputs.operation == 'deploy-preview'")
     })
 
     it('deploy-preview job requires exact SHA confirmation', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
-      const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
+      const deployJob = yml.match(/ {2}deploy-preview:[\s\S]*?(?=\n {2}read-only-plan:)/)?.[0] ?? ''
       expect(deployJob).toContain('deploy-staging-feature-tip')
       expect(deployJob).toContain('expected_sha')
     })
 
     it('deploy-preview job checks out the explicit source ref', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
-      const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
+      const deployJob = yml.match(/ {2}deploy-preview:[\s\S]*?(?=\n {2}read-only-plan:)/)?.[0] ?? ''
       expect(deployJob).toContain('ref: ${{ inputs.source_ref }}')
     })
 
     it('deploy-preview image tags use stable staging tag, no dynamic branch_ref variable', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
-      const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
+      const deployJob = yml.match(/ {2}deploy-preview:[\s\S]*?(?=\n {2}read-only-plan:)/)?.[0] ?? ''
       expect(deployJob).toContain(':staging')
       expect(deployJob).not.toContain('branch_ref=')
     })

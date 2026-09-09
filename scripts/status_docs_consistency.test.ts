@@ -24,6 +24,11 @@ async function main(): Promise<void> {
     stagingChecklist: 'docs/client/STAGING_SMOKE_CHECKLIST.md',
     stagingEvidence: 'docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md',
     statusProcedure: 'docs/client/STATUS_UPDATE_PROCEDURE.md',
+    troubleshooting: 'docs/TROUBLESHOOTING.md',
+    stagingEmailProcedure: 'docs/STAGING_EMAIL_AUTH_PROOF_PROCEDURE.md',
+    cronSetup: 'docs/DOKPLOY_CRON_SETUP.md',
+    cronApplicationSetup: 'docs/DOKPLOY_CRON_APPLICATION_SETUP.md',
+    bunnyPlan: 'docs/BUNNY_INTEGRATION_TEST_PLAN.md',
   } as const
 
   const entries = await Promise.all(
@@ -52,7 +57,6 @@ async function main(): Promise<void> {
   ]
 
   for (const [name, source] of Object.entries(docs)) {
-    assert.match(source, /feature\/course-branding-and-preview/, `${name} should mention the feature branch`)
     for (const secretPattern of noSecrets) {
       assert.doesNotMatch(source, secretPattern, `${name} should not contain secret-looking material`)
     }
@@ -77,16 +81,19 @@ async function main(): Promise<void> {
 
   assert.match(docs.roadmap, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
+  assert.match(docs.roadmap, /Branch \| `codex\/production-hygiene-20260907`/)
+  assert.match(docs.roadmap, /Staging target \| `https:\/\/staging\.jpvbootcamp\.com`/)
+  assert.match(docs.roadmap, /2026-09-09 read-only runtime identity refresh/)
   assert.match(
     docs.roadmap,
     /Current staging migration state.*36 Payload migrations applied.*20260824_120000_engagement_reactions.*sole pending migration/,
   )
   assert.match(docs.roadmap, /production migration, production deployment, provider mutation, and branch advancement were not performed or authorized/i)
   assert.match(docs.roadmap, /Do not touch `main`/)
-  assert.match(docs.roadmap, /Applied migration state \| Verified pre-apply state from guarded run `31215369413`/)
+  assert.match(docs.roadmap, /Applied migration state \| Production guarded read-only verification `34147184195` reports no pending Payload or Prisma migrations/)
   assert.match(docs.roadmap, /Current client truth: `docs\/client\/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7\.docx`/)
   assert.match(docs.roadmap, /Version 3\.4 is the prior progress baseline/)
-  assert.match(docs.roadmap, /Migration approval \| Pre-apply evidence is clean/)
+  assert.match(docs.roadmap, /Migration approval \| Any future staging or production migration requires a fresh exact-SHA read-only report/)
   assert.match(docs.roadmap, /Decision readiness \| `DECISION-READY, EXTERNAL APPROVALS PENDING`/)
   assert.match(docs.roadmap, /22 July 2026.*Front-end milestone/i)
   assert.match(docs.roadmap, /15 July 2026.*[Cc]lient content/i)
@@ -94,12 +101,13 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /Local browser validation passed; staging smoke pending/)
   assert.match(docs.roadmap, /af6de62 docs: record core go-live readiness/)
   assert.match(docs.roadmap, /d55229f test: enforce programme content readiness/)
-  assert.match(docs.roadmap, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
-  assert.match(docs.roadmap, /30853006495/)
+  assert.match(docs.roadmap, /8b1f459fed358776fda791553ef225cc9f03b2ae/)
+  assert.match(docs.roadmap, /f93ffac7dd299c39d8daf242d6a436272cc79188/)
+  assert.match(docs.roadmap, /34147184195/)
   assert.match(docs.roadmap, /STAGING MIGRATION COMPLETE/)
   assert.match(docs.roadmap, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)
   assert.match(docs.roadmap, /37 registered migrations/)
-  assert.match(docs.roadmap, /20260804_050000_member_account_action_reservations/)
+  assert.match(docs.roadmap, /20260826_100000_administrator_member_identity/)
   assert.match(docs.roadmap, /M0-01 through M0-09/)
   assert.match(docs.roadmap, /M1-01 through M1-06/)
   assert.match(docs.roadmap, new RegExp(String.raw`\`pnpm test:release\` passed \`${releaseCount}\/${releaseCount}\``))
@@ -162,24 +170,24 @@ async function main(): Promise<void> {
   assert.match(docs.approvalStatus, /Payload migrations applied.*35\/35/)
   assert.match(docs.approvalStatus, /Production migration \/ cutover.*NOT performed, NOT authorized/)
 
-  assert.match(docs.rehearsalRunbook, /feature\/course-branding-and-preview/)
+  assert.match(docs.rehearsalRunbook, /`feature\/\*`, `fix\/\*`, or `release\/\*`/)
   assert.match(docs.rehearsalRunbook, /Do not touch `main`/)
   assert.match(docs.rehearsalRunbook, /Do not apply migrations unless the target-environment approval checklist is signed off\./)
   assert.match(docs.rehearsalRunbook, /Table-plan-to-Free mapping approved/)
   assert.match(docs.rehearsalRunbook, /Account-column rename approved/)
 
-  assert.match(docs.evidenceChecklist, /Branch is `feature\/course-branding-and-preview`/)
+  assert.match(docs.evidenceChecklist, /Source ref matches the approved `feature\/\*`, `fix\/\*`, or `release\/\*` policy/)
   assert.match(docs.evidenceChecklist, /Migrations applied remains `No`/)
   assert.match(docs.evidenceChecklist, /Old WordPress, Fluent, and portal-path checks were recorded/)
   assert.match(docs.evidenceChecklist, /Reviewer signoff exists/)
   assert.match(docs.evidenceChecklist, /`pnpm staging:static-preflight` was run before manual staging smoke or evidence capture/)
 
-  assert.match(docs.stagingChecklist, /feature\/course-branding-and-preview/)
+  assert.match(docs.stagingChecklist, /`feature\/\*`, `fix\/\*`, or `release\/\*`/)
   assert.match(docs.stagingChecklist, /Migrations applied: `No`/)
   assert.match(docs.stagingChecklist, /Verify deploy did not auto-apply migrations\./)
   assert.match(docs.stagingChecklist, /Verify invalid and legacy checkout plans fail safely/)
 
-  assert.match(docs.stagingEvidence, /feature\/course-branding-and-preview/)
+  assert.match(docs.stagingEvidence, /`feature\/\*`, `fix\/\*`, or `release\/\*`/)
   assert.match(docs.stagingEvidence, /Migrations applied: `No`/)
   assert.match(docs.stagingEvidence, /No migrations were applied\./)
   assert.match(docs.stagingEvidence, /main was not touched/)
@@ -192,10 +200,11 @@ async function main(): Promise<void> {
   assert.match(launchReadinessEvidence, /Production: NOT touched, NOT migrated, NOT authorized/)
 
   assert.match(docs.providerReadiness, /checkout accepts only `plan=membership` and optional `billing=monthly\|annual`/)
+  assert.match(docs.providerReadiness, /Approved staging source ref: `feature\/\*`, `fix\/\*`, or `release\/\*`/)
   assert.match(docs.providerReadiness, /Do not apply migrations from this checklist\./)
   assert.match(docs.providerReadiness, /Migrations applied: `No`/)
 
-  assert.match(docs.providerEvidence, /feature\/course-branding-and-preview/)
+  assert.match(docs.providerEvidence, /`feature\/\*`, `fix\/\*`, or `release\/\*`/)
   assert.match(docs.providerEvidence, /Migrations applied: `No`/)
   assert.match(docs.providerEvidence, /No migrations were applied\./)
   assert.match(docs.providerEvidence, /main was not touched\./)
@@ -206,6 +215,18 @@ async function main(): Promise<void> {
   assert.match(docs.readme, /pnpm toolchain:check/)
   assert.match(docs.readme, /`pnpm staging:static-preflight`/)
 
+  assert.match(docs.troubleshooting, /https:\/\/staging\.jpvbootcamp\.com/)
+  assert.doesNotMatch(docs.troubleshooting, /https:\/\/preview\.jpvbootcamp\.com/)
+  for (const [name, source] of Object.entries({
+    stagingEmailProcedure: docs.stagingEmailProcedure,
+    cronSetup: docs.cronSetup,
+    cronApplicationSetup: docs.cronApplicationSetup,
+    bunnyPlan: docs.bunnyPlan,
+  })) {
+    assert.match(source, /https:\/\/staging\.jpvbootcamp\.com/, `${name} should use the canonical staging origin`)
+    assert.doesNotMatch(source, /https:\/\/preview\.jpvbootcamp\.com/, `${name} should not use the retired preview origin`)
+  }
+
   assert.match(docs.integrationPlan, /feature\/course-branding-and-preview/)
   assert.match(docs.integrationPlan, /Verify the exact branch tip with `git log --oneline -1` before operator action\./)
   assert.match(docs.integrationPlan, /No migrations have been applied\./)
@@ -213,8 +234,8 @@ async function main(): Promise<void> {
   assert.match(docs.integrationPlan, /H1-02 \| Add one complete release test command and browser E2E suite/)
 
   assert.match(docs.previewReadiness, /feature\/course-branding-and-preview/)
-  assert.match(docs.previewReadiness, /Verify the exact branch tip with `git log --oneline -1` before operator action\./)
-  assert.match(docs.previewReadiness, /Current migration truth — Phase 9\.5:/)
+  assert.match(docs.previewReadiness, /with `git log --oneline -1` before operator action\./)
+  assert.match(docs.previewReadiness, /\*\*Migration truth:\*\*/)
   assert.match(docs.previewReadiness, /Do not touch `main`/)
   assert.match(docs.previewReadiness, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.previewReadiness, /`pnpm staging:static-preflight`/)
@@ -242,7 +263,7 @@ async function main(): Promise<void> {
   for (const currentDoc of [docs.previewReadiness, docs.roadmap, docs.operatorHandoff]) {
     assert.match(currentDoc, /registration.*not.*applied database state|registration inventory, not evidence|not database-applied state/i)
     assert.match(currentDoc, /staging:migration-status/)
-    assert.match(currentDoc, /31215369413/)
+    assert.match(currentDoc, /31215369413|34147184195/)
     assert.match(currentDoc, /no real source (?:export|import)|no real source export.*no real source import/is)
     assert.match(currentDoc, /account.action/i)
     assert.match(currentDoc, /reservation\/finalization/i)

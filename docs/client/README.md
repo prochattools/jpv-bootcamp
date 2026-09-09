@@ -12,7 +12,11 @@ Version 3.7 keeps the front-end website milestone at 22 July 2026, the internal 
 
 No migrations have been applied.
 
-Current deployment branch: `feature/course-branding-and-preview`.
+The current production release authority is `main`; the 2026-09-09 repository
+hygiene candidate is `codex/production-hygiene-20260907` and has not been
+deployed. The canonical staging target is `https://staging.jpvbootcamp.com`.
+The older `feature/course-branding-and-preview` deployment wording is retained
+only in dated audit records and historical client planning material.
 Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before operator preflight if your shell pnpm version is not already aligned.
 
 ## Review packet

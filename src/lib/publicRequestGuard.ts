@@ -291,10 +291,17 @@ function validateOrigin(
   return null
 }
 
+function hasAsciiControlCharacter(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const code = character.charCodeAt(0)
+    return code <= 0x1f || code === 0x7f
+  })
+}
+
 function containsUnsafeRedirectEncoding(value: string): boolean {
   const lower = value.toLowerCase()
   return (
-    /[\u0000-\u001f\u007f]/.test(value) ||
+    hasAsciiControlCharacter(value) ||
     lower.includes('%2f%2f') ||
     lower.includes('%5c') ||
     lower.includes('%00')

@@ -17,9 +17,14 @@ export function isSafeResourceId(value: string): boolean {
   return SAFE_RESOURCE_ID.test(value)
 }
 
+function isAsciiControlCharacter(character: string): boolean {
+  const code = character.charCodeAt(0)
+  return code <= 0x1f || code === 0x7f
+}
+
 export function sanitizeDownloadFilename(value: string): string {
   const basename = value.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'download'
-  const withoutControls = basename.replace(/[\u0000-\u001F\u007F]/g, '')
+  const withoutControls = Array.from(basename).filter((character) => !isAsciiControlCharacter(character)).join('')
   const safe = withoutControls.replace(/["<>:|?*]/g, '_').trim()
   return safe || 'download'
 }
@@ -27,7 +32,7 @@ export function sanitizeDownloadFilename(value: string): string {
 export function resolveSafeStoredFilePath(root: string, filename: string): string | null {
   if (!filename || filename === '.' || filename === '..') return null
   if (filename.includes('/') || filename.includes('\\')) return null
-  if (/[\u0000-\u001F\u007F]/.test(filename)) return null
+  if (Array.from(filename).some(isAsciiControlCharacter)) return null
 
   const safeFilename = sanitizeDownloadFilename(filename)
   if (safeFilename !== filename) return null

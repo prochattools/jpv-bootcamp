@@ -1,5 +1,11 @@
 # Agent Mode Progress — Staging Media Durability
 
+> **Historical progress record.** The implementation and runtime checkpoints
+> below are retained for provenance and are not current staging evidence or an
+> execution authorization. The current staging authority is
+> `https://staging.jpvbootcamp.com`; use the current environment and release
+> records for exact-SHA, provider, migration, or deployment decisions.
+
 ## Goal
 
 Remediate media durability for `preview.jpvbootcamp.com` only, starting from deployed revision `5130191`. Never inspect or modify the deny-listed production application.

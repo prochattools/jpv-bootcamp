@@ -1,6 +1,18 @@
 # Go / No-Go Checklist
 
-## Current repository review — 2026-08-23
+## Current production-hygiene review — 2026-09-09
+
+- **Status:** `NO-GO` for deployment and production operation.
+- **Production authority:** `main` at `f93ffac7dd299c39d8daf242d6a436272cc79188`.
+- **Reviewed candidate snapshot:** `codex/production-hygiene-20260907`; the functional split and post-split handoff refreshes are pushed, the worktree is clean and synchronized with its remote, PR #31 requires human review, and the candidate is not deployed.
+- **Repository validation:** `pnpm test:release` passed `183/183`; static preflight, lint, TypeScript, build, Prisma validation, and the high-severity audit gate passed.
+- **Open gates:** staging deployment and smoke, live provider verification, CSP/image-allowlist review, and formal release approval remain open. The preview hostname is unresolved; current staging and production health responses report matching `commit` and `imageTag` values.
+- **Current evidence:** use `docs/CURRENT_WORK_HANDOFF.md`, `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`, and `docs/release/PRODUCTION_MIGRATION_STATUS_VERIFICATION_2026-09-07.md`.
+
+The dated checklist below is retained as audit evidence and does not override
+this current decision.
+
+## Historical repository review — 2026-08-23 (superseded)
 
 - **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.
 - **Local evidence:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared muted-token contrast defect is corrected.
@@ -17,7 +29,7 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 
 ## Identity
 
-> The identity rows below are historical snapshots retained for audit. They are not the current candidate identity; use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
+> The identity rows below are historical snapshots retained for audit. They are not the current candidate identity; use `docs/CURRENT_WORK_HANDOFF.md` for the current repository review.
 
 - Branch: `feature/course-branding-and-preview`
 - Commit: `eb03a08` (local HEAD); staging confirmed running `eb03a08` design tokens (imageTag env var not set in Dokploy — cosmetic only; design confirmed in deployed HTML, 2026-07-21)

@@ -84,7 +84,7 @@ try {
 console.log('\nTest 4: No MySQL or WordPress services in Docker Compose')
 try {
 	const dcPath = join(process.cwd(), 'docker-compose.yml')
-	execSync(`grep -i "mysql\|wordpress" "${dcPath}"`, {
+	execSync(`grep -Ei "mysql|wordpress" "${dcPath}"`, {
 		stdio: 'pipe',
 		encoding: 'utf-8',
 	})

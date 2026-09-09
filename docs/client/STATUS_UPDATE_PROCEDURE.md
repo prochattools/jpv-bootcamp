@@ -1,6 +1,9 @@
 # Status Update Procedure
 
-Procedure for future agents and operators who update roadmap progress and related status docs for `feature/course-branding-and-preview`.
+Procedure for future agents and operators who update roadmap progress and
+related status documents. For controlled staging evidence, use an approved
+`feature/*`, `fix/*`, or `release/*` source ref and the canonical staging origin
+`https://staging.jpvbootcamp.com`.
 
 Version 3.7 is the current client go-live plan. Version 3.4 is the prior progress baseline. Current truth is `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`; audit evidence is `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -12,9 +15,9 @@ This procedure prevents status drift. It keeps roadmap percentages, migration re
 
 Before updating any status text:
 
-1. Verify the branch is `feature/course-branding-and-preview`.
-2. Verify the worktree is clean.
-3. Verify local and upstream branches are in sync.
+1. Verify the current branch and identify any unrelated worktree changes.
+2. If recording staging evidence, verify the source ref matches the approved policy.
+3. Verify local and upstream branches are in sync when the update depends on a remote tip.
 4. Verify the exact current branch tip with `git log --oneline -1`.
 5. Migrations applied remains `No` unless a separate approved migration record exists.
 6. Verify the latest recorded operator evidence or handoff note is still current.

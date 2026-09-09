@@ -84,7 +84,7 @@ const Footer = () => {
                 Launch your SaaS in days, not weeks
               </p>
               <p className="text-xs text-[#7B7E83] dark:text-[#808389] font-medium">
-                Copyright © 2025 - All rights reserved - JCCP Holdings
+                Copyright ©&nbsp;2025&nbsp;- All rights reserved - JCCP Holdings
               </p>
             </div>
           </div>

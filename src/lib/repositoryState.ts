@@ -28,7 +28,7 @@ export function readRepositoryState(
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
-  const dirtyPaths: string[] = status.map((line) => line.replace(/^[ MARCUD\?\!]+/, '').trim())
+  const dirtyPaths: string[] = status.map((line) => line.replace(/^[ MARCUD?!]+/, '').trim())
   const protectedDirtyPaths: string[] = dirtyPaths.filter((path: string) => path === '.graphifyignore' || path === 'docs/HANDOFF_AUTH_BRANDING_STAGING_2026-06-30.md')
   const intendedDirtyPaths = dirtyPaths.filter((path) => !protectedDirtyPaths.includes(path))
   return {

@@ -1,12 +1,15 @@
 # Provider and Email Readiness
 
-<!-- Reconciliation note 2026-08-02: This checklist remains pending. No live email delivery has been verified from current HEAD (c15cd578a953cd6b1dc8a3d4705350a52f7d0812, workflow 30761713446). All approval fields are unchanged and remain pending. -->
+> **Current operating boundary:** use an approved `feature/*`, `fix/*`, or
+> `release/*` source ref and the canonical staging origin
+> `https://staging.jpvbootcamp.com`. This repository-only checklist does not
+> authorize deployment, provider mutation, migration, or production action.
 
 Repository-only checklist for provider/email readiness before any approved live send.
 
 ## Rules
 
-- Branch: `feature/course-branding-and-preview`
+- Approved staging source ref: `feature/*`, `fix/*`, or `release/*`
 - Verify environment variable names only. Never record secret values.
 - Migrations applied: `No`
 - Do not apply migrations from this checklist.

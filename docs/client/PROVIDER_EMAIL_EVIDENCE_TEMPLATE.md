@@ -1,18 +1,20 @@
 # Provider and Email Evidence Template
 
-Operator-facing evidence template for provider and email verification on `feature/course-branding-and-preview`.
+Operator-facing evidence template for provider and email verification on an
+approved staging source ref. Use `feature/*`, `fix/*`, or `release/*` and the
+canonical staging origin `https://staging.jpvbootcamp.com`.
 
 **Note:** This is a template. Operator fills this evidence manually during actual provider/email verification. Draft evidence files can be generated from this template using `npx tsx scripts/create_staging_evidence_artifacts.ts` (local-only, no migrations applied). Use `npx tsx scripts/validate_staging_evidence_artifacts.ts` to validate completed evidence for safety and secret-leakage.
 
 ## Header
 
-- Branch: `feature/course-branding-and-preview`
+- Source ref:
 - Deployed commit:
 - Operator:
 - Date/time:
 - Environment:
 - Provider mode: `test` / `live`
-- PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
+- PR / review URL:
 - Migrations applied: `No`
 - Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
 - Evidence review checklist: `docs/client/EVIDENCE_REVIEW_CHECKLIST.md`

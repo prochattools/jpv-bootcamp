@@ -7,7 +7,7 @@ const readSource = (path: string) => readFileSync(resolve(path), 'utf8')
 describe('Singular Membership Regression Tests', () => {
   it('hides the legacy access badge and exposes no Free/Pro/VIP options', () => {
     const source = readSource('src/collections/PayloadCoursePrototype.ts')
-    const accessBadgeBlock = source.match(/name: 'accessBadge'[\s\S]*?\n    \},\n    \{ name: 'estimatedDuration'/)?.[0]
+    const accessBadgeBlock = source.match(/name: 'accessBadge'[\s\S]*?\n {4}\},\n {4}\{ name: 'estimatedDuration'/)?.[0]
 
     expect(accessBadgeBlock).toBeTruthy()
     expect(accessBadgeBlock).toContain('hidden: true')

@@ -24,8 +24,8 @@ async function main(): Promise<void> {
     readFile('docs/client/PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md', 'utf8'),
   ])
 
-  assert.match(stagingEvidence, /feature\/course-branding-and-preview/)
-  assert.match(providerEvidence, /feature\/course-branding-and-preview/)
+  assert.match(stagingEvidence, /`feature\/\*`, `fix\/\*`, or `release\/\*`/)
+  assert.match(providerEvidence, /`feature\/\*`, `fix\/\*`, or `release\/\*`/)
   assert.match(stagingEvidence, /Migrations applied:\s*`No`/)
   assert.match(providerEvidence, /Migrations applied:\s*`No`/)
   assert.match(stagingEvidence, /Do not paste secrets|No secrets were pasted/)

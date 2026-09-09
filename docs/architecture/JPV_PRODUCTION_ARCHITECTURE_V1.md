@@ -1,8 +1,8 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A5.1 COMPLETE; E1 FINAL CLOSEOUT COMPLETE; READY TO RESUME A6 GATE 1
+**Status:** CURRENT ARCHITECTURE AUTHORITY — runtime identity refreshed 2026-09-09; E1 closeout retained as historical evidence
 
-**Date:** 2026-08-29
+**Date:** 2026-09-09 runtime identity refresh; E1 closeout 2026-08-29
 
 This document is the architectural authority for the live JPV Bootcamp system
 and for the post-launch consolidation packets A1–A6. It describes the target
@@ -11,7 +11,7 @@ change, provider mutation, migration, or feature batch. Those actions require
 the packet-specific authorization and validation described in
 `JPV_ARCHITECTURE_CONSOLIDATION_PLAN.md`.
 
-## E1 environment authority — final read-only reconciliation
+## Historical E1 environment authority — final read-only reconciliation (2026-08-29)
 
 The canonical production application is `JPV Bootcamp` /
 `clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`. The canonical
@@ -41,17 +41,32 @@ and any provider or production-data change remain separately authorized. See
 the complete topology and preview-to-staging inventory in
 `JPV_ENVIRONMENT_TOPOLOGY_V1.md` and `JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
 
+## Live endpoint identity refresh — 2026-09-09
+
+Read-only probes returned HTTP 200 with `status=live` for staging and
+production. Staging reported `deploymentEnv=staging` and image tag
+`8b1f459fed358776fda791553ef225cc9f03b2ae`; production reported
+`deploymentEnv=production` and image tag
+`f93ffac7dd299c39d8daf242d6a436272cc79188`. Both reported the `commit` field
+equal to the corresponding image tag.
+The preview hostname did not resolve (`curl` HTTP `000`), while the legacy
+health route returned HTTP `404`; preview retirement remains unverified.
+
+This refresh records runtime identity only. It does not refresh migration state,
+authorize deployment or migration, or change the production release authority.
+Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
+
 ## Current production authority
 
 | Authority | Current value | Evidence boundary |
 | --- | --- | --- |
 | Release branch | `main` | Verified locally after fetch; `origin/main` matches. |
-| Production commit | `08605e52af4abb0b1bdcdfbe6890d010c545b636` | Supplied production evidence and local `main`/`origin/main` verification. |
-| GitHub Actions | Run `33093612107` passed | Supplied production evidence. |
-| Deployment | Dokploy production deployment converged | Supplied production evidence. |
-| Live identity | Exact production SHA; `deploymentEnv=production` | Supplied production evidence. |
+| Production image tag | `f93ffac7dd299c39d8daf242d6a436272cc79188` | 2026-09-09 read-only health probe; `commit` and `imageTag` matched. |
+| GitHub Actions | Run `34147184195` passed read-only migration-status verification | 2026-09-07 production evidence; no apply job ran. |
+| Deployment | Serving image tag observed; convergence not re-run by this probe | 2026-09-09 runtime identity refresh. |
+| Live identity | `status=live`; `deploymentEnv=production`; image tag `f93ffac7dd299c39d8daf242d6a436272cc79188` | 2026-09-09 read-only health probe. |
 | Database change | Required Payload relationship-table migration applied | Supplied production evidence; not re-run by A0. |
-| Health | Production health green | Supplied production evidence. |
+| Health | HTTP 200; `status=live` | 2026-09-09 read-only health probe. |
 | Working tree | Reported clean at the production checkpoint | Current architecture worktree is clean before A0 edits. |
 
 `main` is the production release authority. Historical feature, UX, staging,

@@ -1,8 +1,13 @@
 # Bunny Integration Test Plan — JPV Bootcamp Staging
 
+> **Staging-only gated procedure.** Use the canonical staging origin
+> `https://staging.jpvbootcamp.com` and an approved exact-SHA deployment.
+> This plan does not authorize provider mutation, migrations, deployment, or
+> production action.
+
 **Goal**: Verify end-to-end Bunny Stream integration with real video, webhook, and signed playback.
 
-**Environment**: https://preview.jpvbootcamp.com (staging)  
+**Environment**: https://staging.jpvbootcamp.com (staging)
 **Database**: jpvbootcamp_staging (PostgreSQL)  
 **Date**: 2026-07-19
 
@@ -52,7 +57,7 @@ curl -s -X GET "$BUNNY_API_URL" \
 curl -s -X GET "$BUNNY_API_URL" \
   -H "Authorization: Bearer ${BUNNY_API_KEY}" | jq '.WebhookUrl'
 
-# Expected: "https://preview.jpvbootcamp.com/api/webhook/bunny"
+# Expected: "https://staging.jpvbootcamp.com/api/webhook/bunny"
 ```
 
 ### Phase 2: Upload Test Video (5 min)
@@ -131,7 +136,7 @@ PAYLOAD
 
 WEBHOOK_SIG=$(echo -n "$WEBHOOK_PAYLOAD" | openssl dgst -sha256 -hmac "${BUNNY_STREAM_WEBHOOK_SECRET}" | cut -d' ' -f2)
 
-curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
+curl -X POST https://staging.jpvbootcamp.com/api/webhook/bunny \
   -H "Content-Type: application/json" \
   -H "X-BunnyStream-Signature-Version: v1" \
   -H "X-BunnyStream-Signature-Algorithm: hmac-sha256" \
@@ -149,13 +154,13 @@ curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
 ```bash
 # 1. Get member auth token
 # (Using Payload login or test credential)
-MEMBER_TOKEN=$(curl -X POST https://preview.jpvbootcamp.com/api/auth/login \
+MEMBER_TOKEN=$(curl -X POST https://staging.jpvbootcamp.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"member@test.local","password":"testpass"}' \
   | jq -r '.token')
 
 # 2. Request playback token
-curl -s -X GET "https://preview.jpvbootcamp.com/api/bunny/video?lessonId=lesson-abc123" \
+curl -s -X GET "https://staging.jpvbootcamp.com/api/bunny/video?lessonId=lesson-abc123" \
   -H "Authorization: Bearer $MEMBER_TOKEN" | jq .
 
 # Expected response (if entitled):
@@ -179,12 +184,12 @@ curl -s -X GET "https://preview.jpvbootcamp.com/api/bunny/video?lessonId=lesson-
 
 # 4. Test playback denial for non-entitled member
 # (Create member without subscription or with expired subscription)
-DENIED_TOKEN=$(curl -X POST https://preview.jpvbootcamp.com/api/auth/login \
+DENIED_TOKEN=$(curl -X POST https://staging.jpvbootcamp.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"denied@test.local","password":"testpass"}' \
   | jq -r '.token')
 
-curl -s -X GET "https://preview.jpvbootcamp.com/api/bunny/video?lessonId=lesson-abc123" \
+curl -s -X GET "https://staging.jpvbootcamp.com/api/bunny/video?lessonId=lesson-abc123" \
   -H "Authorization: Bearer $DENIED_TOKEN" | jq .
 
 # Expected response (if not entitled):
@@ -203,7 +208,7 @@ curl -s -X GET "https://preview.jpvbootcamp.com/api/bunny/video?lessonId=lesson-
 
 ```bash
 # 1. Test webhook with missing signature headers
-curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
+curl -X POST https://staging.jpvbootcamp.com/api/webhook/bunny \
   -H "Content-Type: application/json" \
   -d '{"Type":"VideoFinishedProcessing"}'
 
@@ -212,7 +217,7 @@ curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
 # 2. Test webhook with wrong version
 WEBHOOK_SIG=$(echo -n '{}' | openssl dgst -sha256 -hmac "${BUNNY_STREAM_WEBHOOK_SECRET}" | cut -d' ' -f2)
 
-curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
+curl -X POST https://staging.jpvbootcamp.com/api/webhook/bunny \
   -H "Content-Type: application/json" \
   -H "X-BunnyStream-Signature-Version: v2" \
   -H "X-BunnyStream-Signature-Algorithm: hmac-sha256" \
@@ -222,7 +227,7 @@ curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
 # Expected: HTTP 403 + {"error": "Unsupported signature version"}
 
 # 3. Test webhook with wrong algorithm
-curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
+curl -X POST https://staging.jpvbootcamp.com/api/webhook/bunny \
   -H "Content-Type: application/json" \
   -H "X-BunnyStream-Signature-Version: v1" \
   -H "X-BunnyStream-Signature-Algorithm: hmac-sha512" \
@@ -232,7 +237,7 @@ curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
 # Expected: HTTP 403 + {"error": "Unsupported signature algorithm"}
 
 # 4. Test webhook with invalid signature
-curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
+curl -X POST https://staging.jpvbootcamp.com/api/webhook/bunny \
   -H "Content-Type: application/json" \
   -H "X-BunnyStream-Signature-Version: v1" \
   -H "X-BunnyStream-Signature-Algorithm: hmac-sha256" \
@@ -242,7 +247,7 @@ curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
 # Expected: HTTP 403 + {"error": "Signature verification failed"}
 
 # 5. Test playback for non-existent lesson
-curl -s -X GET "https://preview.jpvbootcamp.com/api/bunny/video?lessonId=nonexistent" \
+curl -s -X GET "https://staging.jpvbootcamp.com/api/bunny/video?lessonId=nonexistent" \
   -H "Authorization: Bearer $MEMBER_TOKEN" | jq .
 
 # Expected:
@@ -259,7 +264,7 @@ curl -s -X GET "https://preview.jpvbootcamp.com/api/bunny/video?lessonId=nonexis
 **Objective**: Verify full user flow in browser (optional, if UI is ready).
 
 ```bash
-BASE_URL=https://preview.jpvbootcamp.com pnpm test:e2e:staging
+BASE_URL=https://staging.jpvbootcamp.com pnpm test:e2e:staging
 
 # Expected: 40/40 tests PASS
 # Including: video playback, entitlement checks, error states
@@ -290,7 +295,7 @@ If critical failures occur:
 1. **Revert commit**: `git revert f4c150a` (Bunny protocol fixes)
 2. **Rebuild image**: `docker build --no-cache -t ghcr.io/prochattools/jpv-bootcamp:$(git rev-parse HEAD) .`
 3. **Redeploy old image**: `pnpm db:migrate:prod` + restart app
-4. **Verify**: `curl https://preview.jpvbootcamp.com/api/health | jq`
+4. **Verify**: `curl https://staging.jpvbootcamp.com/api/health | jq`
 
 ---
 

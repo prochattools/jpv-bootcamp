@@ -1,8 +1,8 @@
 # JPV Bootcamp Architecture Risk Register
 
-**Status:** CURRENT A6 GATE 2 CLOSEOUT — ARCHITECTURE CONSOLIDATION COMPLETE; FEATURE DEVELOPMENT UNBLOCKED
+**Status:** CURRENT RISK REGISTER — runtime identity refreshed 2026-09-09; A6 architecture closeout retained as historical evidence
 
-**Date:** 2026-08-30
+**Date:** 2026-09-09 runtime identity refresh; E1 closeout 2026-08-30
 
 Ratings describe the risk in the current repository and the verified live
 boundaries. A6 Gate 2 closes the architecture-consolidation release gate.
@@ -26,7 +26,7 @@ explicitly open rather than being silently treated as resolved.
 The following rows remain operational safeguards or separately scoped risks;
 they do not block this architecture closeout.
 
-## E1 final closeout evidence
+## Historical E1 final closeout evidence — 2026-08-29
 
 The canonical staging authority is `https://staging.jpvbootcamp.com` on
 Dokploy application `clients-jpv-bootcamp-preview-wjfqfd` /
@@ -45,14 +45,30 @@ hostname is still active with HTTP 200 and no redirect, serving that production
 runtime. It remains a stale compatibility endpoint and is not staging
 authority; retiring or repointing it is a separate change.
 
+## Live endpoint identity refresh — 2026-09-09
+
+Read-only probes returned HTTP 200 with `status=live` for the canonical staging
+and production origins. Staging reported image tag
+`8b1f459fed358776fda791553ef225cc9f03b2ae` with
+`deploymentEnv=staging`; production reported image tag
+`f93ffac7dd299c39d8daf242d6a436272cc79188` with
+`deploymentEnv=production`. Both reported the `commit` field equal to the
+corresponding image tag.
+
+The preview hostname did not resolve (`curl` HTTP `000`) and the legacy health
+route returned HTTP `404`. Preview retirement or repointing is therefore not
+verified; treat the prior active-preview observation as historical until an
+authoritative DNS/Dokploy record is available.
+Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
+
 ## E1 Gate A live topology risks
 
 | Risk | Rating / state | Evidence | Mitigation / required owner |
 | --- | --- | --- | --- |
-| Preview hostname remains active outside the staging authority | High — open compatibility risk | `https://preview.jpvbootcamp.com` is HTTP 200 with no redirect and serves the production image with `deploymentEnv=production`; staging is independently healthy at `https://staging.jpvbootcamp.com` | Keep preview out of staging workflows; retire or repoint only through a separately authorized routing change with rollback proof |
+| Preview hostname DNS/routing state is unresolved | High — open compatibility risk | The 2026-09-09 read-only probe could not resolve `https://preview.jpvbootcamp.com` (`curl` HTTP `000`); no authoritative DNS/Dokploy retirement record was inspected | Keep preview out of staging workflows; confirm authoritative DNS/Dokploy state and record retirement or repointing with rollback proof before treating the endpoint as closed |
 | Staging database identity and migration state | Low — `E1 RESOLVED` | Staging uses `jpvbootcamp_staging` / `jpvbootcamp` / `jpvbootcamp_staging_app`; exact-SHA plan passed with 52 applied and zero expected pending migrations | Preserve the exact staging allow-list and rerun the read-only plan before future staging releases |
 | Production database role has a staging-labelled name | High — observed drift | Production metadata reports role `jpvbootcamp_staging_user` | Do not rename or repair during E1; assess least privilege and rollback in Gate B |
-| Preview-era references can be mistaken for current staging authority | Medium — mitigated in repository, compatibility endpoint remains | Active staging defaults use `environmentTopology`; preview hostname is explicitly documented as non-authoritative | Use the preview-to-staging inventory and reject unclassified references in later changes |
+| Preview-era references can be mistaken for current staging authority | Medium — mitigated in repository, endpoint state unresolved | Active staging defaults use `environmentTopology`; preview hostname is documented as non-authoritative, but its external DNS/routing state is not currently verified | Use the preview-to-staging inventory, confirm the external endpoint state, and reject unclassified references in later changes |
 
 | Risk | Rating / state | Evidence | Mitigation / required owner |
 | --- | --- | --- | --- |

@@ -1,6 +1,10 @@
 # Troubleshooting Guide
 
-**Last updated:** 2026-07-29
+**Last updated:** 2026-09-09
+
+The current staging origin is `https://staging.jpvbootcamp.com`. Verify the
+exact deployed commit before using staging diagnostics. Troubleshooting does
+not authorize migrations, provider mutation, or production action.
 
 ## Common Issues & Solutions
 
@@ -67,7 +71,7 @@
 **Step 1:** Verify endpoint responds
 
 ```bash
-curl -X POST https://preview.jpvbootcamp.com/api/member-password/forgot \
+curl -X POST https://staging.jpvbootcamp.com/api/member-password/forgot \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com"}' \
   -w "\nHTTP:%{http_code}\n"
@@ -95,7 +99,7 @@ Same query but check `delivery_status` column:
 **Step 4:** Manually trigger queue
 
 ```bash
-curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+curl -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -w "\nHTTP:%{http_code}\n"
 ```
@@ -164,10 +168,10 @@ ssh master@68.221.139.108 'nc -zv 10.0.2.4 5433 -w 5'
 
 ```bash
 # 1. Is the app healthy?
-curl -s https://preview.jpvbootcamp.com/api/health | jq .
+curl -s https://staging.jpvbootcamp.com/api/health | jq .
 
 # 2. Is the database connected?
-curl -s https://preview.jpvbootcamp.com/admin && echo "DB OK" || echo "DB DOWN"
+curl -s https://staging.jpvbootcamp.com/admin && echo "DB OK" || echo "DB DOWN"
 
 # 3. Are emails queuing?
 ssh master@100.71.31.88 'psql postgresql://...:jpvbootcamp -c "
@@ -182,7 +186,7 @@ ssh master@68.221.139.108 'tailscale status | grep -E "supabase|active"'
 
 ```bash
 # Process pending emails
-curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+curl -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 
 # Check for stuck items (> 1 hour queued)
