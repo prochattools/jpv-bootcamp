@@ -2,17 +2,22 @@
 
 > **Historical/planning runbook.** The counts, checkpoints, and commands below
 > are retained for safety/design provenance and are not the current migration
-> state or an execution authorization. Current truth is 36/36 applied with
-> pending `[]` in `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
+> state or an execution authorization. The last recorded staging truth was
+> 36/36 applied with pending `[]` in
+> `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`; this is a
+> historical record and must be refreshed with a new exact-SHA read-only
+> artifact before it is used for an operator decision.
 > Do not run a migration in Phase 9.5.
 
-Operator-facing runbook for target-environment migration rehearsal preparation on `feature/course-branding-and-preview`.
+Operator-facing runbook for target-environment migration rehearsal preparation
+on an approved source ref. The canonical staging origin is
+`https://staging.jpvbootcamp.com`.
 
 ## Hard safety rules
 
 - Do not apply migrations unless the target-environment approval checklist is signed off.
 - Do not touch `main`.
-- Use only `feature/course-branding-and-preview`.
+- Use only an approved `feature/*`, `fix/*`, or `release/*` source ref.
 - Confirm backup or snapshot evidence before rehearsal.
 - Confirm rollback or recovery plan before rehearsal.
 - Confirm operator identity and timestamp before rehearsal.
@@ -20,7 +25,7 @@ Operator-facing runbook for target-environment migration rehearsal preparation o
 
 ## Preflight checklist
 
-- [ ] Branch confirmed: `feature/course-branding-and-preview`
+- [ ] Source ref matches the approved `feature/*`, `fix/*`, or `release/*` policy
 - [ ] Deployed commit confirmed
 - [ ] Database snapshot or backup confirmed
 - [ ] Approval packet signed

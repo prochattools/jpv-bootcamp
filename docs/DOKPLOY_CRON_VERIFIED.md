@@ -1,5 +1,9 @@
 # Dokploy Cron Job — Verified & Operational ✅
 
+> **Historical verification snapshot — 2026-07-29.** The operational claims
+> below were not reverified by the current repository review. Use the current
+> staging origin and exact-SHA operator evidence before relying on this record.
+
 **Date:** 2026-07-29  
 **Status:** TESTED AND WORKING
 

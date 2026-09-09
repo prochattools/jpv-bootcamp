@@ -98,9 +98,11 @@ The `EmailForm` component handles email collection:
 ### Using Dokploy
 
 1. Follow the [Git workflow](./git-workflow.md)
-2. Push `feature/course-branding-and-preview`
-3. Test the staging / production-staged deployment target
-4. Keep `main` outside this staging deployment path
+2. Use an approved `feature/*`, `fix/*`, or `release/*` source ref for the
+   guarded staging workflow
+3. Test the canonical staging target only after its exact-SHA deployment gate
+4. Keep `main` as the production release authority and do not treat the
+   hygiene review branch as deployed evidence
 
 ### Manual Deployment
 

@@ -3,8 +3,12 @@
 **Last verified:** 2026-07-29  
 **Verified by:** Live SSH inspection, Azure CLI, Tailscale API, Docker Swarm inspection
 
-This document is the canonical reference for how the staging/preview deployment connects
-to its database. Read this before touching `DATABASE_URL`, firewall rules, or Tailscale.
+This document preserves the network and Tailscale reference. The current
+staging authority is `https://staging.jpvbootcamp.com` on Dokploy application
+`clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`; use
+`docs/ENVIRONMENT_DATABASE_BOUNDARIES.md` for the current environment boundary
+and live identity record. Read this before touching `DATABASE_URL`, firewall
+rules, or Tailscale.
 
 ---
 
@@ -141,8 +145,8 @@ at every page load, returning 500 after exactly 10 seconds (`connectionTimeoutMi
 
 ## Dokploy Deployment
 
-- **App:** `clients-jpv-bootcamp-app-tp9xrk` (applicationId: `I_2Vukga3cc3ZhaG-mUzU`)
-- **Staging URL:** `https://preview.jpvbootcamp.com`
+- **App:** `clients-jpv-bootcamp-preview-wjfqfd` (applicationId: `bZllV93NqsPZAFCsqDskb`)
+- **Staging URL:** `https://staging.jpvbootcamp.com`
 - **Dokploy API:** `https://dokploy.prochat.tools/api` (Cloudflare-proxied)
 - **Credentials:** `/Users/Office/.config/dokploy/.env`
 - **Image registry:** `ghcr.io/prochattools/jpv-bootcamp`
@@ -169,7 +173,7 @@ ssh master@68.221.139.108 'nc -zv 10.0.2.4 5433 -w 5'
 # Expected: Connection ... succeeded
 
 # 3. Is the container using 10.0.2.4?
-ssh master@68.221.139.108 'docker service inspect clients-jpv-bootcamp-app-tp9xrk' \
+ssh master@68.221.139.108 'docker service inspect clients-jpv-bootcamp-preview-wjfqfd' \
   | python3 -c "import sys,json,re; d=json.load(sys.stdin); [print(e) for e in d[0]['Spec']['TaskTemplate']['ContainerSpec'].get('Env',[]) if 'DATABASE' in e and print(re.search(r'@([^/]+)/', e).group(1))]"
 # Expected: 10.0.2.4:5433
 
@@ -178,5 +182,5 @@ ssh master@100.71.31.88 'docker ps --filter name=supabase-db --format "{{.Status
 # Expected: Up ... (healthy)
 
 # 5. Check app health endpoint
-curl -s https://preview.jpvbootcamp.com/api/health
+curl -s https://staging.jpvbootcamp.com/api/health
 ```

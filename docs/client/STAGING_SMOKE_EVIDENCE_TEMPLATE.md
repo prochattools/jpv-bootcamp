@@ -1,24 +1,26 @@
 # Staging Smoke Evidence Template
 
-Operator-facing evidence template for staging smoke on `feature/course-branding-and-preview`.
+Operator-facing evidence template for staging smoke on an approved exact-SHA
+deployment from a `feature/*`, `fix/*`, or `release/*` source ref. The canonical
+staging origin is `https://staging.jpvbootcamp.com`.
 
 **Note:** This is a template. Operator fills this evidence manually during actual staging smoke execution. Draft evidence files can be generated from this template using `npx tsx scripts/create_staging_evidence_artifacts.ts` (local-only, no migrations applied). Use `npx tsx scripts/validate_staging_evidence_artifacts.ts` to validate completed evidence for safety and secret-leakage.
 
 ## Header
 
-- Branch: `feature/course-branding-and-preview`
+- Source ref:
 - Deployed commit:
 - Operator:
 - Date/time:
 - Environment:
-- PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
+- PR / review URL:
 - Migrations applied: `No`
 - Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
 - Evidence review checklist: `docs/client/EVIDENCE_REVIEW_CHECKLIST.md`
 
 ## Hard safety confirmation
 
-- [ ] Branch is `feature/course-branding-and-preview`
+- [ ] Source ref matches the approved `feature/*`, `fix/*`, or `release/*` policy
 - [ ] main was not touched
 - [ ] No migrations were applied
 - [ ] No DB-mutating commands were run

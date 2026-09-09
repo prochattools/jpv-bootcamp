@@ -1,5 +1,11 @@
 # Dokploy Application Cron Job Setup — Email Queue Processor
 
+> Use the canonical staging origin `https://staging.jpvbootcamp.com` and the
+> current staging application `clients-jpv-bootcamp-preview-wjfqfd` /
+> `bZllV93NqsPZAFCsqDskb`. Verify the exact deployed SHA before operator action.
+> This setup guide does not authorize migrations, provider mutation, or
+> production action.
+
 ## Purpose
 Set up a scheduled job in Dokploy to process email queue every 5 minutes.
 
@@ -9,12 +15,12 @@ Set up a scheduled job in Dokploy to process email queue every 5 minutes.
 
 ### In Dokploy Dashboard
 
-Navigate to your application: **clients-jpv-bootcamp-app-tp9xrk**
+Navigate to your application: **clients-jpv-bootcamp-preview-wjfqfd**
 
 #### Step 1: Go to Scheduled Jobs / Cron
 
 In Dokploy:
-1. Click: **Applications** → **clients-jpv-bootcamp-app-tp9xrk**
+1. Click: **Applications** → **clients-jpv-bootcamp-preview-wjfqfd**
 2. Click: **Scheduled Jobs** (or **Cron** section)
 3. Click: **Add Scheduled Job** (or **+ New Job**)
 
@@ -25,7 +31,7 @@ In Dokploy:
 | **Name** | `jpv-email-queue` |
 | **Description** | `Process email queue every 5 minutes` |
 | **Schedule** | `*/5 * * * *` |
-| **Command** | `curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1` |
+| **Command** | `curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1` |
 | **Enabled** | ✅ Yes |
 
 ---
@@ -54,7 +60,7 @@ Meaning: Every 5 minutes
 
 ### Command (Exact)
 ```
-curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
+curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 ```
 
 Breaking it down:
@@ -63,7 +69,7 @@ Breaking it down:
 curl                                    HTTP client
 -s                                      Silent mode
 -X POST                                 POST request
-https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue
+https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue
                                         Email queue endpoint (exact URL)
 -H "Authorization: Bearer ..."          Auth header
 $EMAIL_QUEUE_WORKER_SECRET                Worker secret resolved from the Dokploy application environment
@@ -90,7 +96,7 @@ Example (fake): `Bearer a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6`
 ```
 Name: jpv-email-queue
 Schedule: */5 * * * *
-Command: curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
+Command: curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 Enabled: Yes
 ```
 
@@ -101,7 +107,7 @@ Enabled: Yes
 After adding the job:
 
 1. **Check it appears in list:**
-   - Applications → clients-jpv-bootcamp-app-tp9xrk → Scheduled Jobs
+   - Applications → clients-jpv-bootcamp-preview-wjfqfd → Scheduled Jobs
    - Should show: `jpv-email-queue` | Every 5 minutes | Enabled
 
 2. **Watch logs:**
@@ -111,7 +117,7 @@ After adding the job:
 
 3. **Manual trigger (test immediately):**
    ```bash
-   curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+   curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
      -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
      -w "\nHTTP: %{http_code}\n"
    ```
@@ -142,7 +148,7 @@ services:
       # ... existing env vars
       JPV_CRON_ENABLED: "true"
       JPV_CRON_SCHEDULE: "*/5 * * * *"
-      JPV_CRON_COMMAND: "curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H 'Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET'"
+      JPV_CRON_COMMAND: "curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue -H 'Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET'"
 ```
 
 (Exact format depends on your Dokploy version — check Dokploy docs)
@@ -162,7 +168,7 @@ services:
 
 **Check 3:** Check Dokploy logs
 - `ssh master@68.221.139.108`
-- `docker service logs clients-jpv-bootcamp-app-tp9xrk 2>&1 | grep -i cron`
+- `docker service logs clients-jpv-bootcamp-preview-wjfqfd 2>&1 | grep -i cron`
 
 ### Token expired?
 
@@ -180,7 +186,7 @@ If you see `HTTP: 401` in logs:
 **Exact values:**
 - **Name:** `jpv-email-queue`
 - **Schedule:** `*/5 * * * *`
-- **Command:** `curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1`
+- **Command:** `curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1`
 - **Enabled:** Yes
 
 **Replace:** `$EMAIL_QUEUE_WORKER_SECRET` with your actual token

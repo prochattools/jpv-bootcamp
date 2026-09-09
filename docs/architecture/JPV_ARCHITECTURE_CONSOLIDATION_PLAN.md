@@ -2,11 +2,31 @@
 
 **Status:** A6 GATE 2 COMPLETE; ARCHITECTURE CONSOLIDATION COMPLETE; FEATURE DEVELOPMENT UNBLOCKED
 
-**Date:** 2026-08-30
+**Date:** 2026-09-09 current hygiene review; prior closeout 2026-08-30
 
-**Release authority:** `main`, production integration commit `86cedfb9e35002e18e1b412ee43b948f85c88fbe`
+**Release authority:** `main`; current live identity and hygiene-candidate state are recorded in the 2026-09-09 layer below.
 
-## A6 Gate 2 production integration closeout
+## Current production-hygiene review — 2026-09-09
+
+This dated review snapshot was captured before the pending commit split. At
+capture time, `main` remained the production release authority at
+`f93ffac7dd299c39d8daf242d6a436272cc79188`. The reviewed hygiene candidate was
+`codex/production-hygiene-20260907` at committed tip
+`373e9b1b8f6d4eda26bd435629683a2faeec573c`, synchronized with its remote and
+not deployed; its worktree has 47 pending paths (45 tracked modifications and
+2 untracked evidence records) under review. Refresh the tip and worktree count
+after the split is committed.
+
+Repository validation passes `pnpm test:release` at `183/183`, static
+preflight, lint, TypeScript, build, Prisma checks, and the high-severity audit
+gate. One moderate Payload advisory remains. Read-only public probes report
+staging image `8b1f459fed358776fda791553ef225cc9f03b2ae` and production image
+`f93ffac7dd299c39d8daf242d6a436272cc79188`; preview DNS is unresolved and the
+legacy health route returns 404. These probes establish runtime identity only;
+they do not prove migrations or authorize provider, deployment, database, or
+production-data actions.
+
+## Historical A6 Gate 2 production integration closeout — 2026-08-30 (superseded for current identity)
 
 The approved `fix/e1-staging-gate-b` architecture consolidation was merged
 into `main` and deployed to the canonical production application

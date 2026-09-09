@@ -1,6 +1,11 @@
 # JPV Architecture Consolidation A6 Release Evidence
 
-## Current A6 Gate 2 production closeout — 2026-08-30
+> **Historical release evidence.** This packet records the August 2026 A6
+> closeout and earlier staging checkpoints. Use `docs/CURRENT_WORK_HANDOFF.md`
+> and `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md` for current
+> repository and live-runtime state.
+
+## Historical A6 Gate 2 production closeout — 2026-08-30
 
 **Decision:** `A6 GATE 2 COMPLETE` · `ARCHITECTURE CONSOLIDATION COMPLETE` ·
 `FEATURE DEVELOPMENT UNBLOCKED`
@@ -45,7 +50,7 @@ canonical production application `clients-jpv-bootcamp-app-tp9xrk` at
 The historical Gate 1 evidence below is retained for traceability and is
 superseded by this production closeout.
 
-## Current A6 Gate 1 final unblock — 2026-08-30
+## Historical A6 Gate 1 final unblock — 2026-08-30
 
 **Decision:** `READY FOR PRODUCTION MERGE`
 
@@ -224,7 +229,7 @@ member/creator-admin acceptance matrix is completed. The deployed candidate,
 provider smoke, and production-safety checks passed, but the exact protected
 member secrets are required before the authenticated acceptance gate can run.
 
-## Current E1 final closeout — 2026-08-29
+## Historical E1 final closeout — 2026-08-29
 
 **Decision:** `READY TO RESUME A6 GATE 1`
 

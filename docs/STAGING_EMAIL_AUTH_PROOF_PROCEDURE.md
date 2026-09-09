@@ -1,9 +1,13 @@
 # Staging Email/Auth Live Verification Procedure
 
 **Status**: Awaiting operator execution
-**Staging URL**: https://preview.jpvbootcamp.com
+**Staging URL**: https://staging.jpvbootcamp.com
 **Staging DB**: jpvbootcamp_staging (isolated from production)
-**Staging App**: clients-jpv-bootcamp-app-tp9xrk (I_2Vukga3cc3ZhaG-mUzU)
+**Staging App**: clients-jpv-bootcamp-preview-wjfqfd (bZllV93NqsPZAFCsqDskb)
+
+> This procedure is staging-only and requires a separately approved exact-SHA
+> deployment. It does not authorize provider mutation, migrations, or
+> production action.
 
 ---
 
@@ -17,7 +21,7 @@ It is **operator-supervised** and uses **approved staging-only test accounts**.
 
 ## Prerequisites
 
-1. **Operator access** to the staging environment (`preview.jpvbootcamp.com`)
+1. **Operator access** to the staging environment (`staging.jpvbootcamp.com`)
 2. **Approved test email address(es)** for member account creation (e.g., `test-member@internal-staging.example.invalid`)
 3. **Redaction protocol** — no real test addresses logged in commit/documentation
 4. **Browser** with developer tools access to inspect session cookies
@@ -28,7 +32,7 @@ It is **operator-supervised** and uses **approved staging-only test accounts**.
 
 ### Phase 1: Member Account Creation
 
-1. **Navigate to login page**: https://preview.jpvbootcamp.com/portal?mode=login
+1. **Navigate to login page**: https://staging.jpvbootcamp.com/portal?mode=login
 2. **Identify or create test member account** via admin UI or API
    - Member email: _{approved test email}_ (not logged)
    - Member name: JPV Test Member (or similar)
@@ -76,12 +80,12 @@ It is **operator-supervised** and uses **approved staging-only test accounts**.
     - [ ] URL: `/portal`
     - [ ] Content: "Welcome back" heading visible
     - [ ] Navigation: Account, Billing, Courses links visible
-14. **Inspect session cookies** (DevTools → Application → Cookies → preview.jpvbootcamp.com):
+14. **Inspect session cookies** (DevTools → Application → Cookies → staging.jpvbootcamp.com):
     - [ ] `__Secure-authjs.session-token` (or similar): present
     - [ ] `Secure` flag: set (HTTPS only)
     - [ ] `HttpOnly` flag: set (no JS access)
     - [ ] `SameSite` flag: `Lax` or `Strict` (CSRF protection)
-    - [ ] `Domain`: `.jpvbootcamp.com` or `preview.jpvbootcamp.com`
+    - [ ] `Domain`: `.jpvbootcamp.com` or `staging.jpvbootcamp.com`
 
 ### Phase 5: Member Logout
 
@@ -132,9 +136,9 @@ It is **operator-supervised** and uses **approved staging-only test accounts**.
     - Origin/Referer checks enforced for state-changing operations
 
 26. **APP_BASE_URL Consistency**:
-    - [ ] All generated links use `https://preview.jpvbootcamp.com`
+    - [ ] All generated links use `https://staging.jpvbootcamp.com`
     - [ ] Session cookies' domain matches staging domain
-    - [ ] NEXTAUTH_URL points to `https://preview.jpvbootcamp.com`
+    - [ ] NEXTAUTH_URL points to `https://staging.jpvbootcamp.com`
 
 27. **No Console-Only Fallbacks**:
     - [ ] Email delivery: Real Resend API (check request logs / provider dashboard)
@@ -201,7 +205,7 @@ Idempotency: Link reuse returns error
 
 PHASE 8: Security Verification
 CSRF Protection: ✅
-APP_BASE_URL: ✅ (https://preview.jpvbootcamp.com)
+APP_BASE_URL: ✅ (https://staging.jpvbootcamp.com)
 No Fallbacks: ✅ (All real provider calls)
 
 OVERALL: ✅ PASSED — All email/auth flows work end-to-end

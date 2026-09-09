@@ -1,6 +1,6 @@
 # JPV Bootcamp Preview Release Readiness
 
-## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
+## Historical Rooms production release — 2026-08-30 (audit record)
 
 **ROOMS FEATURE: COMPLETE**
 
@@ -26,10 +26,24 @@ or provider mutation was performed.
 
 **READY FOR NEXT FEATURE**
 
-This section supersedes the older preview/staging-only current statements below;
-those sections remain retained as audit history.
+At that historical checkpoint, this section superseded the older
+preview/staging-only statements below; all such sections remain retained as
+audit history.
 
-## Current repository reconciliation — 2026-08-23
+## CURRENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
+
+`pnpm test:release` passed `183/183`; the release manifest contains 184 entries
+including one conditional browser gate. Lint, root TypeScript, the controlled
+production build, both Prisma validations, and the production high-severity
+audit gate also passed. The audit result is zero high/critical advisories with
+one remaining moderate Payload advisory (`GHSA-jg8r-5jh2-v2xj`) for which no
+patched release is available. This is repository-only evidence; staging,
+live-provider, deployment, and external approval gates remain open. Baseline
+response security headers are now defined and contract-tested in
+`next.config.js`; CSP compatibility review and remote image allowlist tightening
+remain open.
+
+## Historical repository reconciliation — 2026-08-23 (superseded)
 
 - **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.
 - **Repository gate:** after the A6 authenticated-gate contract was added, `pnpm test:release` passed `172/172`; the release manifest contains 173 entries including one staging-only conditional gate; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared `#A89A80` contrast failures are corrected.
@@ -44,7 +58,7 @@ those sections remain retained as audit history.
 
 ## Historical staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
 
-This section records the 2026-08-19 historical checkpoint. At that checkpoint, all staging migration and acceptance gates were reported closed; this is not current-live evidence. The Phase 9.5 current-truth document is authoritative for the present state.
+This section records the 2026-08-19 historical checkpoint. At that checkpoint, all staging migration and acceptance gates were reported closed; this is not current-live evidence. The Phase 9.5 current-truth document was authoritative at that checkpoint and is superseded for present state by the current 2026-09-09 review above.
 
 - **Status:** `STAGING MIGRATION COMPLETE`
 - **Branch:** `feature/course-branding-and-preview`
@@ -85,14 +99,21 @@ This runbook separates repository changes, image publication, Payload migrations
 
 ## Scope and safety boundary
 
-The preview release path must use the reviewed feature branch and an exact commit. Approval for one operation never authorizes another.
+The staging release path must use an approved `feature/*`, `fix/*`, or
+`release/*` source ref and an exact commit. Approval for one operation never
+authorizes another.
 
-Current operator branch: `feature/course-branding-and-preview`.
-Verify the exact branch tip with `git log --oneline -1` before operator action.
+The current repository review branch is `codex/production-hygiene-20260907`.
+For any staging operation, select and verify the exact approved source-ref tip
+with `git log --oneline -1` before operator action.
 
-**Current migration truth — Phase 9.5:** the release-lead verified sanitized staging position is 36/36 Payload migrations applied with pending `[]`, ending at `20260820_000000_live_session_space`. No migration operation was performed by this reconciliation. The raw timestamped artifact and exact-SHA deployment identity remain separate evidence requirements.
+**Migration truth:** this hygiene review did not refresh staging migration state.
+The 2026-09-07 production read-only status record remains separate evidence,
+and any staging migration claim requires a fresh exact-SHA read-only artifact.
 
-`pnpm staging:payload-migration-plan -- --current-state=true` is the current **read-only post-apply state verifier**: it expects all 36 registered Payload migrations applied and no pending batch. The closed 35→36 pre-apply/apply/rollback path remains separately guarded and non-current; no apply is authorized by this document.
+`pnpm staging:payload-migration-plan -- --current-state=true` is a read-only
+state verifier. Its expected migration set must come from the current registry
+and exact target contract; no apply is authorized by this document.
 
 Migration apply requires five dynamic operator values in addition to fixed target flags: `expected-hostname`, `operator-id`, `backup-evidence-id`, `maintenance-window-id`, and `rollback-owner`. Any schema write requires exact target authorization, backup evidence, a maintenance window, and rollback ownership.
 
@@ -112,7 +133,7 @@ The protected local files `.graphifyignore` and `docs/HANDOFF_AUTH_BRANDING_STAG
 
 Static preflight automation is available via `pnpm staging:static-preflight`; it is local-only and does not authorize migrations, deployment, or live provider checks.
 
-## Current repository-owned readiness snapshot
+## Historical repository-owned readiness snapshot — retained audit evidence
 
 **Latest completed staging verification snapshot (2026-08-02):** SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`, preview workflow `30761713446`, conclusion `success`, exact-SHA staging health confirmed. Prior verified snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`, conclusion `success` (retained as historical anchor). The authoritative current branch tip is determined by `git rev-parse HEAD`; do not treat any hardcoded SHA as the immutable current tip.
 
@@ -137,7 +158,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 - The programme-content acceptance and release-candidate packet is complete: the repository-owned contract, client intake template, non-publishable fixture, validation, acceptance-report, import-plan, approval-record, release-manifest, and preview guards are present and tested.
 - M2-01 remains post-core and is not promoted by this packet.
 
-### Deterministic local validation baseline
+### Historical deterministic local validation baseline
 
 - `pnpm test:release` passed `172/172`; the release manifest contains 173 entries including the A6 authenticated-gate contract and one staging-only conditional gate; the default run also includes the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), unified dispatchable migration plan job (2026-08-05), environment configurator dry-run/apply guard test (2026-08-06), portal admin source structure and behavioral contract verification (2026-08-25), and support requester phone migration safety coverage (2026-08-26)
 - `pnpm test:e2e` Playwright execution: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected (admin-crud-staging, admin-responsive-staging, staging-smoke, stripe-webhook-staging)
@@ -238,13 +259,11 @@ The previous preview workflow published an image from ordinary feature-branch pu
 
 `.github/workflows/deploy-preview.yml` is the single unified dispatcher for three mutually exclusive operations.
 
-**Push path (`validate-only`):** Runs on `feature/course-branding-and-preview` pushes when the head commit message does NOT contain `[migration-plan-only]`. Validates, builds, and tests only. Does NOT publish an image, call GHCR, trigger Dokploy, deploy, or run migrations. This ensures ordinary development pushes are safe by construction — the only thing a push can do is fail validation.
+**Manual dispatch path (`validate-only`):** Triggered by `workflow_dispatch` with `operation=validate-only` and an approved source ref. Validates, builds, and tests only. It does not publish an image, call GHCR, trigger Dokploy, deploy, or run migrations. Ordinary pushes do not invoke this workflow.
 
-**Manual dispatch path (`deploy-preview`):** Triggered by `workflow_dispatch` with `operation=deploy-preview`. Requires `expected_sha` (full 40-char SHA matching the current remote feature tip) and `confirmation=deploy-staging-feature-tip`. Checks out the exact current remote tip, verifies the SHA matches, then builds, publishes to GHCR, deploys to Dokploy staging, and runs the authenticated admin responsive gate. All Docker actions are SHA-pinned. The canonical Dokploy allow-list (`clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`) is enforced.
+**Manual dispatch path (`deploy-preview`):** Triggered by `workflow_dispatch` with `operation=deploy-preview`. Requires `expected_sha` (full 40-char SHA matching the current remote feature tip) and `confirmation=deploy-staging-feature-tip`. Checks out the exact current remote tip, verifies the SHA matches, then builds, publishes to GHCR, deploys to Dokploy staging, and runs the authenticated admin responsive gate. All Docker actions are SHA-pinned. The canonical staging Dokploy allow-list (`clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`) is enforced.
 
-**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation=run-read-only-staging-payload-migration-plan`. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (zero-reviewer solo-operator environment, branch policy, variable, and secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps. The `staging-migration-plan` environment operates in solo-operator mode: zero required reviewers, zero wait timer, custom branch policy for `feature/course-branding-and-preview` only, `PLAN_READY_FOR_DISPATCH=true`, and `SOLO_OPERATOR_MODE=true`.
-
-Commits with `[migration-plan-only]` in the message suppress the push-triggered validate job so a migration-plan dispatch can be the sole authorized action for that tip.
+**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation=run-read-only-staging-payload-migration-plan`. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (zero-reviewer solo-operator environment, branch policy, variable, and secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps. The `staging-migration-plan` environment accepts the same approved `feature/*`, `fix/*`, or `release/*` source-ref patterns and remains a separately dispatched, read-only operation.
 
 The standalone `staging-payload-migration-plan.yml` has been removed; all capability is now in `deploy-preview.yml`.
 
@@ -256,9 +275,12 @@ The standalone `staging-payload-migration-plan.yml` has been removed; all capabi
 ghcr.io/<repository>:<full-commit-sha>
 ```
 
-The workflow uses the `preview-image-publish` GitHub environment, `contents: read`, and `packages: write`. It must not publish `latest`, deploy, call Dokploy, run migrations, call a provider, or perform live smoke checks. All third-party actions are SHA-pinned. Dispatching from a branch other than `feature/course-branding-and-preview` is rejected.
+The workflow uses the `preview-image-publish` GitHub environment, `contents: read`, and `packages: write`. It must not publish `latest`, deploy, call Dokploy, run migrations, call a provider, or perform live smoke checks. All third-party actions are SHA-pinned. Dispatching from a branch outside the approved `feature/*`, `fix/*`, or `release/*` source-ref patterns is rejected.
 
-A Git push to the feature branch triggers validation-only (no image publication). Image publication requires a separate explicit `workflow_dispatch` via `publish-preview-image.yml`. Image publication does not authorize deployment. Image publication does not authorize Payload migrations, provider dry-run, provider apply, or smoke verification.
+A Git push does not invoke this publication workflow. Image publication requires
+a separate explicit `workflow_dispatch` via `publish-preview-image.yml`. Image
+publication does not authorize deployment. Image publication does not authorize
+Payload migrations, provider dry-run, provider apply, or smoke verification.
 
 ## Release manifest and offline preflight
 
@@ -330,11 +352,14 @@ The shadow report and preflight helpers never authorize live migration, deployme
 
 The admin-only `/operations/shadow-validation` page now reads a bounded Payload snapshot, shows collection counts, domain totals, issue codes, and an executable acceptance matrix for the core member, billing, email, community, and partner journeys, and offers a safe evidence download. It remains read-only and does not perform any live verification.
 
-The canonical reviewed migration inventory is now unified across policy, manifest, preflight, shadow evidence, and validation. It lists the eleven reviewed Payload migrations in exact order, ending with `20260707_130000_remove_table_plan_from_payload_enums`, but execution remains pending until an explicit migration authorization is granted.
+The canonical reviewed migration inventory is unified across policy, manifest,
+preflight, shadow evidence, and validation. The current migration registry is
+the source of truth for its exact ordered set; execution remains pending until
+an explicit migration authorization is granted.
 
 Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
-## Provider email readiness (staging)
+## Historical provider email readiness packet — 2026-07-04 through 2026-07-06 (audit record)
 
 **Current status (4 July 2026):**
 
@@ -402,7 +427,7 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
 
 Billing readiness is a separate authorization track from image publication and deployment. The reviewer must confirm each category independently before any live billing operation is attempted.
 
-- Migration execution authorization: approve the exact migration set, target database, schema, operator, and maintenance window before running the two pending Payload migrations.
+- Migration execution authorization: approve the exact migration set, target database, schema, operator, and maintenance window before running any pending Payload migrations.
 - Deployment authorization: approve the reviewed preview commit or image separately from migrations and provider operations.
 - Webhook configuration authorization: confirm the canonical Stripe webhook route and event set without changing production settings.
 - Checkout and portal smoke verification authorization: approve controlled preview smoke checks for member checkout and billing portal flow behavior only.
@@ -463,11 +488,12 @@ build args (canonical domain `jpvbootcamp.com`), production database
 (`jpvbootcamp` schema), Stripe LIVE keys, and production secrets.
 `STRIPE_ENV=live`. Production webhook: `jpvbootcamp.com/api/webhook/stripe`.
 
-**Staging lane (`feature/course-branding-and-preview` branch):** deploys with
-staging `NEXT_PUBLIC_*` build args (preview domain `preview.jpvbootcamp.com`),
+**Staging lane (`feature/*`, `fix/*`, or `release/*` source ref):** deploys with
+staging `NEXT_PUBLIC_*` build args (canonical origin
+`staging.jpvbootcamp.com`),
 isolated staging database (`jpvbootcamp_staging` schema), Stripe TEST keys,
 staging Resend domain, and staging-only secrets. `STRIPE_ENV=test`. Staging
-webhook: `preview.jpvbootcamp.com/api/webhook/stripe`. Production webhook must
+webhook: `staging.jpvbootcamp.com/api/webhook/stripe`. Production webhook must
 be disabled while staging is active.
 
 The two lanes must never share a database schema or exchange secrets.
@@ -589,7 +615,7 @@ Use this order for the staging gate:
    - Prerequisites: clean intended paths, correct branch, approved commit.
    - Command: `git branch --show-current && git rev-parse HEAD && git status --short`
    - Evidence: branch name, commit SHA, no unexpected intended-path changes.
-   - Success: the repo is on `feature/course-branding-and-preview` at the reviewed commit.
+   - Success: the repo is on an approved `feature/*`, `fix/*`, or `release/*` source ref at the reviewed commit.
    - Stop: branch mismatch, dirty intended paths, or protected-path changes.
 2. Create the release packet.
    - Prerequisites: exact commit, immutable image placeholder, canonical migration order, approval references.
@@ -912,9 +938,9 @@ This does not authorize push, database access beyond the named queue operation, 
 
 ```text
 Authorize preview deployment only.
-Branch: feature/course-branding-and-preview
+Branch: <approved feature/*, fix/*, or release/* source ref>
 Commit/image digest: <exact value>
-Target: clients-jpv-bootcamp-app-tp9xrk (staging only)
+Target: staging.jpvbootcamp.com (staging only)
 Payload migration prerequisite: <status>
 Provider mode: <disabled|dry-run-only|apply with separate approval>
 Rollback image and owner: <exact values>

@@ -1,7 +1,11 @@
 # Email & Notifications System
 
-**Last updated:** 2026-07-29  
+**Last updated:** 2026-09-09
 **Status:** Operational with async queue
+
+The current staging origin is `https://staging.jpvbootcamp.com`. Verify the
+exact deployed commit before staging diagnostics; this document does not
+authorize migrations, provider mutation, or production action.
 
 ## Architecture Overview
 
@@ -62,7 +66,7 @@ The adapter logs emails to console (in staging) instead of throwing. Real sendin
 Trigger the async queue manually to send pending emails:
 
 ```bash
-curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+curl -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
   -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
   -H "Content-Type: application/json" \
   -d '{}'
@@ -74,7 +78,7 @@ curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-que
 
 ```bash
 # Every 5 minutes
-*/5 * * * * curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+*/5 * * * * curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
   -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
   -H "Content-Type: application/json" \
   -d '{}' >> /var/log/jpv-email-queue.log 2>&1
@@ -127,7 +131,7 @@ Navigate to:
 ### 1. Trigger Password Reset
 
 ```bash
-curl -X POST https://preview.jpvbootcamp.com/api/member-password/forgot \
+curl -X POST https://staging.jpvbootcamp.com/api/member-password/forgot \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com"}'
 ```
@@ -145,7 +149,7 @@ ORDER BY created_at DESC LIMIT 1;
 ### 2. Process Queue
 
 ```bash
-curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+curl -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
@@ -164,7 +168,7 @@ curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-que
 **Fix:** Manually trigger queue:
 
 ```bash
-curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+curl -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
   -H "Authorization: Bearer <admin-token>"
 ```
 

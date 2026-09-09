@@ -1,5 +1,9 @@
 # Dokploy Cron Job Setup — Email Queue Processor
 
+> Use the canonical staging origin `https://staging.jpvbootcamp.com` and
+> verify the exact deployed SHA before any operator action. This setup guide
+> does not authorize migrations, provider mutation, or production action.
+
 ## Purpose
 Process pending emails from the queue every 5 minutes so transactional emails (password reset, verification, etc.) are sent automatically.
 
@@ -8,7 +12,7 @@ Process pending emails from the queue every 5 minutes so transactional emails (p
 ### Copy This Exactly
 
 ```cron
-*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
+*/5 * * * * root curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 ```
 
 ### Fields Explained
@@ -21,7 +25,7 @@ Process pending emails from the queue every 5 minutes so transactional emails (p
 | `curl` | HTTP client | Make the request |
 | `-s` | Silent | No progress output |
 | `-X POST` | HTTP POST | Request method |
-| `https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue` | Endpoint URL | Email queue processor |
+| `https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue` | Endpoint URL | Email queue processor |
 | `-H "Authorization: Bearer ..."` | Auth header | Replace with your admin token |
 | `>> /var/log/jpv-email-queue.log 2>&1` | Log file | Both success and error output |
 
@@ -60,7 +64,7 @@ sudo nano /etc/cron.d/jpv-email-queue
 # JPV Bootcamp Email Queue Processor
 # Sends pending transactional emails every 5 minutes
 
-*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
+*/5 * * * * root curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 ```
 
 **Important:** Replace `$EMAIL_QUEUE_WORKER_SECRET` with your actual admin token.
@@ -89,7 +93,7 @@ tail -f /var/log/jpv-email-queue.log
 
 ```bash
 # Trigger the email queue processor now
-curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
   -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
   -w "\nHTTP: %{http_code}\n"
 ```
@@ -132,7 +136,7 @@ If Dokploy has a cron job UI:
 2. **Schedule:** `*/5 * * * *` (every 5 minutes)
 3. **Command:**
 ```
-curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
+curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue \
   -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
   >> /var/log/jpv-email-queue.log 2>&1
 ```
@@ -150,7 +154,7 @@ If you don't have an admin token yet, create one via:
 
 ### Via Payload Admin Dashboard
 
-1. Navigate to: `https://preview.jpvbootcamp.com/admin`
+1. Navigate to: `https://staging.jpvbootcamp.com/admin`
 2. Login with admin credentials
 3. Go to **Payload Users** or **API Keys**
 4. Create/retrieve API key with admin scope
@@ -252,7 +256,7 @@ ls -la /var/log/jpv-email-queue.log
 
 **Exact Cron Line:**
 ```
-*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
+*/5 * * * * root curl -s -X POST https://staging.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 ```
 
 **Where:** `/etc/cron.d/jpv-email-queue` on Dokploy server (68.221.139.108)

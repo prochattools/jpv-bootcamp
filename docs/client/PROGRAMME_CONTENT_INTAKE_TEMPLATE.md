@@ -1,7 +1,7 @@
 # Programme Content Intake Template
 
 Status: `CLIENT TO COMPLETE`  
-Branch: `feature/course-branding-and-preview`  
+Source ref for controlled validation: approved `feature/*`, `fix/*`, or `release/*` ref
 Purpose: provide one complete representative 8-week programme package that can be converted into the canonical repository intake file and validated without touching Payload, Prisma, Stripe, email providers, or production systems.
 
 ## Completion instructions

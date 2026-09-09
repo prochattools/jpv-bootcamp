@@ -4,7 +4,32 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## CURRENT A6 GATE 2 PRODUCTION CLOSEOUT — 2026-08-30
+## CURRENT PRODUCTION-HYGIENE REVIEW — 2026-09-09
+
+This dated review snapshot was captured before the pending commit split. At
+capture time, the production release authority was `main` at
+`f93ffac7dd299c39d8daf242d6a436272cc79188`; the hygiene candidate under
+review was `codex/production-hygiene-20260907` at committed tip
+`373e9b1b8f6d4eda26bd435629683a2faeec573c`, synchronized with its remote and
+not deployed. The worktree contained 47 pending paths (45 tracked modifications
+and 2 untracked evidence records) covering
+dependency remediation, baseline response headers, runtime evidence, and
+documentation. Refresh the tip and worktree count after the split is committed.
+
+Local validation passes `pnpm test:release` at `183/183`, static preflight,
+lint, TypeScript, build, Prisma validation, and the high-severity audit gate.
+One moderate Payload advisory remains. The response-header contract is covered
+in source and release tests; CSP compatibility and remote-image allowlist work
+remain open. Read-only public probes recorded staging image
+`8b1f459fed358776fda791553ef225cc9f03b2ae` and production image
+`f93ffac7dd299c39d8daf242d6a436272cc79188`; preview DNS is unresolved and the
+legacy health route returns 404. See the dated runtime identity and branch/
+worktree review records for evidence and remaining external gates.
+
+No migration, provider mutation, deployment, production-data action, branch
+deletion, worktree deletion, commit, or push is authorized by this review.
+
+## Historical A6 GATE 2 PRODUCTION CLOSEOUT — 2026-08-30 (audit record)
 
 **Status:** `A6 GATE 2 COMPLETE` · `ARCHITECTURE CONSOLIDATION COMPLETE` · `FEATURE DEVELOPMENT UNBLOCKED`
 
@@ -43,7 +68,7 @@ longer the release authority.
 This closeout changes no production data, billing state, Stripe configuration,
 legacy runtime, preview runtime, or DNS. Those remain separately governed.
 
-## CURRENT A6 GATE 1 FINAL UNBLOCK — 2026-08-30
+## Historical A6 GATE 1 FINAL UNBLOCK — 2026-08-30 (audit record)
 
 **Status:** `READY FOR PRODUCTION MERGE`
 
@@ -151,7 +176,7 @@ production deployment are outside this packet’s authorization boundary.
 
 ---
 
-## CURRENT E1 FINAL CLOSEOUT — 2026-08-29
+## Historical E1 FINAL CLOSEOUT — 2026-08-29 (audit record)
 
 **Status:** `READY TO RESUME A6 GATE 1`
 

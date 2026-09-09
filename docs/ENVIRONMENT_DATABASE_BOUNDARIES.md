@@ -1,9 +1,11 @@
 # JPV Bootcamp environment and database boundaries
 
-Verified through 2026-09-07. The latest full staging/production/legacy topology
+Verified through 2026-09-09. The latest full staging/production/legacy topology
 inventory is the 2026-08-29 E1 closeout below; the latest production migration
-status is the guarded read-only verification recorded here. This document records
-runtime facts only; passwords and other secret values are never stored here.
+status is the guarded read-only verification recorded here. A 2026-09-09
+read-only health probe refreshed the live runtime identities below. This document
+records runtime facts only; passwords and other secret values are never stored
+here.
 
 ## CURRENT PRODUCTION MIGRATION STATUS — 2026-09-07
 
@@ -24,9 +26,29 @@ anomaly, a changed anomaly set, or a changed historical prefix fails closed. The
 historical row ordering must therefore not be rewritten merely to make the
 ledger appear sequential.
 
-A fresh post-run production health probe still returned `commitSha=null` and
-`imageTag=f93ffac7dd299c39d8daf242d6a436272cc79188`, so the live revision evidence
-was unchanged by the status run. No production migration is currently required.
+A fresh post-run production health probe returned `commit=f93ffac7dd299c39d8daf242d6a436272cc79188`
+and `imageTag=f93ffac7dd299c39d8daf242d6a436272cc79188`, so the live revision
+evidence was unchanged by the status run. No production migration is currently
+required.
+
+## CURRENT LIVE RUNTIME IDENTITY REFRESH — 2026-09-09
+
+Read-only probes returned `status=live` and HTTP 200 for both current origins.
+Staging reported `deploymentEnv=staging` and
+`imageTag=8b1f459fed358776fda791553ef225cc9f03b2ae`; production reported
+`deploymentEnv=production` and
+`imageTag=f93ffac7dd299c39d8daf242d6a436272cc79188`. Both responses reported
+the `commit` field equal to the corresponding image tag.
+
+The preview hostname did not resolve in the same probe (`curl` HTTP `000`), so
+its current DNS/routing state is unresolved. The legacy health route resolved
+and returned HTTP `404`. Neither observation proves that a routing retirement
+was intentional.
+
+This refresh establishes current HTTP/runtime identity only. It does not assert
+current migration state, prove that the production-hygiene branch is deployed,
+or authorize a deployment, migration, provider mutation, or database change.
+Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
 
 ## LATEST FULL TOPOLOGY CLOSEOUT — 2026-08-29
 

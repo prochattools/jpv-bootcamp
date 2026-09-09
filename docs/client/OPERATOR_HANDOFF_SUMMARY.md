@@ -1,6 +1,6 @@
 # Operator Handoff Summary
 
-## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
+## Historical Rooms production release — 2026-08-30 (audit record)
 
 **ROOMS FEATURE: COMPLETE**
 
@@ -12,7 +12,20 @@
 - **Boundary:** no production seed, invitations, billing/Stripe, reconciliation, staging-copy, or provider mutation was performed. Rollback evidence remains `rooms-production-rollback-20260830T151139Z` with the recorded protected archive checksum.
 - **Next state:** `READY FOR NEXT FEATURE`. The Rooms feature branch is integrated and eligible for exact-SHA closure after the final branch/worktree checks below.
 
-## Current repository reconciliation — 2026-08-23
+## CURRENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
+
+Deterministic release gate: `pnpm test:release` (`183/183`); the release manifest contains 184 entries
+including one conditional browser gate. Lint, root TypeScript, the controlled
+production build, both Prisma validations, and the production high-severity
+audit gate also passed. The audit result is zero high/critical advisories with
+one remaining moderate Payload advisory (`GHSA-jg8r-5jh2-v2xj`) for which no
+patched release is available. This is repository-only evidence; staging,
+live-provider, deployment, and external approval gates remain open. Baseline
+response security headers are now defined and contract-tested in
+`next.config.js`; CSP compatibility review and remote image allowlist tightening
+remain open.
+
+## Historical repository reconciliation — 2026-08-23 (superseded)
 
 - **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.

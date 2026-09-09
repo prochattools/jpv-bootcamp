@@ -1,6 +1,11 @@
 # Staging GO Approval
 
-> **Reconciliation note (2026-08-02):** This document contains stale SHA references. The SHA `80fa3a6` recorded in the evidence table below was the local HEAD at the time of last update; the current repository HEAD is `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`. Additionally, the "3 unapplied migrations" figure is outdated — the migration inventory has grown to 28 entries. Approval fields remain unfilled; this note does not constitute approval.
+> **Historical reconciliation note (2026-08-02):** This document contains stale
+> SHA and migration-count references in its evidence table. Approval fields
+> remain unfilled; this note does not constitute approval. For a current
+> staging decision, use the canonical origin
+> `https://staging.jpvbootcamp.com`, an approved exact-SHA source ref, and fresh
+> read-only migration and smoke evidence.
 
 - Decision ID: `staging-go`
 - Current status: `PENDING`
@@ -21,7 +26,7 @@ authorize production deployment.
 - [ ] Staging DB schema: `jpvbootcamp_staging` (isolated; no production data)
 - [ ] Stripe env on staging: `test` (must not be `live`)
 - [ ] Resend domain on staging: `jpvbootcamp.com` verified
-- [ ] Staging domain: `preview.jpvbootcamp.com` (must not be `jpvbootcamp.com`)
+- [ ] Staging domain: `staging.jpvbootcamp.com` (must not be `jpvbootcamp.com`)
 - [ ] Staging DB backup path/timestamp: `[TO BE FILLED before any migration apply]`
 - [ ] Rollback owner (staging): `[TO BE FILLED]`
 - [ ] Rollback command: `[TO BE FILLED — e.g. redeploy imageTag X]`

@@ -87,7 +87,7 @@ function main(): void {
     assert.match(doc, /36\/36(?:.*Payload migrations)? applied|35\/35.*registration|35 canonical Payload migration registrations|36 canonical Payload migration registrations|35 Payload migrations applied|canonical 29-name Payload registry/i)
     assert.match(doc, /not.*applied database state|not database-applied state|not evidence that those migrations were applied/i)
     assert.match(doc, /staging:migration-status/)
-    assert.match(doc, /31215369413/)
+    assert.match(doc, /31215369413|34147184195/)
     assert.match(doc, /no real source (?:export|import)|no real source export.*no real source import/is)
     assert.match(doc, /programme remains preview-only|programme content is still blocked|representative programme content/i)
     assert.match(doc, /Provider\/email .*pending|provider\/email .*not executed|provider\/email verification/i)
@@ -128,7 +128,8 @@ function main(): void {
   assert.match(roadmap, /DECISION-READY, EXTERNAL APPROVALS PENDING/i)
   assert.match(roadmap, /M0-01 through M0-09/)
   assert.match(roadmap, /M1-01 through M1-06/)
-  assert.match(roadmap, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
+  assert.match(roadmap, /8b1f459fed358776fda791553ef225cc9f03b2ae/)
+  assert.match(roadmap, /f93ffac7dd299c39d8daf242d6a436272cc79188/)
 
   assert.match(operatorHandoff, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
   assert.match(operatorHandoff, new RegExp(String.raw`Deterministic release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))

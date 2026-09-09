@@ -1,16 +1,35 @@
 # JPV Bootcamp environment topology v1
 
-**Status:** E1 final closeout complete — staging authority verified; ready to resume A6 Gate 1
+**Status:** CURRENT ENVIRONMENT IDENTITY CONTRACT — runtime identity refreshed 2026-09-09; E1 closeout retained as historical evidence
 
-**Evidence date:** 2026-08-29
+**Evidence date:** 2026-09-09 runtime identity refresh; E1 migration evidence 2026-08-29
 
 This document is the current environment identity contract. It records the
 observed Dokploy applications, public origins, database metadata, and source
-boundaries without storing credentials. The E1 closeout below is read-only
-evidence and does not authorize production release, provider mutation, or
-database changes.
+boundaries without storing credentials. The 2026-08-29 E1 closeout below is
+retained as dated read-only evidence and does not authorize production release,
+provider mutation, or database changes.
 
-## E1 final closeout — current live truth
+## Live runtime identity refresh — 2026-09-09
+
+Read-only probes returned HTTP 200 with `status=live` for the canonical staging
+and production origins. Staging currently reports `deploymentEnv=staging` and
+image tag `8b1f459fed358776fda791553ef225cc9f03b2ae`; production reports
+`deploymentEnv=production` and image tag
+`f93ffac7dd299c39d8daf242d6a436272cc79188`. Both responses report the `commit`
+field equal to the corresponding image tag.
+
+The preview hostname did not resolve in the same probe (`curl` HTTP `000`), so
+its current DNS/routing state is unresolved. The legacy health route resolved
+and returned HTTP `404`. This does not prove that preview retirement was
+intentional.
+
+This refresh supersedes the older image identifiers for runtime identity only.
+It does not refresh migration-state evidence, prove that the hygiene branch is
+deployed, or authorize any deployment, migration, provider, or database action.
+Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
+
+## Historical E1 final closeout — live truth at 2026-08-29
 
 The canonical production application remains `JPV Bootcamp` /
 `clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`. The canonical
@@ -53,7 +72,10 @@ The staging Dokploy slug and application ID are retained external identifiers;
 the word `preview` in those identifiers does not make the preview hostname or
 preview database the current staging authority.
 
-## Read-only live observation
+## Historical E1 read-only live observation — 2026-08-29
+
+The table below records the E1 checkpoint and is superseded for runtime
+identity by the 2026-09-09 refresh above.
 
 | Runtime | Observed origin and health | Observed database metadata | Classification |
 | --- | --- | --- | --- |
@@ -72,7 +94,7 @@ The production role is labelled `jpvbootcamp_staging_user` in the observed
 metadata. That is configuration drift, not permission to repair or rename the
 role during E1.
 
-## Migration-state evidence
+## Historical E1 migration-state evidence — 2026-08-29
 
 The verified staging connection was checked through the guarded staging plan
 for the exact deployed SHA. It reported database `jpvbootcamp_staging`, schema
@@ -80,7 +102,7 @@ for the exact deployed SHA. It reported database `jpvbootcamp_staging`, schema
 and healthy Prisma access. The staging plan was read-only. The production and
 legacy boundaries were checked separately and were not targeted by this plan.
 
-## Gate status
+## Historical E1 gate status — 2026-08-29
 
 E1 is closed for the stated reconciliation scope: the staging hostname, exact
 runtime identity, isolated database/schema/role, migration plan, and guarded

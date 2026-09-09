@@ -1,15 +1,35 @@
 # Preview-to-staging inventory
 
-**Status:** E1 final closeout — staging authority verified; preview compatibility
-state classified; no preview retirement performed
+**Status:** CURRENT PREVIEW-TO-STAGING INVENTORY — runtime identity refreshed;
+preview DNS unresolved; no preview retirement performed
 
-**Evidence date:** 2026-08-29
+**Evidence date:** 2026-09-09 runtime identity refresh; E1 migration evidence 2026-08-29
 
 This inventory prevents a retained `preview` string from being mistaken for a
 live environment authority. Current staging behavior uses
 `https://staging.jpvbootcamp.com`; historical evidence and external immutable
 identifiers remain labelled below. E1 verified staging without retiring the
-still-active preview hostname.
+then-active preview hostname; see the dated live refresh above for the current
+DNS observation.
+
+## Live runtime identity refresh — 2026-09-09
+
+Read-only probes returned HTTP 200 with `status=live` for both current origins.
+The canonical staging origin reports `deploymentEnv=staging` and image tag
+`8b1f459fed358776fda791553ef225cc9f03b2ae`; the production origin reports
+`deploymentEnv=production` and image tag
+`f93ffac7dd299c39d8daf242d6a436272cc79188`. Both responses report the `commit`
+field equal to the corresponding image tag.
+
+The preview hostname did not resolve in the same probe (`curl` HTTP `000`), so
+its current DNS/routing state is unresolved. The legacy health route resolved
+and returned HTTP `404`. This does not prove that preview retirement was
+intentional.
+
+This refresh updates runtime identity only. It does not refresh migration-state
+evidence, make the hygiene branch a staging candidate, or authorize deployment,
+migration, provider, routing, or database changes.
+Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
 
 ## E1 final closeout — 2026-08-29
 

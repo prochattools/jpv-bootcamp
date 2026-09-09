@@ -22,13 +22,26 @@ additional or changed anomaly, or any change to the protected historical prefix,
 fails closed. Do not rewrite migration history or mutate production rows merely
 to normalize this historical ordering.
 
-A post-run production health probe remained unchanged: `commitSha=null` and
+A post-run production health probe remained unchanged: `commit=f93ffac7dd299c39d8daf242d6a436272cc79188` and
 `imageTag=f93ffac7dd299c39d8daf242d6a436272cc79188`. The next repository work is
 source/documentation hygiene and branch reconciliation; this checkpoint does not
 justify a migration apply or deployment. Full evidence is recorded in
 `docs/release/PRODUCTION_MIGRATION_STATUS_VERIFICATION_2026-09-07.md`.
 
-## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
+## CURRENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
+
+`pnpm test:release` passed `183/183`; the release manifest contains 184 entries including one
+conditional browser gate. Lint, root TypeScript, the controlled production
+build, both Prisma validations, and the production high-severity audit gate
+also passed.
+The audit result is zero high/critical advisories with one remaining moderate
+Payload advisory (`GHSA-jg8r-5jh2-v2xj`) for which no patched release is
+available. This is repository-only evidence; staging, live-provider, deployment,
+and external approval gates remain open. Baseline response security headers are
+now defined and contract-tested in `next.config.js`; CSP compatibility review
+and remote image allowlist tightening remain open.
+
+## Historical Rooms production release — 2026-08-30 (audit record)
 
 **ROOMS FEATURE: COMPLETE**
 
@@ -54,11 +67,11 @@ mutation was performed.
 This section supersedes the older dated “current checkpoint” statements below;
 those sections remain retained as audit history.
 
-## CURRENT PRODUCTION CHECKPOINT — 2026-08-28
+## Historical production checkpoint — 2026-08-28 (audit record)
 
-JPV Bootcamp is live in production. This checkpoint supersedes older
-feature-branch and staging-era “current” statements below; those sections are
-retained as dated audit history.
+At that checkpoint, JPV Bootcamp was live in production. This record is
+retained as dated audit history; the 2026-09-09 hygiene validation above is the
+current repository status.
 
 - **Release authority:** `main`, with local `main` and `origin/main` verified at
   `08605e52af4abb0b1bdcdfbe6890d010c545b636` after a no-tags fetch.
@@ -297,9 +310,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 | Field | Value |
 | --- | --- |
-| Branch | `feature/course-branding-and-preview` |
-| Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Latest verification snapshot** | SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` (2026-08-04 — preview workflow `30853006495` succeeded, exact-SHA health confirmed, authenticated admin `14/14`); current release manifest 164/164 tests. Current branch tip: `git rev-parse HEAD`. |
+| Branch | `codex/production-hygiene-20260907` — repository-only review candidate; production authority remains `main` |
+| Staging target | `https://staging.jpvbootcamp.com`; no staging deployment is authorized by this review |
+| **Latest verification snapshot** | 2026-09-09 read-only runtime identity refresh: staging image/commit `8b1f459fed358776fda791553ef225cc9f03b2ae`, production image/commit `f93ffac7dd299c39d8daf242d6a436272cc79188`; the hygiene branch is not deployed. See `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`. |
 | **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (historical) |
 | **Security Status** | Sponsored-seat concurrent claim is resolved; durable email recovery is implemented; account-action reservation/finalization is implemented and behaviorally validated in source, with shared-staging migration authorization pending. |
 | Release State | **LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS** |
@@ -308,11 +321,11 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Prior validated baseline | `d55229f test: enforce programme content readiness` |
 | Prior branch tip | `8927df9 docs: checkpoint membership implementation readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/3` |
-| Applied migration state | Verified pre-apply state from guarded run `31215369413`: 28 Payload migrations applied; migration `20260804_050000_member_account_action_reservations` is the sole missing Payload migration; zero unexpected/duplicate/malformed Payload records; Prisma history healthy. Migration 29 is not applied. |
-| Migration approval | Pre-apply evidence is clean. After final push CI succeeds, rerun the guarded pre-apply plan against that exact SHA; a fresh `plan_ok` makes the migration-29 packet ready for separate authorization with exact target, backup evidence, maintenance window, and rollback owner. |
+| Applied migration state | Production guarded read-only verification `34147184195` reports no pending Payload or Prisma migrations and no mutation; staging migration state was not refreshed by this review. See `docs/release/PRODUCTION_MIGRATION_STATUS_VERIFICATION_2026-09-07.md`. |
+| Migration approval | Any future staging or production migration requires a fresh exact-SHA read-only report, target-specific authorization, backup evidence, maintenance window, and rollback owner. |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |
-| Complete staging/browser smoke | Playwright: **188 collected, 148 passed, 40 skipped** — desktop + mobile Chromium; four staging-only spec files not collected; snapshot workflow `30756831212` at SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`; admin responsive CI gate passes; formal external sign-off pending |
+| Complete staging/browser smoke | Repository browser baseline remains historical evidence; live staging smoke and formal external sign-off remain pending for the selected exact-SHA deployment |
 
 Staging migration evidence is recorded in `docs/CURRENT_WORK_HANDOFF.md`. This branch does not authorize further staging writes or any production migration.
 
@@ -407,7 +420,7 @@ These assets make the repository ready for controlled staging operations without
 | 23 July 2026 | Handover buffer and non-migration corrections |
 | 24 July 2026 | Client finished-by date; full cutover only if every independent gate passes |
 
-## Staging evidence (2026-07-22 HARDENING PHASE)
+## Historical staging evidence (2026-07-22 HARDENING PHASE)
 
 - **REM-01 cohort dry-run:** 21 migration-sourced members confirmed in `jpvbootcamp_staging.payload_members` via Dokploy DB connection; 0 already invited; run ID `invitation_run_v1_ffd0fef3e66e8a15`.
 - **REM-10 Stripe verification (TEST mode, live credential confirmed 2026-07-21):** TEST secret key valid; Product `JPV Bootcamp Membership` active (`prod_UuO0SZGtwH75xI`); GBP 80/month price active; GBP 800/year price active; billing portal config active (is_default: true); staging webhook enabled at `preview.jpvbootcamp.com/api/webhook/stripe`; production webhook `jpvbootcamp.com` disabled (correct for staging).
@@ -543,7 +556,7 @@ Hard stops:
 - Do not apply additional staging migrations without explicit authorization
 - Do not begin Phase 10 production cutover from this checkpoint
 
-## Migration status
+## Historical migration status — retained audit record
 
 The repository contains 36 canonical Payload migration registrations. Registration and the deployment health inventory are not database-applied state. The real `pnpm staging:migration-status` adapter is implemented as one guarded PostgreSQL client and one read-only transaction, but it has not been run against staging in this work. Exact Payload and Prisma applied, failed, in-progress, rolled-back, and pending state therefore remains unverified until an authorized operator captures the read-only report.
 

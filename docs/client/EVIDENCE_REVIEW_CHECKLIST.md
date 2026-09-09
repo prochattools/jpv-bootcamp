@@ -2,6 +2,12 @@
 
 Use this checklist after an operator fills the evidence templates in `docs/client/evidence/`.
 
+For controlled staging evidence, use an approved `feature/*`, `fix/*`, or
+`release/*` source ref and the canonical staging origin
+`https://staging.jpvbootcamp.com`. Verify the exact deployed commit before
+review; this checklist does not authorize deployment, migrations, provider
+mutation, or production action.
+
 Run `pnpm toolchain:check` before manual staging smoke or evidence capture if your shell pnpm version is not already pinned to `pnpm@10.33.0`.
 Run `pnpm staging:static-preflight` before manual staging smoke or evidence capture. It performs local-only checks, includes a committed-evidence guard, does not apply migrations, does not run live network checks, and does not prove operator approval.
 Generated evidence files can be created with `pnpm evidence:create` or `tsx scripts/create_staging_evidence_artifacts.ts` (optional, local-only, no migrations applied, no DB access, no network access). Draft evidence `.md` files under `docs/client/evidence/` are local operator artifacts and must not be committed unless explicitly approved. `pnpm evidence:create` is separate from static preflight.
@@ -10,7 +16,7 @@ Generated drafts do not prove checks passed.
 
 ## Review checks
 
-- [ ] Branch is `feature/course-branding-and-preview`
+- [ ] Source ref matches the approved `feature/*`, `fix/*`, or `release/*` policy
 - [ ] Deployed commit is recorded
 - [ ] Migrations applied remains `No` unless a separately approved migration task has occurred
 - [ ] `pnpm toolchain:check` was run before `pnpm staging:static-preflight` when needed
