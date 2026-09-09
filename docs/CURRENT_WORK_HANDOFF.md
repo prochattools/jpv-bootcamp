@@ -7,17 +7,18 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 The production release authority is `main` at
-`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. PR #31 and PR #32 are merged, followed
+`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. PR #31 and PR #32 are merged, followed
 by PR #36’s guarded production migration verifier, PR #35’s Payload account
-unlock authorization fix, and PR #34’s deployed-state documentation. Publish
-workflow `34392897174` passed and the live deployment-health endpoint reports
+unlock authorization fix, PR #34’s deployed-state documentation, and PR #37’s
+post-deployment documentation closeout. Publish workflow `34397017905` passed
+and the live deployment-health endpoint reports
 `status=live`, `deploymentEnv=production`, and the expected image tag.
 
 No separate production migration workflow was run, no migration or schema
 files changed relative to the previous production image, and no manual
 database write was performed. PR #30 and PR #33 were closed without merging.
-There are no open production release pull requests; PR #37 is the
-documentation-only closeout follow-up. The pre-deployment review below is kept
+There are no open production release pull requests; PR #37 completed the
+documentation-only closeout. The pre-deployment review below is kept
 as historical evidence.
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE REVIEW — 2026-09-09

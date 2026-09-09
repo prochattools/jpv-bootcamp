@@ -9,9 +9,9 @@
 ## Current production-hygiene review — 2026-09-09
 
 `main` remains the production release authority at
-`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. PR #31, PR #32, PR #34, PR #35, and PR #36 are merged into `main`; PR #30
-and PR #33 were closed without merging. Production is live at `d55ac6a30bcd78c63bd2a0a46db709617efc48f2`
-following successful publish workflow `34392897174`. Repository validation
+`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. PR #31, PR #32, PR #34, PR #35, PR #36, and PR #37 are merged into `main`; PR #30
+and PR #33 were closed without merging. Production is live at `41662c7df7ec6f5c3aa912e784aa2b0c812c0869`
+following successful publish workflow `34397017905`. Repository validation
 passes `pnpm test:release` at `184/184`, static preflight, lint,
 TypeScript, build, Prisma checks, and the high-severity audit gate. No separate
 production migration workflow or manual database write was performed. The

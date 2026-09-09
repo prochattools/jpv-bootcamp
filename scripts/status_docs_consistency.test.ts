@@ -81,13 +81,13 @@ async function main(): Promise<void> {
 
   assert.match(docs.roadmap, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.roadmap, /CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09/)
-  assert.match(docs.roadmap, /34392897174/)
-  assert.match(docs.roadmap, /d55ac6a30bcd78c63bd2a0a46db709617efc48f2/)
+  assert.match(docs.roadmap, /34397017905/)
+  assert.match(docs.roadmap, /41662c7df7ec6f5c3aa912e784aa2b0c812c0869/)
   assert.match(docs.roadmap, /No separate production migration workflow was run/)
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
   assert.match(
     docs.roadmap,
-    /Branch \| `main` at `d55ac6a30bcd78c63bd2a0a46db709617efc48f2` is production authority; PR #34 documentation follow-up is merged/,
+    /Branch \| `main` at `41662c7df7ec6f5c3aa912e784aa2b0c812c0869` is production authority; PR #37 documentation closeout is merged/,
   )
   assert.match(docs.roadmap, /Staging target \| `https:\/\/staging\.jpvbootcamp\.com`/)
   assert.match(docs.roadmap, /2026-09-09 post-deployment read-only runtime identity refresh/)
@@ -126,8 +126,8 @@ async function main(): Promise<void> {
 
   assert.match(docs.operatorHandoff, /Version 3\.7 current client go-live plan; Version 3\.4 is the prior progress baseline/)
   assert.match(docs.operatorHandoff, /CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09/)
-  assert.match(docs.operatorHandoff, /34392897174/)
-  assert.match(docs.operatorHandoff, /d55ac6a30bcd78c63bd2a0a46db709617efc48f2/)
+  assert.match(docs.operatorHandoff, /34397017905/)
+  assert.match(docs.operatorHandoff, /41662c7df7ec6f5c3aa912e784aa2b0c812c0869/)
   assert.match(docs.operatorHandoff, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
   assert.match(docs.operatorHandoff, /30853006495/)
   assert.match(docs.operatorHandoff, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)
