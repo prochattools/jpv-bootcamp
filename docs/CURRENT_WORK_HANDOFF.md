@@ -21,15 +21,20 @@ Implemented locally: typed fail-closed Mighty configuration, documented Admin
 API client, durable Stripe-derived desired access state, authenticated retrying
 worker endpoint, delayed welcome ordering, canonical Mighty Sign In target,
 legacy `/sign-in` and `/login` redirects, and a read-only entitled-member
-bridge roster tool. No live Mighty API call, provider-object creation,
+bridge roster tool. The staging scheduler and disposable acceptance harness are
+now defined, but no live Mighty API call or provider-object creation has been
+performed because all six non-production Mighty variables are absent from the
+local and canonical staging environments. No
 production deployment, production database mutation, or Stripe mutation was
 performed. The old portal remains in the repository for controlled rollback and
 operator continuity.
 
-Current blockers before controlled cutover: live Mighty Network/access Plan
-configuration and credential ownership, non-production API verification,
-manual existing-member bridge evidence, scheduled worker setup, full focused
-matrix, staging acceptance, and separately authorized release/go-no-go gates.
+Current staging blockers: Mighty Network/access Plan configuration and
+credential ownership, disposable test identities, real API verification, live
+Stripe test-mode lifecycle evidence, manual existing-member bridge evidence,
+and aggregate operator evidence. The fixed staging scheduler is defined in
+`.github/workflows/staging-mighty-access-sync.yml`; the canonical verification
+report is `migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md`.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

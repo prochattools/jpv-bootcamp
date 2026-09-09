@@ -25,7 +25,7 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | M2 | Bounded Mighty Admin API client and documented member/access operations | **Implemented and focused-tested** |
 | M3 | Website Sign In cutover support, Join preservation, safe legacy redirects | **Implemented locally** |
 | M4 | Stripe event → durable Mighty desired-state projection | **Implemented locally** |
-| M5 | Durable worker, retries, stable IDs, access reconciliation, welcome ordering | **Implemented locally; worker not live-exercised** |
+| M5 | Durable worker, retries, stable IDs, access reconciliation, welcome ordering | **Implemented locally; staging scheduler defined; worker not live-exercised** |
 | M6 | Read-only entitled-member bridge for controlled manual migration | **Implemented locally** |
 | M7 | Focused regression tests and validation matrix | **Initial tests green; full matrix pending** |
 | M8 | Staging configuration and controlled provider/API verification | **Blocked on operator-owned Mighty configuration** |
@@ -48,6 +48,25 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 6. Complete the focused validation matrix, exact-SHA staging verification,
    support/admin regression, rollback rehearsal, and go/no-go review.
 7. Only after a separate authorization may the controlled cutover be deployed.
+
+## Worker execution and scheduling
+
+The worker is an authenticated `POST /api/admin/process-mighty-access-sync`
+route. The fixed staging scheduler is
+`.github/workflows/staging-mighty-access-sync.yml`, which runs every five
+minutes, targets only `https://staging.jpvbootcamp.com`, uses the GitHub
+environment `staging-mighty-sync`, and reads only the
+`MIGHTY_ACCESS_SYNC_WORKER_SECRET` environment secret. It has a non-overlapping
+concurrency group and a five-minute timeout. A manual workflow dispatch is
+available for controlled staging verification.
+
+Each run claims up to 100 due rows with a five-minute lease. Successful rows
+record provider IDs, success, and reconciliation timestamps. Failures record a
+safe error code, increment the attempt count, clear the lease, and retry with
+exponential backoff capped at one hour. Reconciliation always reuses the stored
+Mighty member ID when present, discovers existing Plan purchases before granting,
+and treats an absent purchase on revoke as idempotent. A production scheduler is
+not configured by this branch and requires a separate cutover authorization.
 
 ## Focused validation matrix
 
@@ -75,13 +94,17 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 
 ## Manual bridge procedure
 
-1. Verify the intended environment and read-only database boundary.
-2. Run `pnpm mighty:bridge-roster` and review the count without exporting data.
-3. If a transfer roster is required, run the command with `--format=csv` only
+1. Verify the intended staging/non-production environment and read-only database boundary.
+2. Run `pnpm mighty:bridge-roster` and record the aggregate expected-member count without exporting data.
+3. Have a second authorized reviewer compare the count and the active-subscription/payment-state criteria.
+4. If a transfer roster is required, run the command with `--format=csv` only
    to a secure location outside the repository and shared logs.
-4. An authorized operator adds existing subscribers to the pre-created Mighty
+5. An authorized operator adds existing subscribers to the pre-created Mighty
    Network/access Plan and records only aggregate success/failure evidence.
-5. Do not change Stripe subscriptions, Stripe products/prices, or local billing
+6. Retry only failed rows after resolving the recorded safe error; do not rerun
+   a full export. Match by normalized email and existing Mighty member ID before
+   any retry, and stop on an identity conflict.
+7. Do not change Stripe subscriptions, Stripe products/prices, or local billing
    state as part of this bridge.
 
 ## Missing before controlled cutover

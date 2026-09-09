@@ -120,6 +120,7 @@
     "payload:email:send": "tsx scripts/payload/send-queued-emails.mts",
     "stripe:check-products": "tsx scripts/stripe/check_price_products.ts",
     "mighty:bridge-roster": "tsx scripts/mighty/buildEntitledMemberBridge.mts",
+    "mighty:staging-acceptance": "tsx scripts/mighty/runStagingAcceptance.mts",
     "mcp:discover": "tsx scripts/mcp-discover.ts",
     "mcp:provision": "tsx scripts/mcp-provision-tenant.ts",
     "test:env-legacy-cleanup": "tsx scripts/env_legacy_cleanup_contract.test.ts",

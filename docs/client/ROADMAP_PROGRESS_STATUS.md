@@ -19,13 +19,16 @@ Mighty access state locally, reconciles it through a retrying authenticated
 worker, reuses or creates members by email, grants the existing non-paid Plan,
 removes access immediately on payment failure or actual subscription end, and
 restores it on `invoice.paid`. Welcome/login email is deferred until the Mighty
-grant succeeds. No Mighty API was live-exercised and no provider production
-objects were created.
+grant succeeds. The fixed staging scheduler and guarded disposable acceptance
+harness are now defined. No Mighty API was live-exercised and no provider
+production objects were created because the non-production configuration is
+missing.
 
 See `docs/architecture/JPV_MIGHTY_STRIPE_ARCHITECTURE.md` and
 `docs/migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md` for the canonical
 architecture, M0–M9 phase status, missing configuration, manual bridge, and
-cutover gates.
+cutover gates. See `docs/migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md`
+for the sanitized staging evidence and exact blocker.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

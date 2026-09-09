@@ -42,6 +42,51 @@ type QueueParams = {
 	welcomeRequired?: boolean
 }
 
+const accessSyncSelect = {
+	id: true,
+	email: true,
+	normalizedEmail: true,
+	stripeCustomerId: true,
+	stripeSubscriptionId: true,
+	lastStripeEventId: true,
+	plan: true,
+	desiredAccess: true,
+	mightyMemberId: true,
+	mightyPurchaseId: true,
+	welcomeRequired: true,
+	welcomeSentAt: true,
+	attemptCount: true,
+} as const
+
+function stripeRelationFilters(params: QueueParams): Array<Record<string, string>> {
+	return [
+		...(params.stripeCustomerId?.trim() ? [{ stripeCustomerId: params.stripeCustomerId.trim() }] : []),
+		...(params.stripeSubscriptionId?.trim() ? [{ stripeSubscriptionId: params.stripeSubscriptionId.trim() }] : []),
+	]
+}
+
+async function findExistingSyncRow(
+	email: string | null,
+	params: QueueParams,
+): Promise<AccessSyncRow | null> {
+	const relationFilters = stripeRelationFilters(params)
+	const [byStripeRelations, byEmail] = await Promise.all([
+		relationFilters.length > 0
+			? prisma.mightyAccessSync.findMany({ where: { OR: relationFilters }, select: accessSyncSelect })
+			: Promise.resolve([]),
+		email
+			? prisma.mightyAccessSync.findUnique({ where: { normalizedEmail: email }, select: accessSyncSelect })
+			: Promise.resolve(null),
+	])
+
+	if (byStripeRelations.length > 1) throw new Error('mighty_identity_conflict')
+	const byStripeRelation = byStripeRelations[0] ?? null
+	if (byStripeRelation && byEmail && byStripeRelation.id !== byEmail.id) {
+		throw new Error('mighty_identity_conflict')
+	}
+	return byStripeRelation ?? byEmail
+}
+
 function relationshipId(value: unknown): string | null {
 	if (typeof value === 'string' && value.trim()) return value.trim()
 	if (value && typeof value === 'object' && 'id' in value) {
@@ -94,45 +139,41 @@ export async function queueMightyAccessSync(params: QueueParams): Promise<{
 	reason?: string
 	rowId?: string
 }> {
-	const email = await resolveQueueEmail(params)
+	const directEmail = normalizeEmail(params.email)
+	let existing = await findExistingSyncRow(directEmail, params)
+	const email = directEmail ?? normalizeEmail(existing?.email) ?? await resolveQueueEmail(params)
 	if (!email) return { queued: false, reason: 'missing_member_email' }
 
-	const existing = await prisma.mightyAccessSync.findUnique({
-		where: { normalizedEmail: email },
-		select: { id: true, welcomeRequired: true, welcomeSentAt: true },
-	})
+	existing ??= await findExistingSyncRow(email, params)
 	const welcomeRequired = existing
 		? existing.welcomeRequired
 		: params.welcomeRequired === true
 
-	const row = await prisma.mightyAccessSync.upsert({
-		where: { normalizedEmail: email },
-		create: {
-			email,
-			normalizedEmail: email,
-			stripeCustomerId: params.stripeCustomerId ?? null,
-			stripeSubscriptionId: params.stripeSubscriptionId ?? null,
-			lastStripeEventId: params.stripeEventId,
-			plan: params.plan ?? null,
-			desiredAccess: params.desiredAccess,
-			syncStatus: 'pending',
-			welcomeRequired,
-		},
-		update: {
-			email,
-			stripeCustomerId: params.stripeCustomerId ?? undefined,
-			stripeSubscriptionId: params.stripeSubscriptionId ?? undefined,
-			lastStripeEventId: params.stripeEventId,
-			plan: params.plan ?? undefined,
-			desiredAccess: params.desiredAccess,
-			syncStatus: 'pending',
-			lastError: null,
-			nextAttemptAt: null,
-			leaseUntil: null,
-			welcomeRequired,
-		},
-		select: { id: true },
-	})
+	const data = {
+		email,
+		normalizedEmail: email,
+		stripeCustomerId: params.stripeCustomerId?.trim() || undefined,
+		stripeSubscriptionId: params.stripeSubscriptionId?.trim() || undefined,
+		lastStripeEventId: params.stripeEventId,
+		plan: params.plan ?? undefined,
+		desiredAccess: params.desiredAccess,
+		syncStatus: 'pending',
+		lastError: null as string | null,
+		nextAttemptAt: null as Date | null,
+		leaseUntil: null as Date | null,
+		welcomeRequired,
+	} as const
+
+	const row = existing
+		? await prisma.mightyAccessSync.update({ where: { id: existing.id }, data, select: { id: true } })
+		: await prisma.mightyAccessSync.create({
+			data: {
+				...data,
+				stripeCustomerId: params.stripeCustomerId?.trim() ?? null,
+				stripeSubscriptionId: params.stripeSubscriptionId?.trim() ?? null,
+			},
+			select: { id: true },
+		})
 
 	return { queued: true, rowId: row.id }
 }

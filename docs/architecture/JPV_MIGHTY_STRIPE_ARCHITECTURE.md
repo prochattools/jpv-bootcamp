@@ -45,6 +45,13 @@ The webhook persists the desired state locally and does not synchronously call
 Mighty. Provider outage therefore cannot corrupt Stripe webhook processing or
 cause duplicate provider writes. The worker owns retries and reconciliation.
 
+The staging worker is scheduled by
+`.github/workflows/staging-mighty-access-sync.yml`. It runs every five minutes
+against the fixed `https://staging.jpvbootcamp.com` origin, uses the dedicated
+`staging-mighty-sync` environment secret, and never accepts a target URL input.
+The production schedule remains a separate, future, explicitly authorized
+cutover task.
+
 ## Mighty API contract
 
 The implementation uses the documented Mighty Admin API operations only:
@@ -96,6 +103,12 @@ The worker sends the existing application welcome/login email only after a
 Mighty account exists and the access grant has succeeded. Failed email delivery
 is retried without revoking already granted access.
 
+Worker failures remain on the local row as a safe error code with an incremented
+attempt count, lease cleared, and an exponential retry time capped at one hour.
+The scheduled worker can be rerun safely because member and purchase discovery
+precedes grant/revoke operations. A reconciliation pass may also be invoked
+manually through the same authenticated staging endpoint.
+
 ## Durable state
 
 `jpvbootcamp.mighty_access_sync` is the local outbox/reconciliation record. It
@@ -135,6 +148,15 @@ and access Plan through a separately controlled operator procedure. Automatic
 provisioning is not considered complete until the live Network/Plan IDs and
 credential ownership are configured and the worker is exercised in the target
 environment.
+
+## Staging verification harness
+
+After a disposable test identity and non-production configuration are supplied,
+`pnpm mighty:staging-acceptance` runs the bounded create/find, grant, repeated
+grant, immediate revoke, restore, and changed-email/stable-member-ID checks.
+It requires `MIGHTY_PROVIDER_ENV=staging` and the explicit
+`MIGHTY_STAGING_ALLOW_API_MUTATIONS=true` guard. The script cleans up the test
+Plan access before returning success and emits aggregate evidence only.
 
 ## References
 
