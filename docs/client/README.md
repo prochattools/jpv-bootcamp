@@ -7,7 +7,7 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 ### Current deployed state — 2026-09-09
 
 Production is live from `main` at commit/image
-`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. The protected root-domain publish
+`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. The protected root-domain publish
 workflow passed, Dokploy convergence passed, and the live deployment-health
 endpoint reports `status=live` and `deploymentEnv=production`. PR #31 contains
 the production-hygiene release and PR #32 contains the production image
@@ -18,8 +18,9 @@ The current production release is operational. PR #30 and PR #33 were
 closed without merging. PR #34 records the deployed state, PR #35 contains the
 account-unlock authorization hardening fix, and PR #36 contains the read-only
 production migration verifier; all three are merged. There are no open pull
-requests. Historical pre-deployment snapshots below retain their original
-commit identities and claims.
+requests; PR #37 completed the documentation-only closeout. Historical
+pre-deployment snapshots below retain their original commit identities and
+claims.
 
 **JPV Bootcamp Platform Expansion & Go-Live Plan v3.7** is the current client go-live plan. Version 3.4 is the prior progress baseline.
 
@@ -31,7 +32,7 @@ The client go-live plan does not authorize migration execution. No separate
 production migration workflow was run for the 2026-09-09 deployment.
 
 The current production release authority is `main` at
-`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. The canonical staging target is
+`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. The canonical staging target is
 `https://staging.jpvbootcamp.com`. The 2026-09-09 hygiene candidate and its
 Bookworm image fix are now historical merged release inputs.
 The older `feature/course-branding-and-preview` deployment wording is retained

@@ -1,7 +1,7 @@
 # JPV Bootcamp — Branch and Worktree Consolidation Review — 2026-09-09
 
-**Status:** POST-DEPLOYMENT REVIEW — PR #31, PR #32, PR #34, PR #35, and PR #36
-are merged; production is verified on `d55ac6a3`; merged-only local refs were
+**Status:** POST-DEPLOYMENT REVIEW — PR #31, PR #32, PR #34, PR #35, PR #36, and
+PR #37 are merged; production is verified on `41662c7d`; merged-only local refs were
 cleaned after ancestry checks
 
 **Audit repository:** `jpv-bootcamp`
@@ -10,9 +10,10 @@ cleaned after ancestry checks
 
 The reviewed hygiene release was merged as PR #31 and the production image
 Bookworm fix was merged as PR #32. PR #34, PR #35, and PR #36 completed the
-documentation, authorization, and read-only verification follow-ups. Publish
-workflow `34392897174` passed and the live deployment-health endpoint reports
-the same production image. The remaining branch and worktree inventory is
+documentation, authorization, and read-only verification follow-ups; PR #37
+completed the post-deployment documentation closeout. Publish workflow
+`34397017905` passed and the live deployment-health endpoint reports the same
+production image. The remaining branch and worktree inventory is
 preserved because it contains independent work.
 
 This review records the current Git topology and safe disposition. An ancestry
@@ -23,7 +24,7 @@ remove a worktree, or rewrite history.
 
 | Ref | Tip | Relation to `main` | Worktree | Disposition |
 | --- | --- | --- | --- | --- |
-| `main` | `d55ac6a3` | Production authority; PR #34 deployment verified | No dedicated worktree | Preserve |
+| `main` | `41662c7d` | Production authority; PR #37 deployment verified | No dedicated worktree | Preserve |
 | `codex/post-release-baseline-closeout` | `761087a1` | Divergent clean closeout line | `jpv-bootcamp-main` — clean | Preserve for separate review |
 | `codex/production-migration-preflight-20260907` | `16b3424c` | Divergent clean preflight line | `jpv-bootcamp-production-preflight-20260907` — clean | Preserve |
 | `codex/repository-reconciliation-20260905` | `8b1f459f` | Divergent clean reconciliation line | `jpv-bootcamp-reconciliation` — clean | Preserve |
@@ -89,11 +90,12 @@ merged remote refs above are ancestry observations only; no local or remote ref
 was deleted, archived, or rewritten.
 
 The production release pull-request state is closed and clean. PR #37 is the
-documentation-only closeout follow-up represented by this record:
+completed documentation-only closeout represented by this record:
 
 - PR #34 merged as `d55ac6a3` and is deployed.
 - PR #35 merged as `cb0fb0c6` and is deployed.
 - PR #36 merged as `7ba93c31` and is deployed.
+- PR #37 merged as `41662c7d` and is deployed.
 - PR #30 and PR #33 were closed without merging.
 - No other production release pull requests are open.
 

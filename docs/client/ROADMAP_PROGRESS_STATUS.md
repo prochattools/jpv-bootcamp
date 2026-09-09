@@ -6,18 +6,18 @@ PR #31 and PR #32 established the production-hygiene release and image build
 fix. PR #36 added the guarded read-only production migration verifier, PR #35
 restricted Payload account unlock access to administrators, and PR #34 recorded
 the deployed state. The protected root-domain publish workflow
-`34392897174` passed source verification, application validation, immutable
+`34397017905` passed source verification, application validation, immutable
 image publication, Dokploy update, deployment trigger, and production
 convergence for `main` commit/image
-`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. The live deployment-health
+`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. The live deployment-health
 endpoint independently reports `status=live`, `deploymentEnv=production`, and
 the same image tag.
 
 No separate production migration workflow was run for this release, and no
 migration or schema files changed relative to the previous production image.
 No new feature PR was promoted. PR #30 and PR #33 were closed without merging.
-There are no open production release pull requests; PR #37 is the
-documentation-only closeout follow-up. The pre-deployment records below remain
+There are no open production release pull requests; PR #37 completed the
+documentation-only closeout. The pre-deployment records below remain
 historical evidence and retain their original identities.
 
 ## PRE-DEPLOYMENT PRODUCTION MIGRATION-STATUS VERIFICATION — 2026-09-07
@@ -330,9 +330,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 | Field | Value |
 | --- | --- |
-| Branch | `main` at `d55ac6a30bcd78c63bd2a0a46db709617efc48f2` is production authority; PR #34 documentation follow-up is merged |
+| Branch | `main` at `41662c7df7ec6f5c3aa912e784aa2b0c812c0869` is production authority; PR #37 documentation closeout is merged |
 | Staging target | `https://staging.jpvbootcamp.com`; no staging deployment is authorized by this review |
-| **Latest verification snapshot** | 2026-09-09 post-deployment read-only runtime identity refresh: staging image/commit `8b1f459fed358776fda791553ef225cc9f03b2ae`, production image/commit `d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. See `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`. |
+| **Latest verification snapshot** | 2026-09-09 post-deployment read-only runtime identity refresh: staging image/commit `8b1f459fed358776fda791553ef225cc9f03b2ae`, production image/commit `41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. See `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`. |
 | **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (historical) |
 | **Security Status** | Sponsored-seat concurrent claim is resolved; durable email recovery is implemented; account-action reservation/finalization is implemented and behaviorally validated in source, with shared-staging migration authorization pending. |
 | Release State | **LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS** |

@@ -10,7 +10,7 @@ here.
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 Production is live from `main` at commit/image
-`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. Publish workflow `34392897174`
+`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. Publish workflow `34397017905`
 passed image publication, Dokploy update, deployment trigger, and root
 production convergence. The live deployment-health endpoint reports
 `status=live`, `deploymentEnv=production`, and the expected image tag.

@@ -3,15 +3,16 @@
 ## Current deployed production state — 2026-09-09
 
 The production release authority is `main` at
-`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. PR #31 and PR #32 are merged;
-publish workflow `34392897174` passed image publication, Dokploy update,
+`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. PR #31 and PR #32 are merged;
+publish workflow `34397017905` passed image publication, Dokploy update,
 deployment, and convergence. The live deployment-health endpoint reports the
 expected production image and `status=live`.
 
 No separate production migration workflow was run for this deployment, and no
 migration or schema files changed relative to the previous production image.
 PR #30 and PR #33 were closed without merging, and there are no open pull
-requests. The pre-deployment review below remains a historical record.
+requests. PR #37 completed the documentation-only closeout; the pre-deployment
+review below remains a historical record.
 
 ## Pre-deployment production-hygiene review — 2026-09-09
 
