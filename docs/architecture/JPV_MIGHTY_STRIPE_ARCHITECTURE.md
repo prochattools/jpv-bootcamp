@@ -1,0 +1,146 @@
+# JPV Bootcamp Stripe → Mighty Architecture
+
+**Status:** Approved migration architecture; implementation started on
+`feature/mighty-stripe-migration`  
+**Date:** 2026-09-09  
+**Production billing authority:** Existing Stripe integration  
+**Student platform target:** Mighty Networks
+
+## Canonical decision
+
+Stripe remains the sole billing authority. Existing Stripe products, prices,
+subscriptions, Checkout, webhooks, support, sponsored membership, public sales,
+and operator/admin workflows remain in place. No Stripe membership is recreated,
+and Mighty billing or native Mighty checkout is not enabled.
+
+Mighty owns the student-facing account and learning experience: student login,
+profile, courses, progress, community, Spaces, and member-facing content. The
+existing custom student portal remains available during the controlled
+cutover-preparation phase, but it is no longer the target student destination.
+Payload remains an internal/operator system for the functionality that still
+uses it; it is not the future student-facing course/community authority.
+
+## Runtime flow
+
+```text
+Public website
+    ├── Sign In → https://jpv-community.mn.co/sign_in?from=...
+    └── Join → existing #pricing → existing monthly/annual Stripe Checkout
+                                      │
+                                      ▼
+                         existing JPV Stripe webhook/application
+                                      │
+                                      ▼
+                    Stripe-derived local Mighty desired-state row
+                                      │
+                                      ▼
+                    authenticated Mighty Admin API worker
+                                      │
+                                      ├── find/create Mighty member by email
+                                      ├── grant existing non-paid JPV access Plan
+                                      └── revoke/restore access from Stripe state
+```
+
+The webhook persists the desired state locally and does not synchronously call
+Mighty. Provider outage therefore cannot corrupt Stripe webhook processing or
+cause duplicate provider writes. The worker owns retries and reconciliation.
+
+## Mighty API contract
+
+The implementation uses the documented Mighty Admin API operations only:
+
+- `GET /admin/v1/networks/{network_id}/members` with pagination to discover a
+  member by normalized email;
+- `POST /admin/v1/networks/{network_id}/members` with
+  `send_welcome_email: false` when a member is absent;
+- `POST /admin/v1/networks/{network_id}/plans/{plan_id}/members?user_id={id}`
+  to grant an existing free/non-paid access Plan immediately, without an
+  invitation;
+- `GET /admin/v1/networks/{network_id}/purchases?member_id={id}&plan_id={id}`
+  to recover the purchase identifier needed for durable idempotency and revoke;
+- `DELETE /admin/v1/networks/{network_id}/purchases/{id}?immediate=true` to
+  remove access immediately after a failed payment or an ended subscription.
+
+The access Plan must already exist in Mighty. The application never creates or
+archives a production Network, Space, Plan, or billing object.
+
+## Configuration boundary
+
+Production configuration is environment-only and fails closed when any value is
+missing or invalid:
+
+| Variable | Meaning |
+| --- | --- |
+| `MIGHTY_API_BASE_URL` | Documented Admin API base, normally `https://api.mn.co/admin/v1` |
+| `MIGHTY_NETWORK_ID` | Existing Mighty Network ID or supported network identifier |
+| `MIGHTY_ACCESS_PLAN_ID` | Existing non-paid JPV access Plan ID |
+| `MIGHTY_ADMIN_API_TOKEN` | Secret Admin API bearer token |
+| `MIGHTY_STUDENT_LOGIN_URL` | Canonical student sign-in URL |
+| `MIGHTY_ACCESS_SYNC_WORKER_SECRET` | Dedicated secret for the reconciliation worker route |
+
+No live Mighty credentials, Network ID, or Plan ID are stored in Git, tests,
+logs, or documentation.
+
+## Stripe event policy
+
+| Stripe event | Desired Mighty state | Notes |
+| --- | --- | --- |
+| Confirmed paid subscription Checkout | `ALLOWED` | Existing member is reused; absent member is created with no Mighty welcome email; access is granted before JPV welcome/login email. |
+| `invoice.paid` | `ALLOWED` | Restores access after recovery. |
+| `invoice.payment_failed` | `DENIED` | Immediate removal; no grace period. |
+| `customer.subscription.deleted` | `DENIED` | Immediate removal for an actually ended subscription. |
+| Scheduled cancellation (`cancel_at_period_end`) | unchanged/`ALLOWED` | Access remains until the paid period ends. |
+| Duplicate/replayed Stripe delivery | same desired state | Local Stripe idempotency plus provider-side member/purchase discovery prevents duplicate grants. |
+
+The worker sends the existing application welcome/login email only after a
+Mighty account exists and the access grant has succeeded. Failed email delivery
+is retried without revoking already granted access.
+
+## Durable state
+
+`jpvbootcamp.mighty_access_sync` is the local outbox/reconciliation record. It
+stores the normalized email, Stripe customer/subscription/event relationship,
+desired access (`ALLOWED`/`DENIED`), stable Mighty member and purchase IDs,
+welcome state, attempt count, lease, next retry, last error, last success, and
+last reconciliation timestamps. It is not a second billing ledger.
+
+The existing `CustomerProvisioning` projection remains the source for Stripe
+identity and membership state. The new table stores only the downstream Mighty
+desired state and provider mapping needed to reconcile it safely.
+
+## Cutover boundary
+
+- The public Sign In action and `/sign-in`/`/login` compatibility routes target
+  Mighty.
+- Join remains the existing `#pricing` flow and existing Stripe monthly/annual
+  Checkout.
+- Support, sponsored membership, pay-it-forward, public sales, Stripe billing,
+  and operator/admin access remain unchanged.
+- The old portal is not deleted in this migration branch. Its remaining
+  entrypoints are retained for rollback, operator functions, existing email
+  links, and controlled cutover testing until a separately approved retirement.
+- Courses/content/community history, LiveKit, Bunny, SSO, white-labeling,
+  affiliate redesign, and Payload removal are outside this migration.
+
+## Manual existing-member bridge
+
+`pnpm mighty:bridge-roster` performs a read-only query of currently entitled
+Stripe-projected subscribers. It prints only a count by default. An operator
+may explicitly request `--format=csv` for a secure local transfer; that output
+contains customer contact data and must remain outside the repository, logs,
+commits, and shared evidence. The tool performs no Stripe or Mighty mutation.
+
+Existing subscribers can then be added to the already-created Mighty Network
+and access Plan through a separately controlled operator procedure. Automatic
+provisioning is not considered complete until the live Network/Plan IDs and
+credential ownership are configured and the worker is exercised in the target
+environment.
+
+## References
+
+- [Mighty Admin API](https://docs.mightynetworks.com/admin-api)
+- [Create a member](https://docs.mightynetworks.com/api-reference/members/create-a-new-member-in-the-network)
+- [List members](https://docs.mightynetworks.com/api-reference/members/return-members-of-the-given-network)
+- [Grant direct non-paid Plan access](https://docs.mightynetworks.com/api-reference/members/add-a-member-directly-to-a-freenonpaid-plan-granting-them-accessthe-member-will-be-granted-access-immediately%3B-no-invite-is-sent)
+- [List purchases](https://docs.mightynetworks.com/api-reference/purchases/return-purchases-and-subscriptions-for-the-given-network)
+- [Revoke purchase access](https://docs.mightynetworks.com/api-reference/purchases/remove-a-member-from-a-plan-revoke-purchase-access-note%3A-cannot-remove-members-from-apple-in-app-purchases)

@@ -1,5 +1,32 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT MIGHTY MIGRATION — 2026-09-09
+
+The approved Stripe → Mighty migration has started on
+`feature/mighty-stripe-migration`. Production baseline revision
+`a287800735d465a41ad9e45d2c7914ab9cc34a26` is preserved by the annotated tag
+`pre-mighty-migration-2026-09-09`; no production operation was performed.
+
+Stripe remains the sole billing authority. Existing Stripe monthly/annual
+Checkout, webhook/application, support, sponsored membership, public sales, and
+operator/admin paths are preserved. Mighty becomes the target for student
+login/profile, courses, progress, community, Spaces, and member-facing content.
+Payload remains for internal/operator functionality. The old portal is retained
+for rollback and controlled cutover preparation.
+
+The durable implementation now records Stripe-derived `ALLOWED`/`DENIED`
+Mighty access state locally, reconciles it through a retrying authenticated
+worker, reuses or creates members by email, grants the existing non-paid Plan,
+removes access immediately on payment failure or actual subscription end, and
+restores it on `invoice.paid`. Welcome/login email is deferred until the Mighty
+grant succeeds. No Mighty API was live-exercised and no provider production
+objects were created.
+
+See `docs/architecture/JPV_MIGHTY_STRIPE_ARCHITECTURE.md` and
+`docs/migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md` for the canonical
+architecture, M0–M9 phase status, missing configuration, manual bridge, and
+cutover gates.
+
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 PR #31 and PR #32 established the production-hygiene release and image build

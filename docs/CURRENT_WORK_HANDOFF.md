@@ -4,6 +4,33 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
+## CURRENT MIGHTY MIGRATION — 2026-09-09
+
+The approved JPV migration is now being executed on
+`feature/mighty-stripe-migration`, based on synchronized `origin/main` and
+protected by annotated tag `pre-mighty-migration-2026-09-09` at the documented
+live production revision `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
+
+Stripe remains the sole billing authority. The canonical architecture and
+phase plan are [JPV Mighty → Stripe Architecture](architecture/JPV_MIGHTY_STRIPE_ARCHITECTURE.md)
+and [Mighty Migration Implementation Plan](migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md).
+The existing Stripe Checkout, webhook, support, sponsored membership, public
+sales, and operator/admin paths remain in scope and are preserved.
+
+Implemented locally: typed fail-closed Mighty configuration, documented Admin
+API client, durable Stripe-derived desired access state, authenticated retrying
+worker endpoint, delayed welcome ordering, canonical Mighty Sign In target,
+legacy `/sign-in` and `/login` redirects, and a read-only entitled-member
+bridge roster tool. No live Mighty API call, provider-object creation,
+production deployment, production database mutation, or Stripe mutation was
+performed. The old portal remains in the repository for controlled rollback and
+operator continuity.
+
+Current blockers before controlled cutover: live Mighty Network/access Plan
+configuration and credential ownership, non-production API verification,
+manual existing-member bridge evidence, scheduled worker setup, full focused
+matrix, staging acceptance, and separately authorized release/go-no-go gates.
+
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 The production release authority is `main`. The deployed production revision is
