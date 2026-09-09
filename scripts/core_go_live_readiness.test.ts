@@ -51,6 +51,7 @@ function main(): void {
 
   assert.equal(packageJson.scripts?.['staging:migration-preflight'], 'tsx scripts/release/stagingMigrationPreflight.ts')
   assert.equal(packageJson.scripts?.['staging:migration-status'], 'tsx scripts/release/buildStagingMigrationStatus.ts')
+  assert.equal(packageJson.scripts?.['production:migration-status:read-only'], 'tsx scripts/release/verifyProductionMigrationStatus.ts')
   assert.equal(packageJson.scripts?.['staging:migration-rehearsal'], 'tsx scripts/release/migrationRehearsal.ts')
   assert.equal(packageJson.scripts?.['staging:migration-rehearsal:evidence'], 'tsx scripts/release/buildMigrationRehearsalEvidence.ts')
   assert.equal(packageJson.scripts?.['staging:decision-readiness'], 'tsx scripts/release/runDecisionReadiness.ts')
