@@ -15,6 +15,7 @@ import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
 import { finalizeSponsoredRecipientCheckout, releaseSponsoredRecipientCheckout } from '@/lib/sponsored-recipient'
 import { getStripe } from '@/lib/stripe'
 import { shouldSendMembershipEmailForEvent } from '@/lib/stripe-membership-email-gate'
+import { queueMightyAccessFromStripeEvent } from '@/lib/mighty/accessSync'
 import { shadowSyncStripeEventToPayload } from '@/lib/payloadCourse/stripeShadowSync'
 import {
 	projectAsyncCheckoutFailure,
@@ -523,6 +524,7 @@ export async function handleStripeWebhook(req: Request) {
 						allowEmail: allowMembershipEmail,
 						eventLivemode: event.livemode,
 						forceWelcomeEmailForNewMember: true,
+						deferWelcomeUntilMightyAccess: true,
 					})
 					await finalizeSponsoredRecipientCheckout(session)
 					break
@@ -530,6 +532,7 @@ export async function handleStripeWebhook(req: Request) {
 				await provisionFromCheckoutSession(session, event.id, event.type, {
 					allowEmail: allowMembershipEmail,
 					eventLivemode: event.livemode,
+					deferWelcomeUntilMightyAccess: true,
 				})
 				break
 			}
@@ -558,6 +561,7 @@ export async function handleStripeWebhook(req: Request) {
 				await syncFromSubscription(subscription.id, event.id, event.type, {
 					allowEmail: allowMembershipEmail,
 					eventLivemode: event.livemode,
+					deferWelcomeUntilMightyAccess: true,
 				})
 				break
 			}
@@ -566,6 +570,7 @@ export async function handleStripeWebhook(req: Request) {
 				await syncFromSubscription(subscription.id, event.id, event.type, {
 					allowEmail: allowMembershipEmail,
 					eventLivemode: event.livemode,
+					deferWelcomeUntilMightyAccess: true,
 				})
 				break
 			}
@@ -574,6 +579,7 @@ export async function handleStripeWebhook(req: Request) {
 				await syncFromSubscription(subscription.id, event.id, event.type, {
 					allowEmail: allowMembershipEmail,
 					eventLivemode: event.livemode,
+					deferWelcomeUntilMightyAccess: true,
 				})
 				break
 			}
@@ -597,6 +603,7 @@ export async function handleStripeWebhook(req: Request) {
 					await syncFromSubscription(subscriptionId, event.id, event.type, {
 						allowEmail: allowMembershipEmail,
 						eventLivemode: event.livemode,
+						deferWelcomeUntilMightyAccess: true,
 					})
 				} else {
 					logProvisioningSkip(event, 'missing_subscription_id')
@@ -715,6 +722,22 @@ export async function handleStripeWebhook(req: Request) {
 			}
 			default:
 				break
+		}
+
+		if (PROVISIONING_EVENT_TYPES.has(event.type)) {
+			const mightyQueueResult = await queueMightyAccessFromStripeEvent(event)
+			if (mightyQueueResult.queued) {
+				console.info('mighty_access_sync_queued', {
+					eventId: event.id,
+					type: event.type,
+				})
+			} else if (mightyQueueResult.reason !== 'event_not_mighty_access_event') {
+				console.warn('mighty_access_sync_not_queued', {
+					eventId: event.id,
+					type: event.type,
+					reason: mightyQueueResult.reason ?? 'unknown',
+				})
+			}
 		}
 
 		try {

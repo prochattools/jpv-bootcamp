@@ -188,7 +188,8 @@ async function main(): Promise<void> {
   assert.doesNotMatch(portalPage, /Create free account|New Free accounts/)
 
   const loginPage = readFileSync('src/app/(frontend)/login/page.tsx', 'utf8')
-  assert.match(loginPage, /redirect\(`\/portal\?\$\{target\.toString\(\)\}`\)/)
+  assert.match(loginPage, /MIGHTY_STUDENT_LOGIN_URL/)
+  assert.match(loginPage, /redirect\(MIGHTY_STUDENT_LOGIN_URL\)/)
   assert.doesNotMatch(loginPage, /MemberLoginForm/)
 
   const registerRoute = readFileSync('src/app/(frontend)/register/route.ts', 'utf8')

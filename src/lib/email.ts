@@ -46,6 +46,7 @@ type EmailAttemptMeta = {
 	source?: string | null
 	dedupeKey?: string | null
 	stackHint?: string
+	loginUrl?: string | null
 }
 
 function logEmailAttempt(params: {
@@ -161,6 +162,7 @@ type WelcomeEmailContent = {
 function buildWelcomeEmailContent(params: {
 	plan: Plan
 	resetUrl: string
+	loginUrl?: string | null
 	variant: MembershipEmailVariant
 	credentials?: { email: string; password: string } | null
 }): WelcomeEmailContent {
@@ -178,12 +180,13 @@ function buildWelcomeEmailContent(params: {
 				'Please change your password after your first login.',
 			].join('\n')
 		: ''
+	const loginUrl = params.loginUrl?.trim() || emailConfig.portalUrl
 
 	const text = [
 		introLine,
 		credentialsTextBlock,
 		'',
-		`Sign in here: ${emailConfig.portalUrl}`,
+		`Sign in here: ${loginUrl}`,
 		`Set or reset your password here: ${params.resetUrl}`,
 		'',
 		`If you need help, reply to this email: ${emailConfig.replyTo}`,
@@ -198,7 +201,7 @@ function buildWelcomeEmailContent(params: {
 		heading: isUpgrade ? 'Your membership has been updated' : 'Your account is activated',
 		bodyHtml: `<p style="margin:0 0 16px">${getMembershipEmailIntroHtml({ plan: params.plan, variant: params.variant })}</p>${credentialsHtmlBlock}<p style="margin:0">Use the links below to sign in or set your password.</p>`,
 		actions: [
-			{ label: 'Sign in to portal', url: emailConfig.portalUrl },
+			{ label: 'Sign in to portal', url: loginUrl },
 			{ label: 'Set or reset your password', url: params.resetUrl, tone: 'secondary' },
 		],
 	})
@@ -462,7 +465,8 @@ function buildSendParams(params: {
 		const resetUrl = payload.resetUrl as string
 		const variant = (payload.variant as MembershipEmailVariant | undefined) ?? 'welcome'
 		const credentials = payload.credentials as { email: string; password: string } | null | undefined
-		const content = buildWelcomeEmailContent({ plan, resetUrl, variant, credentials })
+		const loginUrl = payload.loginUrl as string | null | undefined
+		const content = buildWelcomeEmailContent({ plan, resetUrl, loginUrl, variant, credentials })
 		return {
 			from: content.from,
 			to: [recipient],
@@ -617,6 +621,7 @@ export async function sendWelcomeEmail({
 			subscriptionId: meta?.subscriptionId ?? null,
 			customerId: meta?.customerId ?? null,
 			credentials: credentials ?? null,
+			loginUrl: meta?.loginUrl ?? null,
 		},
 		idempotencyKey,
 	})

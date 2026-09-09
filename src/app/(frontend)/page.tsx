@@ -8,6 +8,7 @@ import SponsoredPayItForward from "@/components/sponsored-pay-it-forward";
 import { AccessibleDialog } from "@/components/ui/AccessibleDialog";
 import { landingSans, landingSerif } from "@/fonts";
 import { jpvBrand } from "@/lib/brand/jpvDesignSystem";
+import { MIGHTY_STUDENT_LOGIN_URL } from "@/lib/mighty/studentLogin";
 
 import styles from "./landing.module.scss";
 
@@ -161,7 +162,7 @@ const SUPPORT_PHONE_DISPLAY = "0208 092 2398";
 const SUPPORT_PHONE_HREF = "tel:+442080922398";
 
 export default function HomePage() {
-  const signInHref = "/portal?mode=login";
+  const signInHref = MIGHTY_STUDENT_LOGIN_URL;
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);

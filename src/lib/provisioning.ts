@@ -1040,6 +1040,7 @@ export async function provisionFromCheckoutSession(
 		allowEmail?: boolean
 		eventLivemode?: boolean | null
 		forceWelcomeEmailForNewMember?: boolean
+		deferWelcomeUntilMightyAccess?: boolean
 	}
 ): Promise<ProvisioningSummary> {
 	let email: string | null = null
@@ -1056,6 +1057,7 @@ export async function provisionFromCheckoutSession(
 	let emailReason: string | null = null
 	const allowEmail = options?.allowEmail ?? false
 	const forceWelcomeEmailForNewMember = options?.forceWelcomeEmailForNewMember ?? false
+	const deferWelcomeUntilMightyAccess = options?.deferWelcomeUntilMightyAccess ?? false
 	const disableNonWebhookEmails = isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS)
 	const eventLivemode =
 		typeof options?.eventLivemode === 'boolean' ? options?.eventLivemode : null
@@ -1290,8 +1292,12 @@ export async function provisionFromCheckoutSession(
 	const memberWasOnboarded = memberWasCreated || Boolean(memberCredentials)
 	const emailVariant = memberWasOnboarded || !existing ? 'welcome' : 'upgrade'
 
-	const shouldSendWelcomeEmail = emailEval.shouldSend ||
-		(allowEmail && forceWelcomeEmailForNewMember && memberWasOnboarded)
+	const deferThisEmail = deferWelcomeUntilMightyAccess && emailVariant === 'welcome'
+	const shouldSendWelcomeEmail = !deferThisEmail && (emailEval.shouldSend ||
+		(allowEmail && forceWelcomeEmailForNewMember && memberWasOnboarded))
+	if (deferThisEmail && (emailEval.shouldSend || memberWasOnboarded)) {
+		emailReason = 'deferred_until_mighty_access'
+	}
 	if (allowEmail && forceWelcomeEmailForNewMember && memberWasOnboarded && !emailEval.shouldSend) {
 		emailReason = 'new_member_account'
 	}
@@ -1392,7 +1398,12 @@ export async function syncFromSubscription(
 	subscriptionId: string,
 	eventId?: string | null,
 	eventType?: string | null,
-	options?: { dryRun?: boolean; allowEmail?: boolean; eventLivemode?: boolean | null }
+	options?: {
+		dryRun?: boolean
+		allowEmail?: boolean
+		eventLivemode?: boolean | null
+		deferWelcomeUntilMightyAccess?: boolean
+	}
 ): Promise<ProvisioningSummary> {
 	let email: string | null = null
 	let resolvedEmail: string | null = null
@@ -1406,6 +1417,7 @@ export async function syncFromSubscription(
 	let emailSent = false
 	let emailReason: string | null = null
 	const allowEmail = options?.allowEmail ?? false
+	const deferWelcomeUntilMightyAccess = options?.deferWelcomeUntilMightyAccess ?? false
 	const disableNonWebhookEmails = isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS)
 	const eventLivemode =
 		typeof options?.eventLivemode === 'boolean' ? options?.eventLivemode : null
@@ -1735,7 +1747,12 @@ export async function syncFromSubscription(
 		commitmentStatus: projectedCommitmentStatus,
 	})
 
-	if (emailEval.shouldSend) {
+	const deferThisEmail = deferWelcomeUntilMightyAccess && emailVariant === 'welcome'
+	if (deferThisEmail && emailEval.shouldSend) {
+		emailReason = 'deferred_until_mighty_access'
+	}
+
+	if (emailEval.shouldSend && !deferThisEmail) {
 		if (disableNonWebhookEmails && emailSource !== 'webhook') {
 			emailSent = false
 			emailReason = 'non_webhook_disabled'

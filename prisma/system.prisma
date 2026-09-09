@@ -84,6 +84,34 @@ model CustomerProvisioning {
   @@map("customer_provisioning")
 }
 
+model MightyAccessSync {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  email             String    @map("email")
+  normalizedEmail   String    @unique @map("normalized_email")
+  stripeCustomerId  String?   @unique @map("stripe_customer_id")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  lastStripeEventId String?   @map("last_stripe_event_id")
+  plan              String?   @map("plan")
+  desiredAccess     String    @default("DENIED") @map("desired_access")
+  syncStatus        String    @default("pending") @map("sync_status")
+  mightyMemberId    String?   @map("mighty_member_id")
+  mightyPurchaseId  String?   @map("mighty_purchase_id")
+  welcomeRequired   Boolean   @default(false) @map("welcome_required")
+  welcomeSentAt     DateTime? @map("welcome_sent_at") @db.Timestamptz(3)
+  attemptCount      Int       @default(0) @map("attempt_count")
+  lastError         String?   @map("last_error")
+  nextAttemptAt     DateTime? @map("next_attempt_at") @db.Timestamptz(3)
+  leaseUntil        DateTime? @map("lease_until") @db.Timestamptz(3)
+  lastSucceededAt   DateTime? @map("last_succeeded_at") @db.Timestamptz(3)
+  lastReconciledAt  DateTime? @map("last_reconciled_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([syncStatus, nextAttemptAt], name: "mighty_access_sync_due_idx")
+  @@index([stripeSubscriptionId], name: "mighty_access_sync_subscription_idx")
+  @@map("mighty_access_sync")
+}
+
 model PartnerSession {
   sessionId   String   @id @map("session_id")
   accountId    Int      @map("account_id")
