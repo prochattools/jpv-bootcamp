@@ -3,11 +3,11 @@
 ## Current deployed production state — 2026-09-09
 
 - **Status:** `GO` for the reviewed production deployment; live health is verified.
-- **Production authority:** `main` at `41662c7df7ec6f5c3aa912e784aa2b0c812c0869`.
-- **Deployment:** workflow `34397017905` passed immutable image publication, Dokploy update, deployment trigger, and root-production convergence.
-- **Live identity:** `https://jpvbootcamp.com/api/health/deployment` reports `status=live`, `deploymentEnv=production`, and image tag `41662c7df7ec6f5c3aa912e784aa2b0c812c0869`.
+- **Production authority:** `main` at `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
+- **Deployment:** workflow `34398931497` passed immutable image publication, Dokploy update, deployment trigger, and root-production convergence.
+- **Live identity:** `https://jpvbootcamp.com/api/health/deployment` reports `status=live`, `deploymentEnv=production`, and image tag `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
 - **Data boundary:** no separate production migration workflow was run; no migration or schema files changed relative to the previous production image, and no manual database write was performed.
-- **Release follow-up:** PR #34 documentation, PR #35 authorization hardening, PR #36 read-only migration verification, and PR #37 post-deployment documentation closeout are merged. PR #30 and PR #33 were closed without merging. Preserved unfinished worktrees remain outside this release.
+- **Release follow-up:** PR #34 documentation, PR #35 authorization hardening, PR #36 read-only migration verification, PR #37 post-deployment documentation closeout, and PR #38 production identity correction are merged. PR #30 and PR #33 were closed without merging. Preserved unfinished worktrees remain outside this release.
 
 The pre-deployment checklist below is retained as a dated audit record and is
 not the current deployment decision.

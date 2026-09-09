@@ -12,11 +12,11 @@ historical evidence and records the final post-deployment result below.
 
 ## Post-deployment verification — 2026-09-09
 
-Publish workflow `34397017905` completed successfully for `main` commit/image
-`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`, including Dokploy convergence. A
+Publish workflow `34398931497` completed successfully for `main` commit/image
+`a287800735d465a41ad9e45d2c7914ab9cc34a26`, including Dokploy convergence. A
 follow-up read-only deployment-health probe returned HTTP 200 with
 `status=live`, `deploymentEnv=production`, and image tag
-`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. No separate production migration
+`a287800735d465a41ad9e45d2c7914ab9cc34a26`. No separate production migration
 workflow was run for this deployment.
 
 The configured production origin is `https://jpvbootcamp.com`. The separate
@@ -29,7 +29,7 @@ production origin used by the publish workflow.
 | Origin | DNS | HTTP | `status` | `deploymentEnv` | `imageTag` | `commit` |
 | --- | --- | ---: | --- | --- | --- | --- |
 | `https://staging.jpvbootcamp.com` | Resolved | 200 | `live` | `staging` | `8b1f459fed358776fda791553ef225cc9f03b2ae` | `8b1f459fed358776fda791553ef225cc9f03b2ae` |
-| `https://jpvbootcamp.com` | Resolved | 200 | `live` | `production` | `41662c7df7ec6f5c3aa912e784aa2b0c812c0869` | `41662c7df7ec6f5c3aa912e784aa2b0c812c0869` |
+| `https://jpvbootcamp.com` | Resolved | 200 | `live` | `production` | `a287800735d465a41ad9e45d2c7914ab9cc34a26` | `a287800735d465a41ad9e45d2c7914ab9cc34a26` |
 | `https://jpv-bootcamp.prochat.tools` | Resolved | 530 / Cloudflare 1033 | — | — | — | — |
 | `https://preview.jpvbootcamp.com` | `ENOTFOUND` | Not reached | — | — | — | — |
 | `https://legacy.jpvbootcamp.com` | Resolved | 404 | — | — | — | — |

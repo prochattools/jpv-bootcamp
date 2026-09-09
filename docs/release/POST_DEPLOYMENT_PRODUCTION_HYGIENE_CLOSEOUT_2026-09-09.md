@@ -2,8 +2,8 @@
 
 ## Decision
 
-Production is operational on `main` at
-`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. The release is approved for
+Production is operational on the deployed `main` revision
+`a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). The release is approved for
 stability and operational continuity. It contains hardening and documentation
 updates only; no new product feature was promoted.
 
@@ -17,19 +17,24 @@ updates only; no new product feature was promoted.
 | #35 | Payload account-unlock authorization hardening | `cb0fb0c6` | `34391403077` | Merged and deployed |
 | #34 | Deployed production-state documentation | `d55ac6a3` | `34392897174` | Merged and deployed |
 | #37 | Post-deployment documentation closeout | `41662c7d` | `34397017905` | Merged and deployed |
+| #38 | Production identity documentation correction | `a2878007` | `34398931497` | Merged and deployed |
+
+This source record is aligned to the PR #38 runtime. Any subsequent documentation-only
+source alignment must preserve this deployed identity and does not represent a new
+application release.
 
 PR #30 and PR #33 were closed without merging. There are no open production
-release pull requests; the documentation-only closeout is merged as PR #37.
+release pull requests; the deployed documentation closeout is complete through PR #38.
 
 ## Runtime evidence
 
 - Canonical production origin: `https://jpvbootcamp.com`.
 - Production health: HTTP 200, `status=live`, `deploymentEnv=production`,
-  `imageTag=41662c7df7ec6f5c3aa912e784aa2b0c812c0869`.
+  `imageTag=a287800735d465a41ad9e45d2c7914ab9cc34a26`.
 - Staging health: HTTP 200, `status=live`,
   `deploymentEnv=staging`, image/commit
   `8b1f459fed358776fda791553ef225cc9f03b2ae`.
-- Final publish workflow `34397017905` completed successfully, including
+- Final publish workflow `34398931497` completed successfully, including
   immutable image publication, Dokploy update, deployment trigger, and
   production convergence.
 
