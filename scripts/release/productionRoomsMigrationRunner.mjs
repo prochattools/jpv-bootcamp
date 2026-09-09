@@ -260,6 +260,14 @@ function hashRows(rows) {
   return crypto.createHash('sha256').update(JSON.stringify(rows)).digest('hex')
 }
 
+function hasAsciiControlCharacter(value) {
+  for (const character of value) {
+    const code = character.charCodeAt(0)
+    if (code <= 0x1f || code === 0x7f) return true
+  }
+  return false
+}
+
 function normalizePayloadRows(rows) {
   const malformed = []
   const normalized = []
@@ -267,7 +275,7 @@ function normalizePayloadRows(rows) {
     const id = Number(row.id)
     const batch = Number(row.batch)
     const name = typeof row.name === 'string' ? row.name : null
-    if (!Number.isSafeInteger(id) || id < 1 || !Number.isSafeInteger(batch) || batch < 1 || !name || /[\x00-\x1f\x7f]/.test(name)) {
+    if (!Number.isSafeInteger(id) || id < 1 || !Number.isSafeInteger(batch) || batch < 1 || !name || hasAsciiControlCharacter(name)) {
       malformed.push(index)
       continue
     }

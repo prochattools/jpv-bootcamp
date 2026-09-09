@@ -363,7 +363,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                     ? 'JPV Bootcamp Membership'
                     : currentTier(account)}
                 </span>
-                {!isAdministrator ? <a href='/portal/billing' className='text-sm text-jpv-brand hover:underline'>View billing &rarr;</a> : <span className='text-sm text-neutral-500'>Billing disabled</span>}
+                {!isAdministrator ? <Link href='/portal/billing' className='text-sm text-jpv-brand hover:underline'>View billing &rarr;</Link> : <span className='text-sm text-neutral-500'>Billing disabled</span>}
               </dd>
             </div>
           </dl>

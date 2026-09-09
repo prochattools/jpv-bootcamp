@@ -7,6 +7,7 @@ import {
   INFO_FORUM_TARGET,
   type InfoForumMigrationMode,
 } from './productionInfoForumMigrationConstants'
+import { throwPrimaryOrCleanupError } from './cleanupErrorPrecedence'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../')
 const runnerPath = resolve(repoRoot, 'scripts/release/productionInfoForumMigrationRunner.mjs')
@@ -183,31 +184,42 @@ async function runSchedule(requestedMode: InfoForumMigrationMode): Promise<void>
   if (created.status < 200 || created.status >= 300) throw new Error('schedule_create_failed')
   const scheduleId = findString(created.data, ['scheduleId', 'id'])
   if (!scheduleId) throw new Error('schedule_id_missing')
+  let primaryError: Error | null = null
   try {
     const run = await dokployRequest(apiBase, apiKey, '/schedule.runManually', { method: 'POST', body: JSON.stringify({ scheduleId }) })
     if (run.status < 200 || run.status >= 300) throw new Error('schedule_run_failed')
-    for (let attempt = 1; attempt <= 36; attempt += 1) {
+    let completed = false
+    poll: for (let attempt = 1; attempt <= 36; attempt += 1) {
       const deployments = await dokployRequest(apiBase, apiKey, `/deployment.allByType?id=${encodeURIComponent(scheduleId)}&type=schedule`)
       const deploymentIds = [...findDeploymentIds(deployments.data)]
       for (const deploymentId of deploymentIds) {
         const logs = await dokployRequest(apiBase, apiKey, `/deployment.readLogs?deploymentId=${encodeURIComponent(deploymentId)}&tail=10000`)
         const text = logText(logs.data)
-        const marker = text.match(/(?:^|\n)(\{\"version\":1,.*)$/m)
+        const marker = text.match(/(?:^|\n)(\{"version":1,.*)$/m)
         if (marker) {
           const result = JSON.parse(marker[1]) as UnknownRecord
           process.stdout.write(`${JSON.stringify(result)}\n`)
           if (result.ok !== true) throw new Error('info_forum_migration_blocked')
-          return
+          completed = true
+          break poll
         }
         if (/JPV_INFO_FORUM_REMOTE_EXIT_[1-9]\d*/.test(text)) throw new Error('remote_runner_failed')
       }
       if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
     }
-    throw new Error('schedule_completion_marker_missing')
-  } finally {
-    const deleted = await dokployRequest(apiBase, apiKey, '/schedule.delete', { method: 'POST', body: JSON.stringify({ scheduleId }) })
-    if (deleted.status < 200 || deleted.status >= 300) throw new Error('schedule_cleanup_failed')
+    if (!completed) throw new Error('schedule_completion_marker_missing')
+  } catch (error: unknown) {
+    primaryError = error instanceof Error ? error : new Error('production_info_forum_control_failed')
   }
+
+  let cleanupError: Error | null = null
+  try {
+    const deleted = await dokployRequest(apiBase, apiKey, '/schedule.delete', { method: 'POST', body: JSON.stringify({ scheduleId }) })
+    if (deleted.status < 200 || deleted.status >= 300) cleanupError = new Error('schedule_cleanup_failed')
+  } catch {
+    cleanupError = new Error('schedule_cleanup_failed')
+  }
+  throwPrimaryOrCleanupError(primaryError, cleanupError)
 }
 
 async function main(): Promise<void> {

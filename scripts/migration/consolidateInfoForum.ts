@@ -32,7 +32,7 @@ function flagValue(args: string[], flag: string): string | undefined {
 async function findAll(payload: PayloadClient, collection: string, where?: Record<string, unknown>): Promise<Document[]> {
   const docs: Document[] = []
   let page = 1
-  do {
+  for (;;) {
     const result = await payload.find({
       collection: collection as never,
       where,
@@ -45,7 +45,7 @@ async function findAll(payload: PayloadClient, collection: string, where?: Recor
     if (!result.hasNextPage) break
     if (page >= 1000) throw new Error(collection + '_pagination_limit_exceeded')
     page += 1
-  } while (true)
+  }
   return docs
 }
 

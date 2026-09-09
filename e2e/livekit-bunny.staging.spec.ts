@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { createHmac } from 'node:crypto'
 
 const STAGING_URL = process.env.STAGING_URL || process.env.E2E_BASE_URL || 'http://127.0.0.1:3107'
 
@@ -93,9 +94,8 @@ test.describe('LiveKit and Bunny Staging Integration', () => {
         VideoCodec: 'h264',
       }
 
-      const crypto = require('crypto')
       const body = JSON.stringify(payload)
-      const signature = crypto.createHmac('sha256', secret).update(body).digest('hex')
+      const signature = createHmac('sha256', secret).update(body).digest('hex')
 
       const response = await request.post(`${STAGING_URL}/api/webhook/bunny`, {
         headers: {
@@ -154,9 +154,8 @@ test.describe('LiveKit and Bunny Staging Integration', () => {
         test.skip()
         return
       }
-      const crypto = require('crypto')
       const body = 'not valid json'
-      const signature = crypto.createHmac('sha256', secret).update(body).digest('hex')
+      const signature = createHmac('sha256', secret).update(body).digest('hex')
 
       const response = await request.post(`${STAGING_URL}/api/webhook/bunny`, {
         headers: {

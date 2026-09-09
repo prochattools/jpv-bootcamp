@@ -228,20 +228,16 @@ describe('Behavioral: Preservation Adapter Rollback is No-Op', () => {
     const mockClient = makeMockClient(sqlLog)
     const adapter = new EmailSubscribersAdapter()
 
-    try {
-      const result = await adapter.rollback(mockClient, 'public', 'test_run_id')
+    const result = await adapter.rollback(mockClient, 'public', 'test_run_id')
 
-      // Verify no rows deleted
-      if (result.rowsDeleted !== 0) {
-        throw new Error(`Expected 0 rows deleted but got ${result.rowsDeleted}`)
-      }
+    // Verify no rows deleted
+    if (result.rowsDeleted !== 0) {
+      throw new Error(`Expected 0 rows deleted but got ${result.rowsDeleted}`)
+    }
 
-      // Verify reason is present
-      if (!result.reason || !result.reason.includes('no_op')) {
-        throw new Error(`Expected no-op reason but got: ${result.reason}`)
-      }
-    } catch (e) {
-      throw e
+    // Verify reason is present
+    if (!result.reason || !result.reason.includes('no_op')) {
+      throw new Error(`Expected no-op reason but got: ${result.reason}`)
     }
 
     // Verify no DELETE statements

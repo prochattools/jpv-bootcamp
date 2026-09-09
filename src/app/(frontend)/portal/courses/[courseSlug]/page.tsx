@@ -49,7 +49,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
         <header className='space-y-4'>
           {course.coverImage ? (
             <div className='max-h-[300px] w-full overflow-hidden rounded-xl border border-jpv-border bg-jpv-surface'>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              { }
               <img
                 alt={course.coverImage.alt}
                 className='h-full max-h-[300px] w-full object-cover'

@@ -67,13 +67,13 @@ async function findAll(
 ): Promise<PayloadDocument[]> {
   const docs: PayloadDocument[] = []
   let page = 1
-  do {
+  for (;;) {
     const result = await payload.find({ collection, where, limit: 100, page, depth, overrideAccess: true })
     docs.push(...(result.docs as PayloadDocument[]))
     if (!result.hasNextPage) break
     page += 1
     if (page > 1000) throw new Error(`member_directory_${collection}_page_limit_exceeded`)
-  } while (true)
+  }
   return docs
 }
 

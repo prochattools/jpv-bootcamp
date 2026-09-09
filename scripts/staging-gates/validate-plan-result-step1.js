@@ -4,7 +4,11 @@ const allowedCodes = new Set(JSON.parse(process.argv[3]))
 // Only allow trailing whitespace — reject BOM, prefixes, multiple documents, control chars
 const trimmed = raw.trimEnd()
 if (trimmed !== trimmed.trimStart()) { process.stderr.write('PLAN-BLOCKED: leading whitespace or BOM\n'); process.exit(1) }
-if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(trimmed)) { process.stderr.write('PLAN-BLOCKED: control characters detected\n'); process.exit(1) }
+const hasUnsafeControlCharacter = Array.from(trimmed).some((character) => {
+  const code = character.charCodeAt(0)
+  return (code <= 0x1f && code !== 0x09 && code !== 0x0a && code !== 0x0d) || code === 0x7f
+})
+if (hasUnsafeControlCharacter) { process.stderr.write('PLAN-BLOCKED: control characters detected\n'); process.exit(1) }
 let parsed
 try { parsed = JSON.parse(trimmed) } catch { process.stderr.write('PLAN-BLOCKED: invalid JSON\n'); process.exit(1) }
 if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) { process.stderr.write('PLAN-BLOCKED: not a JSON object\n'); process.exit(1) }

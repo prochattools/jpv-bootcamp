@@ -56,7 +56,7 @@ async function findAll(
 ): Promise<PayloadDocument[]> {
   const docs: PayloadDocument[] = []
   let page = 1
-  do {
+  for (;;) {
     const result = await payload.find({
       collection,
       where,
@@ -68,7 +68,7 @@ async function findAll(
     docs.push(...(result.docs as PayloadDocument[]))
     if (!result.hasNextPage || page >= 1000) break
     page += 1
-  } while (true)
+  }
   return docs
 }
 

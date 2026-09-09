@@ -34,7 +34,7 @@ async function findAll(
 ): Promise<PayloadDocument[]> {
   const docs: PayloadDocument[] = []
   let page = 1
-  do {
+  for (;;) {
     const result = await payload.find({
       collection,
       where,
@@ -47,7 +47,7 @@ async function findAll(
     if (!result.hasNextPage) break
     page += 1
     if (page > 1000) throw new Error(`membership_read_model_${collection}_page_limit_exceeded`)
-  } while (true)
+  }
   return docs
 }
 

@@ -20,6 +20,7 @@
  */
 
 import { Client } from 'pg'
+import { createHash } from 'node:crypto'
 import {
   DomainMigrationAdapter,
   DomainRecord,
@@ -30,9 +31,8 @@ import {
 } from './legacyMigrationFramework'
 
 export function emailSubscriberIdempotencyKey(email: string): string {
-  const crypto = require('crypto')
   const normalized = email.toLowerCase().trim()
-  return `email_subscriber_v1_${crypto.createHash('sha256').update(normalized).digest('hex')}`
+  return `email_subscriber_v1_${createHash('sha256').update(normalized).digest('hex')}`
 }
 
 export class EmailSubscribersAdapter implements DomainMigrationAdapter {

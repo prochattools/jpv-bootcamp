@@ -16,7 +16,7 @@ for (const table of [
 	'payload_subscriptions',
 	'payload_space_memberships',
 ]) {
-	assert.match(upSql, new RegExp(`ALTER TABLE "jpvbootcamp"\."${table}"`))
+	assert.match(upSql, new RegExp(`ALTER TABLE "jpvbootcamp"\\."${table}"`))
 }
 
 assert.match(upSql, /ON DELETE CASCADE/)

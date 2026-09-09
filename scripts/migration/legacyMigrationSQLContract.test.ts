@@ -12,7 +12,7 @@
  * Run: pnpm test:migration:next-domains:sql
  */
 
-import { SponsoredGrantsAdapter } from './legacyMigrationSponsored'
+import { SponsoredGrantsAdapter, sponsoredIdempotencyKey } from './legacyMigrationSponsored'
 
 const tests: { name: string; fn: () => void | Promise<void> }[] = []
 const passed: string[] = []
@@ -68,8 +68,6 @@ describe('SQL Safety: Schema Qualification', () => {
 
 describe('SQL Safety: Idempotency Keys', () => {
   test('sponsoredIdempotencyKey with null input throws (no Date.now fallback)', () => {
-    const { sponsoredIdempotencyKey } = require('./legacyMigrationSponsored')
-
     try {
       sponsoredIdempotencyKey(null)
       throw new Error('Expected sponsoredIdempotencyKey(null) to throw')
@@ -81,8 +79,6 @@ describe('SQL Safety: Idempotency Keys', () => {
   })
 
   test('sponsoredIdempotencyKey is deterministic (same input = same output)', () => {
-    const { sponsoredIdempotencyKey } = require('./legacyMigrationSponsored')
-
     const key1 = sponsoredIdempotencyKey('pi_test_123')
     const key2 = sponsoredIdempotencyKey('pi_test_123')
 

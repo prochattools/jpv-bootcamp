@@ -55,6 +55,7 @@ class RecordingClient implements PgClientLike {
   failOn: string | null = null
   failMessage = 'synthetic database secret=do-not-print'
   failConnect = false
+  failRollback = false
   failEnd = false
 
   async connect(): Promise<void> {
@@ -65,6 +66,7 @@ class RecordingClient implements PgClientLike {
 
   async query<Row extends Record<string, unknown> = Record<string, unknown>>(text: string): Promise<{ rows: Row[] }> {
     this.queries.push(text)
+    if (text === 'ROLLBACK' && this.failRollback) throw new Error('synthetic rollback credential=do-not-print')
     if (this.failOn && text.includes(this.failOn)) throw new Error(this.failMessage)
     if (text === 'SELECT current_schema() AS current_schema') {
       return { rows: [{ current_schema: this.schema }] as unknown as Row[] }
@@ -530,6 +532,25 @@ async function run(): Promise<void> {
     assert.equal(client.ended, true)
   })
 
+  await test('primary query failure wins when rollback and close cleanup also fail', async () => {
+    const client = new RecordingClient()
+    client.failOn = '.payload_migrations'
+    client.failRollback = true
+    client.failEnd = true
+    const adapter = createStagingReadOnlyAdapter({
+      databaseUrl: 'postgres://user:secret@localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
+      clientFactory: () => client,
+    })
+
+    await assert.rejects(
+      () => buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging'),
+      /^Error: Read-only staging migration query failed$/,
+    )
+    assert.equal(client.queries.at(-1), 'ROLLBACK')
+    assert.equal(client.endCalls, 1)
+  })
+
   await test('database errors mentioning schema are still redacted', async () => {
     const client = new RecordingClient()
     client.failOn = '.payload_migrations'
@@ -608,7 +629,7 @@ async function run(): Promise<void> {
 
   await test('rollback failure after successful queries still closes the client', async () => {
     const client = new RecordingClient()
-    client.failOn = 'ROLLBACK'
+    client.failRollback = true
     const adapter = createStagingReadOnlyAdapter({
       databaseUrl: 'postgres://localhost/db?schema=jpvbootcamp_staging',
       expectedSchema: 'jpvbootcamp_staging',

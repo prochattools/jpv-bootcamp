@@ -8,6 +8,7 @@ import {
   validateDatabaseSchemaIdentifier,
 } from '../../src/lib/databaseConnectionConfig'
 import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
+import { throwPrimaryOrCleanupError } from './cleanupErrorPrecedence'
 
 export type PayloadMigrationRow = {
   name: string
@@ -146,6 +147,7 @@ export async function buildStagingMigrationStatus(
     const nameValid =
       typeof row.name === 'string' &&
       row.name.length > 0 &&
+      // eslint-disable-next-line no-control-regex -- Migration names must reject ASCII control characters.
       !/[\x00-\x1f\x7f]/.test(row.name)
 
     // Normalize numeric string (from node-postgres numeric column) to number.
@@ -310,7 +312,8 @@ export function createStagingReadOnlyAdapter(
         connectionTimeoutMillis,
       })
       let transactionStarted = false
-      let primaryError: unknown = null
+      let evidence: MigrationEvidence | null = null
+      let primaryError: Error | null = null
 
       try {
         await client.connect()
@@ -334,7 +337,7 @@ export function createStagingReadOnlyAdapter(
           `SELECT migration_name, started_at, finished_at, rolled_back_at, applied_steps_count, (logs IS NOT NULL) AS has_logs FROM ${schemaIdentifier}._prisma_migrations ORDER BY started_at ASC`,
         )
 
-        return {
+        evidence = {
           schemaIdentity,
           payloadMigrations: payloadResult.rows.map((row) => ({ name: row.name, batch: row.batch })),
           prismaMigrations: prismaResult.rows.map((row) => ({
@@ -347,29 +350,31 @@ export function createStagingReadOnlyAdapter(
           })),
         }
       } catch (error: unknown) {
-        primaryError = error
         if (error instanceof Error && error.message === 'Database-reported schema does not match the expected staging schema') {
-          throw error
+          primaryError = error
+        } else {
+          primaryError = new Error('Read-only staging migration query failed')
         }
-        throw new Error('Read-only staging migration query failed')
-      } finally {
-        let cleanupError: Error | null = null
-        if (transactionStarted) {
-          try {
-            await client.query('ROLLBACK')
-          } catch {
-            if (!primaryError) cleanupError = new Error('Read-only staging migration rollback failed')
-          }
-        }
-        try {
-          await client.end()
-        } catch {
-          if (!primaryError && !cleanupError) {
-            cleanupError = new Error('Read-only staging migration connection close failed')
-          }
-        }
-        if (cleanupError) throw cleanupError
       }
+
+      let cleanupError: Error | null = null
+      if (transactionStarted) {
+        try {
+          await client.query('ROLLBACK')
+        } catch {
+          cleanupError = new Error('Read-only staging migration rollback failed')
+        }
+      }
+      try {
+        await client.end()
+      } catch {
+        if (!cleanupError) {
+          cleanupError = new Error('Read-only staging migration connection close failed')
+        }
+      }
+      throwPrimaryOrCleanupError(primaryError, cleanupError)
+      if (!evidence) throw new Error('Read-only staging migration query failed')
+      return evidence
     },
   }
 }

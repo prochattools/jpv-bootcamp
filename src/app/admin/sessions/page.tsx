@@ -15,6 +15,13 @@ type LiveSession = {
   hostUser?: string | { id: string; email?: string } | null
 }
 
+async function fetchSessions(): Promise<LiveSession[]> {
+  const res = await fetch('/api/admin/sessions')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  return data.sessions ?? []
+}
+
 export default function AdminSessionsPage() {
   const [sessions, setSessions] = useState<LiveSession[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -30,17 +37,27 @@ export default function AdminSessionsPage() {
   async function loadSessions() {
     setLoadError(null)
     try {
-      const res = await fetch('/api/admin/sessions')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setSessions(data.sessions ?? [])
+      setSessions(await fetchSessions())
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load sessions')
     }
   }
 
   useEffect(() => {
-    loadSessions()
+    let cancelled = false
+    void fetchSessions()
+      .then((nextSessions) => {
+        if (cancelled) return
+        setLoadError(null)
+        setSessions(nextSessions)
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        setLoadError(err instanceof Error ? err.message : 'Failed to load sessions')
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   async function createSession() {

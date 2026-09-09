@@ -1,3 +1,5 @@
+import { throwPrimaryOrCleanupError } from './cleanupErrorPrecedence'
+
 const PRODUCTION_ORIGIN = 'https://jpvbootcamp.com'
 const PRODUCTION_APPLICATION_ID = 'I_2Vukga3cc3ZhaG-mUzU'
 const PRODUCTION_APPLICATION_NAME = 'clients-jpv-bootcamp-app-tp9xrk'
@@ -163,6 +165,7 @@ async function runMigration(): Promise<void> {
 	}
 
 	let scheduleId = findScheduleId(create.data, scheduleName) ?? findString(create.data, ['scheduleId'])
+	let primaryError: Error | null = null
 	try {
 		if (!scheduleId) {
 			const listed = await dokployRequest(
@@ -186,7 +189,8 @@ async function runMigration(): Promise<void> {
 			console.log(`Migration job start returned HTTP ${run.status}; polling its deployment log`)
 		}
 
-		for (let attempt = 1; attempt <= MAXIMUM_ATTEMPTS; attempt += 1) {
+		let completed = false
+		poll: for (let attempt = 1; attempt <= MAXIMUM_ATTEMPTS; attempt += 1) {
 			const listed = await dokployRequest(
 				apiBase,
 				apiKey,
@@ -204,7 +208,8 @@ async function runMigration(): Promise<void> {
 						const text = logText(logs.data)
 						if (text.includes('JPV_PRISMA_MIGRATION_APPLIED')) {
 							console.log('JPV_PRISMA_MIGRATION_APPLIED production schema migration completed')
-							return
+							completed = true
+							break poll
 						}
 						if (text.includes('JPV_PRISMA_MIGRATION_FAILED')) {
 							throw new Error('PRISMA-MIGRATION-FAILED: migration job reported failure')
@@ -217,19 +222,30 @@ async function runMigration(): Promise<void> {
 				await new Promise((resolve) => setTimeout(resolve, DELAY_MILLISECONDS))
 			}
 		}
-		throw new Error('PRISMA-MIGRATION-FAILED: no successful completion marker was found')
-	} finally {
-		if (scheduleId) {
+		if (!completed) throw new Error('PRISMA-MIGRATION-FAILED: no successful completion marker was found')
+	} catch (error: unknown) {
+		primaryError = error instanceof Error ? error : new Error('PRISMA-MIGRATION-FAILED: unknown error')
+	}
+
+	let cleanupError: Error | null = null
+	let cleanupSucceeded = false
+	if (scheduleId) {
+		try {
 			const deleted = await dokployRequest(apiBase, apiKey, '/schedule.delete', {
 				method: 'POST',
 				body: JSON.stringify({ scheduleId }),
 			})
 			if (deleted.status < 200 || deleted.status >= 300) {
-				throw new Error(`PRISMA-MIGRATION-FAILED: temporary job cleanup returned HTTP ${deleted.status}`)
+				cleanupError = new Error(`PRISMA-MIGRATION-FAILED: temporary job cleanup returned HTTP ${deleted.status}`)
+			} else {
+				cleanupSucceeded = true
 			}
-			console.log('Temporary production migration job deleted')
+		} catch {
+			cleanupError = new Error('PRISMA-MIGRATION-FAILED: temporary job cleanup failed')
 		}
 	}
+	if (cleanupSucceeded) console.log('Temporary production migration job deleted')
+	throwPrimaryOrCleanupError(primaryError, cleanupError)
 }
 
 try {

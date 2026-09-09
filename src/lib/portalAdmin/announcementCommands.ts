@@ -73,7 +73,7 @@ function summary(document: PayloadDocument, options: { includeBody?: boolean } =
 async function findAll(payload: PayloadCourseAccessAPI): Promise<PayloadDocument[]> {
   const documents: PayloadDocument[] = []
   let page = 1
-  do {
+  for (;;) {
     const result = await payload.find({
       collection: 'payload_posts',
       limit: 100,
@@ -85,7 +85,7 @@ async function findAll(payload: PayloadCourseAccessAPI): Promise<PayloadDocument
     documents.push(...(result.docs as PayloadDocument[]))
     if (!result.hasNextPage || page >= 1000) break
     page += 1
-  } while (true)
+  }
   return documents
 }
 

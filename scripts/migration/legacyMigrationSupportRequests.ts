@@ -26,6 +26,7 @@
  */
 
 import { Client } from 'pg'
+import { createHash } from 'node:crypto'
 import {
   DomainMigrationAdapter,
   DomainRecord,
@@ -36,8 +37,7 @@ import {
 } from './legacyMigrationFramework'
 
 export function supportRequestIdempotencyKey(dedupeKey: string): string {
-  const crypto = require('crypto')
-  return `support_request_v1_${crypto.createHash('sha256').update(dedupeKey).digest('hex')}`
+  return `support_request_v1_${createHash('sha256').update(dedupeKey).digest('hex')}`
 }
 
 export class SupportRequestsAdapter implements DomainMigrationAdapter {

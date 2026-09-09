@@ -37,6 +37,7 @@
  */
 
 import { Client } from 'pg'
+import { createHash } from 'node:crypto'
 import {
   DomainMigrationAdapter,
   DomainRecord,
@@ -47,9 +48,8 @@ import {
 } from './legacyMigrationFramework'
 
 export function courseProgressIdempotencyKey(memberId: string, courseOrLessonId: string, type: 'enrollment' | 'progress'): string {
-  const crypto = require('crypto')
   const key = `${type}:${memberId}:${courseOrLessonId}`
-  return `course_progress_v1_${crypto.createHash('sha256').update(key).digest('hex')}`
+  return `course_progress_v1_${createHash('sha256').update(key).digest('hex')}`
 }
 
 export class CourseProgressAdapter implements DomainMigrationAdapter {
