@@ -4,10 +4,10 @@
 
 The production release authority remains `main` at
 `f93ffac7dd299c39d8daf242d6a436272cc79188`. The reviewed hygiene candidate is
-`codex/production-hygiene-20260907` at committed tip `6dad5a66`; its seven
-local commits (five functional boundaries plus two handoff refreshes) are pushed and
-synchronized with the remote, the worktree is clean, and the candidate is not
-deployed. PR #31 remains open for human review.
+`codex/production-hygiene-20260907` is pushed and synchronized with the
+remote; its functional split and post-split handoff refreshes are committed,
+the worktree is clean, and the candidate is not deployed. PR #31 remains open
+for human review.
 The dependency remediation, baseline response headers, runtime identity
 evidence, and release documentation are committed and awaiting remote review.
 

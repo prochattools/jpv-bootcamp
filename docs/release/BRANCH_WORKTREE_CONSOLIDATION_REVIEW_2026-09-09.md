@@ -1,8 +1,8 @@
 # JPV Bootcamp — Branch and Worktree Consolidation Review — 2026-09-09
 
-**Status:** REVIEW COMPLETE — seven local commits were created and pushed on the
-hygiene branch; no deployment, branch/worktree/ref deletion, or production
-mutation was performed
+**Status:** REVIEW COMPLETE — the functional hygiene split and post-split
+handoff refreshes were created and pushed on the hygiene branch; no deployment,
+branch/worktree/ref deletion, or production mutation was performed
 
 **Audit repository:** `jpv-bootcamp`
 
@@ -17,7 +17,7 @@ remove a worktree, or rewrite history.
 | Ref | Tip | Relation to `main` | Worktree | Disposition |
 | --- | --- | --- | --- | --- |
 | `main` | `f93ffac7dd299c39d8daf242d6a436272cc79188` | Production authority | `jpv-bootcamp-main` is a separate closeout worktree | Preserve |
-| `codex/production-hygiene-20260907` | `6dad5a66` | 12 commits ahead of `main`; synchronized with origin | `jpv-bootcamp-production-hygiene-20260907` — clean after the seven-commit split | Preserve; PR #31 requires human review |
+| `codex/production-hygiene-20260907` | current pushed tip | Ahead of `main`; synchronized with origin | `jpv-bootcamp-production-hygiene-20260907` — clean after the functional split and handoff refreshes | Preserve; PR #31 requires human review |
 | `codex/post-release-baseline-closeout` | `761087a1fedfdbefcdbe14b1ad92c1b6ebf0ac2a` | 22 commits ahead; contains hygiene, preflight, and reconciliation histories | `jpv-bootcamp-main` — clean | Candidate integration line; no merge performed |
 | `codex/production-migration-preflight-20260907` | `16b3424c4339a355fcd9e15067d1fc6341b3ef52` | 13 commits ahead; contained in closeout | `jpv-bootcamp-production-preflight-20260907` — clean | Preserve until closeout landing is verified |
 | `codex/repository-reconciliation-20260905` | `8b1f459fed358776fda791553ef225cc9f03b2ae` | 10 commits ahead; contained in closeout | `jpv-bootcamp-reconciliation` — clean | Preserve until closeout landing is verified |
@@ -106,7 +106,7 @@ The open review set at audit time was:
 | --- | --- | ---: | --- |
 | `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp` | `codex/ux-architecture-consolidation` | 57 entries | Preserve; inspect and commit or archive deliberately |
 | `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-main` | `codex/post-release-baseline-closeout` | 0 entries | Preserve as clean closeout candidate |
-| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-hygiene-20260907` | `codex/production-hygiene-20260907` | clean after seven local commits; synchronized with origin | Preserve; do not merge until branch ownership is selected |
+| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-hygiene-20260907` | `codex/production-hygiene-20260907` | clean; synchronized with origin | Preserve; do not merge until branch ownership is selected |
 | `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-preflight-20260907` | `codex/production-migration-preflight-20260907` | 0 entries | Preserve until closeout landing is verified |
 | `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-reconciliation` | `codex/repository-reconciliation-20260905` | 0 entries | Preserve until closeout landing is verified |
 
@@ -126,5 +126,5 @@ The safe landing sequence is:
    contained branch or clean redundant worktree be considered for removal.
 
 No branch or worktree is removed by this record. The dirty UX work remains
-preserved, the seven hygiene commits remain pushed on PR #31, and the
+preserved, the hygiene commits remain pushed on PR #31, and the
 production release authority remains `main`.
