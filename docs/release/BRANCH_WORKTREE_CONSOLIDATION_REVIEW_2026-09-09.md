@@ -74,13 +74,13 @@ merged by this read-only review.
 
 The unique production migration verifier in PR #30 currently accepts a
 successful `GET /api/health/deployment` response when either `commitSha` or
-`imageTag` is a full SHA. The reader does not validate an explicit production
-identity field, and the current deployment-health route exposes neither
-`deploymentEnv` nor `status`. Before landing this verifier, add a positive
-production identity check to the response contract or document and test the
-trusted-origin guarantee that replaces it. The database adapter still enforces
-the production database, schema, host, port, and role boundary; this finding
-concerns deployment identity evidence and does not authorize any live probe.
+`imageTag` is a full SHA. Its reader does not validate the explicit production
+identity fields. The current deployment-health route does expose
+`status=live` and `deploymentEnv=production`, so the verifier should require
+and test those fields together with the expected revision before landing.
+The database adapter still enforces the production database, schema, host,
+port, and role boundary; this finding concerns deployment identity evidence
+and does not authorize any live probe.
 
 ## Remote branches with unique or unresolved work
 
