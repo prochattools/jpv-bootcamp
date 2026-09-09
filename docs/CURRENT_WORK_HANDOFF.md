@@ -29,7 +29,7 @@ documentation, runtime-identity, branch/worktree evidence, and post-split
 handoff updates are committed on PR #31, which remains open and requires human
 review before merge.
 
-Local validation passes `pnpm test:release` at `183/183`, static preflight,
+Local validation passes `pnpm test:release` at `184/184`, static preflight,
 lint, TypeScript, build, Prisma validation, and the high-severity audit gate.
 One moderate Payload advisory remains. The response-header contract is covered
 in source and release tests; CSP compatibility and remote-image allowlist work

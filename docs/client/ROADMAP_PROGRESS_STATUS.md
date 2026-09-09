@@ -49,7 +49,7 @@ justify a migration apply or deployment. Full evidence is recorded in
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
-`pnpm test:release` passed `183/183`; the release manifest contains 184 entries including one
+`pnpm test:release` passed `184/184`; the release manifest contains 185 entries including one
 conditional browser gate. Lint, root TypeScript, the controlled production
 build, both Prisma validations, and the production high-severity audit gate
 also passed.

@@ -17,7 +17,7 @@ not the current deployment decision.
 - **Status:** `NO-GO` for deployment and production operation.
 - **Production authority:** `main` at `f93ffac7dd299c39d8daf242d6a436272cc79188`.
 - **Reviewed candidate snapshot:** `codex/production-hygiene-20260907`; the functional split and post-split handoff refreshes are pushed, the worktree is clean and synchronized with its remote, PR #31 requires human review, and the candidate is not deployed.
-- **Repository validation:** `pnpm test:release` passed `183/183`; static preflight, lint, TypeScript, build, Prisma validation, and the high-severity audit gate passed.
+- **Repository validation:** `pnpm test:release` passed `184/184`; static preflight, lint, TypeScript, build, Prisma validation, and the high-severity audit gate passed.
 - **Open gates:** staging deployment and smoke, live provider verification, CSP/image-allowlist review, and formal release approval remain open. The preview hostname is unresolved; current staging and production health responses report matching `commit` and `imageTag` values.
 - **Current evidence:** use `docs/CURRENT_WORK_HANDOFF.md`, `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`, and `docs/release/PRODUCTION_MIGRATION_STATUS_VERIFICATION_2026-09-07.md`.
 

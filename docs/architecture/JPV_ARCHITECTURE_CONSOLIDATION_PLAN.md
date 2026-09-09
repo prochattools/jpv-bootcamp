@@ -17,7 +17,7 @@ for human review.
 The dependency, response-header, documentation, and evidence boundaries are
 now locally committed for remote review.
 
-Repository validation passes `pnpm test:release` at `183/183`, static
+Repository validation passes `pnpm test:release` at `184/184`, static
 preflight, lint, TypeScript, build, Prisma checks, and the high-severity audit
 gate. One moderate Payload advisory remains. Read-only public probes report
 staging image `8b1f459fed358776fda791553ef225cc9f03b2ae` and production image

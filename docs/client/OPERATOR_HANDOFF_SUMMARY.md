@@ -29,7 +29,7 @@ a historical record.
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
-Deterministic release gate: `pnpm test:release` (`183/183`); the release manifest contains 184 entries
+Deterministic release gate: `pnpm test:release` (`184/184`); the release manifest contains 185 entries
 including one conditional browser gate. Lint, root TypeScript, the controlled
 production build, both Prisma validations, and the production high-severity
 audit gate also passed. The audit result is zero high/critical advisories with

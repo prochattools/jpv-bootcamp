@@ -24,7 +24,7 @@ for human review.
 The dependency remediation, baseline response headers, runtime identity
 evidence, and release documentation are committed and awaiting remote review.
 
-Repository validation passes `pnpm test:release` at `183/183`, static
+Repository validation passes `pnpm test:release` at `184/184`, static
 preflight, lint, TypeScript, build, Prisma validation, and the high-severity
 audit gate. One moderate Payload advisory remains without an upstream patched
 release. Response headers are defined and contract-tested; CSP compatibility,
