@@ -75,10 +75,10 @@ Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
 | --- | --- | --- |
 | Release branch | `main` | Verified locally after fetch; `origin/main` matches. |
 | Production image tag | `c72ad378c6cf43a2d0a474000e3e979f834f784e` | Publish workflow `34375016540` and post-deployment health probe. |
-| GitHub Actions | Run `34147184195` passed read-only migration-status verification | 2026-09-07 production evidence; no apply job ran. |
-| Deployment | Serving image tag observed; convergence not re-run by this probe | 2026-09-09 runtime identity refresh. |
+| GitHub Actions | Publish run `34375016540` passed; read-only migration-status run `34147184195` is historical evidence | Publish passed source verification, build, immutable image publication, Dokploy update, deployment trigger, and convergence; no separate production migration workflow ran. |
+| Deployment | Serving image tag observed after successful publish and Dokploy convergence | Publish run `34375016540` and post-deployment health probe. |
 | Live identity | `status=live`; `deploymentEnv=production`; image tag `c72ad378c6cf43a2d0a474000e3e979f834f784e` | Post-deployment health probe. |
-| Database change | Required Payload relationship-table migration applied | Supplied production evidence; not re-run by A0. |
+| Database change | No separate production migration workflow or manual database write was run for this deployment; no migration/schema files changed relative to the previous image | Deployment record and repository diff boundary; this does not substitute for a row-level database snapshot. |
 | Health | HTTP 200; `status=live` | 2026-09-09 read-only health probe. |
 | Working tree | Reported clean at the production checkpoint | Current architecture worktree is clean before A0 edits. |
 

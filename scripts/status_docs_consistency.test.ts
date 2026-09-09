@@ -85,9 +85,12 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /c72ad378c6cf43a2d0a474000e3e979f834f784e/)
   assert.match(docs.roadmap, /No separate production migration workflow was run/)
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
-  assert.match(docs.roadmap, /Branch \| `codex\/production-hygiene-20260907`/)
+  assert.match(
+    docs.roadmap,
+    /Branch \| `main` at `c72ad378c6cf43a2d0a474000e3e979f834f784e` is production authority; documentation follow-up is on `codex\/production-status-documentation-20260909`/,
+  )
   assert.match(docs.roadmap, /Staging target \| `https:\/\/staging\.jpvbootcamp\.com`/)
-  assert.match(docs.roadmap, /2026-09-09 read-only runtime identity refresh/)
+  assert.match(docs.roadmap, /2026-09-09 post-deployment read-only runtime identity refresh/)
   assert.match(
     docs.roadmap,
     /Current staging migration state.*36 Payload migrations applied.*20260824_120000_engagement_reactions.*sole pending migration/,

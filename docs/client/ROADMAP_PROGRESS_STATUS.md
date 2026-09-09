@@ -329,9 +329,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 | Field | Value |
 | --- | --- |
-| Branch | `codex/production-hygiene-20260907` — repository-only review candidate; production authority remains `main` |
+| Branch | `main` at `c72ad378c6cf43a2d0a474000e3e979f834f784e` is production authority; documentation follow-up is on `codex/production-status-documentation-20260909` |
 | Staging target | `https://staging.jpvbootcamp.com`; no staging deployment is authorized by this review |
-| **Latest verification snapshot** | 2026-09-09 read-only runtime identity refresh: staging image/commit `8b1f459fed358776fda791553ef225cc9f03b2ae`, production image/commit `f93ffac7dd299c39d8daf242d6a436272cc79188`; the hygiene branch is not deployed. See `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`. |
+| **Latest verification snapshot** | 2026-09-09 post-deployment read-only runtime identity refresh: staging image/commit `8b1f459fed358776fda791553ef225cc9f03b2ae`, production image/commit `c72ad378c6cf43a2d0a474000e3e979f834f784e`. See `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`. |
 | **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (historical) |
 | **Security Status** | Sponsored-seat concurrent claim is resolved; durable email recovery is implemented; account-action reservation/finalization is implemented and behaviorally validated in source, with shared-staging migration authorization pending. |
 | Release State | **LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS** |
@@ -340,7 +340,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Prior validated baseline | `d55229f test: enforce programme content readiness` |
 | Prior branch tip | `8927df9 docs: checkpoint membership implementation readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/3` |
-| Applied migration state | Production guarded read-only verification `34147184195` reports no pending Payload or Prisma migrations and no mutation; staging migration state was not refreshed by this review. See `docs/release/PRODUCTION_MIGRATION_STATUS_VERIFICATION_2026-09-07.md`. |
+| Applied migration state | Production guarded read-only verification `34147184195` reports no pending Payload or Prisma migrations and no mutation; the 2026-09-09 deployment ran no separate production migration workflow. Staging migration state was not refreshed by this review. See `docs/release/PRODUCTION_MIGRATION_STATUS_VERIFICATION_2026-09-07.md`. |
 | Migration approval | Any future staging or production migration requires a fresh exact-SHA read-only report, target-specific authorization, backup evidence, maintenance window, and rollback owner. |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |

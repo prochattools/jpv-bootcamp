@@ -16,8 +16,10 @@ run for this deployment, and no new feature PR was promoted with it.
 
 The current production release is operational. PR #30 remains a stale,
 unmerged hardening branch for separate review; PR #33 is a development-only
-dependency update. Historical pre-deployment snapshots below retain their
-original commit identities and claims.
+dependency update. PR #34 records the deployed state and PR #35 contains a
+follow-on account-unlock hardening fix; both remain review-gated. Historical
+pre-deployment snapshots below retain their original commit identities and
+claims.
 
 **JPV Bootcamp Platform Expansion & Go-Live Plan v3.7** is the current client go-live plan. Version 3.4 is the prior progress baseline.
 
