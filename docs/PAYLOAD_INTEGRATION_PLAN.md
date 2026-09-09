@@ -2,8 +2,8 @@
 
 ## Current deployed production state — 2026-09-09
 
-The production release authority is `main` at
-`a287800735d465a41ad9e45d2c7914ab9cc34a26`. PR #31 and PR #32 are merged;
+The production release authority is `main`. The deployed production revision is
+`a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). PR #31 and PR #32 are merged;
 publish workflow `34398931497` passed image publication, Dokploy update,
 deployment, and convergence. The live deployment-health endpoint reports the
 expected production image and `status=live`.

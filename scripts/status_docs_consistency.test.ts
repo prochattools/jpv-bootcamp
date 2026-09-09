@@ -87,7 +87,7 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
   assert.match(
     docs.roadmap,
-    /Branch \| `main` at `a287800735d465a41ad9e45d2c7914ab9cc34a26` is production authority; PR #37 documentation closeout is merged/,
+    /Branch \| `main` is production authority; deployed revision `a287800735d465a41ad9e45d2c7914ab9cc34a26` \(PR #38\); PR #38 identity correction is merged/,
   )
   assert.match(docs.roadmap, /Staging target \| `https:\/\/staging\.jpvbootcamp\.com`/)
   assert.match(docs.roadmap, /2026-09-09 post-deployment read-only runtime identity refresh/)

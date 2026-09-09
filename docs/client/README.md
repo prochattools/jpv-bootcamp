@@ -6,8 +6,8 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 
 ### Current deployed state — 2026-09-09
 
-Production is live from `main` at commit/image
-`a287800735d465a41ad9e45d2c7914ab9cc34a26`. The protected root-domain publish
+Production is live from the `main` release line on deployed revision/image
+`a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). The protected root-domain publish
 workflow passed, Dokploy convergence passed, and the live deployment-health
 endpoint reports `status=live` and `deploymentEnv=production`. PR #31 contains
 the production-hygiene release and PR #32 contains the production image
@@ -32,8 +32,8 @@ Version 3.7 keeps the front-end website milestone at 22 July 2026, the internal 
 The client go-live plan does not authorize migration execution. No separate
 production migration workflow was run for the 2026-09-09 deployment.
 
-The current production release authority is `main` at
-`a287800735d465a41ad9e45d2c7914ab9cc34a26`. The canonical staging target is
+The current production release authority is `main`; the deployed revision is
+`a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). The canonical staging target is
 `https://staging.jpvbootcamp.com`. The 2026-09-09 hygiene candidate and its
 Bookworm image fix are now historical merged release inputs.
 The older `feature/course-branding-and-preview` deployment wording is retained
