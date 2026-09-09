@@ -140,7 +140,8 @@ export function createProductionReadOnlyAdapter(
         connectionTimeoutMillis,
       })
       let transactionStarted = false
-      let primaryError: unknown = null
+      let evidence: MigrationEvidence | null = null
+      let primaryError: Error | null = null
       let cleanupError: Error | null = null
 
       try {
@@ -171,7 +172,7 @@ export function createProductionReadOnlyAdapter(
           `SELECT migration_name, started_at, finished_at, rolled_back_at, applied_steps_count, (logs IS NOT NULL) AS has_logs FROM ${schemaIdentifier}._prisma_migrations ORDER BY started_at ASC`,
         )
 
-        return {
+        evidence = {
           schemaIdentity: identity.schema,
           payloadMigrations: payloadResult.rows.map((row) => ({
             name: row.name,
@@ -187,23 +188,29 @@ export function createProductionReadOnlyAdapter(
           })),
         }
       } catch (error: unknown) {
-        primaryError = error
-        throw new Error('Read-only production migration query failed')
-      } finally {
-        if (transactionStarted) {
-          try {
-            await client.query('ROLLBACK')
-          } catch {
-            if (!primaryError) cleanupError = new Error('Read-only production rollback failed')
-          }
-        }
+        primaryError = error instanceof Error && error.message === 'Database-reported production identity mismatch'
+          ? error
+          : new Error('Read-only production migration query failed')
+      }
+
+      if (transactionStarted) {
         try {
-          await client.end()
+          await client.query('ROLLBACK')
         } catch {
-          if (!primaryError && !cleanupError) cleanupError = new Error('Read-only production connection close failed')
+          cleanupError = new Error('Read-only production rollback failed')
         }
       }
+      try {
+        await client.end()
+      } catch {
+        if (!cleanupError) cleanupError = new Error('Read-only production connection close failed')
+      }
+      if (primaryError) throw primaryError
       if (cleanupError) throw cleanupError
+      if (!evidence) {
+        throw new Error('Read-only production migration query failed')
+      }
+      return evidence
     },
   }
 }

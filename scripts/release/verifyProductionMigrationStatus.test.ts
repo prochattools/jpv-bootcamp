@@ -35,6 +35,8 @@ class RecordingClient implements PgClientLike {
   connectCalls = 0
   endCalls = 0
   fail = false
+  rollbackFail = false
+  endFail = false
 
   async connect(): Promise<void> {
     this.connectCalls += 1
@@ -43,6 +45,7 @@ class RecordingClient implements PgClientLike {
   async query<Row extends Record<string, unknown> = Record<string, unknown>>(text: string): Promise<{ rows: Row[] }> {
     this.queries.push(text)
     if (this.fail) throw new Error('connection password=synthetic-secret')
+    if (text === 'ROLLBACK' && this.rollbackFail) throw new Error('rollback failed')
     if (text.includes('current_database()')) {
       return {
         rows: [{
@@ -65,6 +68,7 @@ class RecordingClient implements PgClientLike {
 
   async end(): Promise<void> {
     this.endCalls += 1
+    if (this.endFail) throw new Error('close failed')
   }
 }
 
@@ -167,6 +171,29 @@ async function main(): Promise<void> {
   for (const query of client.queries) {
     assert.doesNotMatch(query, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE)\b/i)
   }
+
+  const rollbackFailureClient = new RecordingClient()
+  rollbackFailureClient.rollbackFail = true
+  await assert.rejects(
+    () => createProductionReadOnlyAdapter({
+      databaseUrl: PRODUCTION_DATABASE_URL,
+      expectedSchema: 'jpvbootcamp',
+      clientFactory: () => rollbackFailureClient,
+    }).collectMigrationEvidence('jpvbootcamp'),
+    /Read-only production rollback failed/,
+  )
+  assert.equal(rollbackFailureClient.endCalls, 1)
+
+  const closeFailureClient = new RecordingClient()
+  closeFailureClient.endFail = true
+  await assert.rejects(
+    () => createProductionReadOnlyAdapter({
+      databaseUrl: PRODUCTION_DATABASE_URL,
+      expectedSchema: 'jpvbootcamp',
+      clientFactory: () => closeFailureClient,
+    }).collectMigrationEvidence('jpvbootcamp'),
+    /Read-only production connection close failed/,
+  )
 
   const pendingReport = await buildProductionMigrationStatus({
     async collectMigrationEvidence() {
