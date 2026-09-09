@@ -11,6 +11,19 @@ change, provider mutation, migration, or feature batch. Those actions require
 the packet-specific authorization and validation described in
 `JPV_ARCHITECTURE_CONSOLIDATION_PLAN.md`.
 
+## Current deployed production identity — 2026-09-09
+
+The production release authority is `main` at commit/image
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. Publish workflow `34375016540`
+passed immutable image publication, Dokploy update, deployment trigger, and
+root-production convergence. The live deployment-health endpoint reports
+`status=live`, `deploymentEnv=production`, and that image tag.
+
+PR #31 and PR #32 are merged. No separate production migration workflow was
+run for this deployment, and no migration or schema files changed relative to
+the previous production image. The pre-deployment identity records below are
+retained as historical evidence.
+
 ## Historical E1 environment authority — final read-only reconciliation (2026-08-29)
 
 The canonical production application is `JPV Bootcamp` /
@@ -41,7 +54,7 @@ and any provider or production-data change remain separately authorized. See
 the complete topology and preview-to-staging inventory in
 `JPV_ENVIRONMENT_TOPOLOGY_V1.md` and `JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
 
-## Live endpoint identity refresh — 2026-09-09
+## Pre-deployment live endpoint identity refresh — 2026-09-09
 
 Read-only probes returned HTTP 200 with `status=live` for staging and
 production. Staging reported `deploymentEnv=staging` and image tag
@@ -61,11 +74,11 @@ Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
 | Authority | Current value | Evidence boundary |
 | --- | --- | --- |
 | Release branch | `main` | Verified locally after fetch; `origin/main` matches. |
-| Production image tag | `f93ffac7dd299c39d8daf242d6a436272cc79188` | 2026-09-09 read-only health probe; `commit` and `imageTag` matched. |
-| GitHub Actions | Run `34147184195` passed read-only migration-status verification | 2026-09-07 production evidence; no apply job ran. |
-| Deployment | Serving image tag observed; convergence not re-run by this probe | 2026-09-09 runtime identity refresh. |
-| Live identity | `status=live`; `deploymentEnv=production`; image tag `f93ffac7dd299c39d8daf242d6a436272cc79188` | 2026-09-09 read-only health probe. |
-| Database change | Required Payload relationship-table migration applied | Supplied production evidence; not re-run by A0. |
+| Production image tag | `c72ad378c6cf43a2d0a474000e3e979f834f784e` | Publish workflow `34375016540` and post-deployment health probe. |
+| GitHub Actions | Publish run `34375016540` passed; read-only migration-status run `34147184195` is historical evidence | Publish passed source verification, build, immutable image publication, Dokploy update, deployment trigger, and convergence; no separate production migration workflow ran. |
+| Deployment | Serving image tag observed after successful publish and Dokploy convergence | Publish run `34375016540` and post-deployment health probe. |
+| Live identity | `status=live`; `deploymentEnv=production`; image tag `c72ad378c6cf43a2d0a474000e3e979f834f784e` | Post-deployment health probe. |
+| Database change | No separate production migration workflow or manual database write was run for this deployment; no migration/schema files changed relative to the previous image | Deployment record and repository diff boundary; this does not substitute for a row-level database snapshot. |
 | Health | HTTP 200; `status=live` | 2026-09-09 read-only health probe. |
 | Working tree | Reported clean at the production checkpoint | Current architecture worktree is clean before A0 edits. |
 

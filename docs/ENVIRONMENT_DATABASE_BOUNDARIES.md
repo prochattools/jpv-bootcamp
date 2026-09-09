@@ -7,7 +7,20 @@ read-only health probe refreshed the live runtime identities below. This documen
 records runtime facts only; passwords and other secret values are never stored
 here.
 
-## CURRENT PRODUCTION MIGRATION STATUS — 2026-09-07
+## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
+
+Production is live from `main` at commit/image
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. Publish workflow `34375016540`
+passed image publication, Dokploy update, deployment trigger, and root
+production convergence. The live deployment-health endpoint reports
+`status=live`, `deploymentEnv=production`, and the expected image tag.
+
+No separate production migration workflow was run for this deployment, and no
+migration or schema files changed relative to the previous production image.
+The migration-status and runtime-refresh records below are retained as
+pre-deployment evidence with their original timestamps and identities.
+
+## PRE-DEPLOYMENT PRODUCTION MIGRATION STATUS — 2026-09-07
 
 GitHub Actions run `34147184195` completed the guarded production migration
 status control successfully. It verified the serving production revision as
@@ -31,7 +44,7 @@ and `imageTag=f93ffac7dd299c39d8daf242d6a436272cc79188`, so the live revision
 evidence was unchanged by the status run. No production migration is currently
 required.
 
-## CURRENT LIVE RUNTIME IDENTITY REFRESH — 2026-09-09
+## PRE-DEPLOYMENT LIVE RUNTIME IDENTITY REFRESH — 2026-09-09
 
 Read-only probes returned `status=live` and HTTP 200 for both current origins.
 Staging reported `deploymentEnv=staging` and

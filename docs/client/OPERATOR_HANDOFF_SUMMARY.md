@@ -12,7 +12,22 @@
 - **Boundary:** no production seed, invitations, billing/Stripe, reconciliation, staging-copy, or provider mutation was performed. Rollback evidence remains `rooms-production-rollback-20260830T151139Z` with the recorded protected archive checksum.
 - **Next state:** `READY FOR NEXT FEATURE`. The Rooms feature branch is integrated and eligible for exact-SHA closure after the final branch/worktree checks below.
 
-## CURRENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
+## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
+
+Production is live from `main` at commit/image
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. Publish workflow `34375016540`
+passed immutable image publication, Dokploy update, deployment trigger, and
+root-production convergence. The live deployment-health endpoint reports
+`status=live`, `deploymentEnv=production`, and the expected image tag.
+
+No separate production migration workflow was run for this deployment, and no
+migration or schema files changed relative to the previous production image.
+PR #34 records this deployed state and remains review-gated. Follow-on security
+PR #35 passed CI and remains review-gated. PR #30 remains deferred for separate
+review; PR #33 is development-only. The pre-deployment validation below remains
+a historical record.
+
+## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
 Deterministic release gate: `pnpm test:release` (`184/184`); the release manifest contains 185 entries
 including one conditional browser gate. Lint, root TypeScript, the controlled

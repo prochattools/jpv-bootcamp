@@ -1,6 +1,18 @@
 # Go / No-Go Checklist
 
-## Current production-hygiene review — 2026-09-09
+## Current deployed production state — 2026-09-09
+
+- **Status:** `GO` for the reviewed production deployment; live health is verified.
+- **Production authority:** `main` at `c72ad378c6cf43a2d0a474000e3e979f834f784e`.
+- **Deployment:** workflow `34375016540` passed immutable image publication, Dokploy update, deployment trigger, and root-production convergence.
+- **Live identity:** `https://jpvbootcamp.com/api/health/deployment` reports `status=live`, `deploymentEnv=production`, and image tag `c72ad378c6cf43a2d0a474000e3e979f834f784e`.
+- **Data boundary:** no separate production migration workflow was run; no migration or schema files changed relative to the previous production image, and no manual database write was performed.
+- **Deferred work:** PR #34 and security PR #35 remain review-gated; PR #30 remains unmerged for separate review; PR #33 is development-only. Preserved unfinished worktrees remain outside this release.
+
+The pre-deployment checklist below is retained as a dated audit record and is
+not the current deployment decision.
+
+## Pre-deployment production-hygiene review — 2026-09-09
 
 - **Status:** `NO-GO` for deployment and production operation.
 - **Production authority:** `main` at `f93ffac7dd299c39d8daf242d6a436272cc79188`.

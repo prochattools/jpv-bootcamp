@@ -4,17 +4,36 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 
 ## Current client truth
 
+### Current deployed state — 2026-09-09
+
+Production is live from `main` at commit/image
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. The protected root-domain publish
+workflow passed, Dokploy convergence passed, and the live deployment-health
+endpoint reports `status=live` and `deploymentEnv=production`. PR #31 contains
+the production-hygiene release and PR #32 contains the production image
+Bookworm fix; both are merged. No separate production migration workflow was
+run for this deployment, and no new feature PR was promoted with it.
+
+The current production release is operational. PR #30 remains a stale,
+unmerged hardening branch for separate review; PR #33 is a development-only
+dependency update. PR #34 records the deployed state and PR #35 contains a
+follow-on account-unlock hardening fix; both remain review-gated. Historical
+pre-deployment snapshots below retain their original commit identities and
+claims.
+
 **JPV Bootcamp Platform Expansion & Go-Live Plan v3.7** is the current client go-live plan. Version 3.4 is the prior progress baseline.
 
 It supersedes the older Version 2.40 plan for product scope, terminology, progress framing, and launch expectations.
 
 Version 3.7 keeps the front-end website milestone at 22 July 2026, the internal delivery / handover buffer at 23 July 2026, the client-requested finished-by date at 24 July 2026, and notes that client content/input was due Wednesday 15 July 2026 and remains outstanding as of the current reporting date. The 22 July milestone is conditional on P0 hardening and public acceptance. None of these dates authorizes migration execution.
 
-No migrations have been applied.
+The client go-live plan does not authorize migration execution. No separate
+production migration workflow was run for the 2026-09-09 deployment.
 
-The current production release authority is `main`; the 2026-09-09 repository
-hygiene candidate is `codex/production-hygiene-20260907` and has not been
-deployed. The canonical staging target is `https://staging.jpvbootcamp.com`.
+The current production release authority is `main` at
+`c72ad378c6cf43a2d0a474000e3e979f834f784e`. The canonical staging target is
+`https://staging.jpvbootcamp.com`. The 2026-09-09 hygiene candidate and its
+Bookworm image fix are now historical merged release inputs.
 The older `feature/course-branding-and-preview` deployment wording is retained
 only in dated audit records and historical client planning material.
 Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before operator preflight if your shell pnpm version is not already aligned.
