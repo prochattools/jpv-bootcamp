@@ -9,11 +9,12 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 The production release authority remains `main` at
 `f93ffac7dd299c39d8daf242d6a436272cc79188`. The local hygiene candidate is
 `codex/production-hygiene-20260907` at committed tip
-`59eddf98` (11 commits ahead of `main`, 5 local commits ahead of its remote),
+`59eddf98` (12 commits ahead of `main`, 6 local commits ahead of its remote),
 not deployed, with a clean worktree. The pending dependency, response-header,
 documentation, runtime-identity, and branch/worktree evidence changes were
-landed as five local commits. They remain unpushed pending final remote review
-and release decisions.
+landed as six local commits: five functional boundaries plus this post-split
+handoff refresh. They remain unpushed pending final remote review and release
+decisions.
 
 Local validation passes `pnpm test:release` at `183/183`, static preflight,
 lint, TypeScript, build, Prisma validation, and the high-severity audit gate.

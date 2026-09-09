@@ -4,11 +4,11 @@
 
 The production release authority remains `main` at
 `f93ffac7dd299c39d8daf242d6a436272cc79188`. The reviewed hygiene candidate is
-`codex/production-hygiene-20260907` at committed tip `59eddf98`; its five
-local commits are 5 commits ahead of the remote, the worktree is clean, and
-the candidate is not deployed. The dependency remediation, baseline response
-headers, runtime identity evidence, and release documentation are committed
-and awaiting remote review.
+`codex/production-hygiene-20260907` at committed tip `59eddf98`; its six local
+commits (five functional boundaries plus a handoff refresh) are 6 commits
+ahead of the remote, the worktree is clean, and the candidate is not deployed.
+The dependency remediation, baseline response headers, runtime identity
+evidence, and release documentation are committed and awaiting remote review.
 
 Repository validation passes `pnpm test:release` at `183/183`, static
 preflight, lint, TypeScript, build, Prisma validation, and the high-severity
