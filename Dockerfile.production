@@ -1,7 +1,7 @@
 # Production image for the new platform.
 # This file is deliberately separate from the staging-only Dockerfile.
 
-FROM node:20-bullseye AS base
+FROM node:20-bookworm AS base
 WORKDIR /app
 
 RUN npm install -g pnpm@10.33.0
@@ -52,12 +52,12 @@ RUN mkdir -p /app/compiled && \
       --module NodeNext --moduleResolution NodeNext \
       --outDir /app/compiled scripts/migration/infoForumConsolidationPlan.ts
 
-FROM node:20-bullseye-slim AS script-deps
+FROM node:20-bookworm-slim AS script-deps
 WORKDIR /script-deps
 RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8","prisma":"6.15.0"}}' > package.json
 RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
 
-FROM node:20-bullseye AS runner
+FROM node:20-bookworm AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
