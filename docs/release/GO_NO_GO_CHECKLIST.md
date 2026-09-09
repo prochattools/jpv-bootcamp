@@ -3,7 +3,7 @@
 ## Current deployed production state — 2026-09-09
 
 - **Status:** `GO` for the reviewed production deployment; live health is verified.
-- **Production authority:** `main` at `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
+- **Production authority:** `main`; deployed production revision `a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38).
 - **Deployment:** workflow `34398931497` passed immutable image publication, Dokploy update, deployment trigger, and root-production convergence.
 - **Live identity:** `https://jpvbootcamp.com/api/health/deployment` reports `status=live`, `deploymentEnv=production`, and image tag `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
 - **Data boundary:** no separate production migration workflow was run; no migration or schema files changed relative to the previous production image, and no manual database write was performed.

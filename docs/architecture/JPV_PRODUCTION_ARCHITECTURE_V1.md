@@ -13,8 +13,8 @@ the packet-specific authorization and validation described in
 
 ## Current deployed production identity — 2026-09-09
 
-The production release authority is `main` at commit/image
-`a287800735d465a41ad9e45d2c7914ab9cc34a26`. Publish workflow `34398931497`
+The production release authority is `main`. The deployed production revision/image is
+`a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). Publish workflow `34398931497`
 passed immutable image publication, Dokploy update, deployment trigger, and
 root-production convergence. The live deployment-health endpoint reports
 `status=live`, `deploymentEnv=production`, and that image tag.

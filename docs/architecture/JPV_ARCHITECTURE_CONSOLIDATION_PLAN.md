@@ -8,8 +8,8 @@
 
 ## Current production-hygiene review — 2026-09-09
 
-`main` remains the production release authority at
-`a287800735d465a41ad9e45d2c7914ab9cc34a26`. PR #31, PR #32, PR #34, PR #35, PR #36, PR #37, and PR #38 are merged into `main`; PR #30
+`main` remains the production release authority. Production is live on deployed
+revision `a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). PR #31, PR #32, PR #34, PR #35, PR #36, PR #37, and PR #38 are merged into `main`; PR #30
 and PR #33 were closed without merging. Production is live at `a287800735d465a41ad9e45d2c7914ab9cc34a26`
 following successful publish workflow `34398931497`. Repository validation
 passes `pnpm test:release` at `184/184`, static preflight, lint,

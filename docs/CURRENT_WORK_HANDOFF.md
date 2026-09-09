@@ -6,8 +6,8 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
-The production release authority is `main` at
-`a287800735d465a41ad9e45d2c7914ab9cc34a26`. PR #31 and PR #32 are merged, followed
+The production release authority is `main`. The deployed production revision is
+`a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). PR #31 and PR #32 are merged, followed
 by PR #36’s guarded production migration verifier, PR #35’s Payload account
 unlock authorization fix, PR #34’s deployed-state documentation, PR #37’s post-deployment
 documentation closeout, and PR #38’s final production identity correction. Publish workflow `34398931497` passed

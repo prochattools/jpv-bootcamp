@@ -8,8 +8,8 @@ restricted Payload account unlock access to administrators, and PR #34 recorded
 the deployed state. The protected root-domain publish workflow
 `34398931497` passed source verification, application validation, immutable
 image publication, Dokploy update, deployment trigger, and production
-convergence for `main` commit/image
-`a287800735d465a41ad9e45d2c7914ab9cc34a26`. The live deployment-health
+convergence for deployed revision/image
+`a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). The live deployment-health
 endpoint independently reports `status=live`, `deploymentEnv=production`, and
 the same image tag.
 
@@ -330,7 +330,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 | Field | Value |
 | --- | --- |
-| Branch | `main` at `a287800735d465a41ad9e45d2c7914ab9cc34a26` is production authority; PR #37 documentation closeout is merged |
+| Branch | `main` is production authority; deployed revision `a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38); PR #38 identity correction is merged |
 | Staging target | `https://staging.jpvbootcamp.com`; no staging deployment is authorized by this review |
 | **Latest verification snapshot** | 2026-09-09 post-deployment read-only runtime identity refresh: staging image/commit `8b1f459fed358776fda791553ef225cc9f03b2ae`, production image/commit `a287800735d465a41ad9e45d2c7914ab9cc34a26`. See `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`. |
 | **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (historical) |
