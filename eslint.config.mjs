@@ -18,6 +18,14 @@ export default defineConfig([
     },
   },
   {
+    // This file contains imported HTML content whose zero-width characters are
+    // part of the preserved source text and must not be rewritten.
+    files: ['src/utils/data.ts'],
+    rules: {
+      'no-irregular-whitespace': 'off',
+    },
+  },
+  {
     files: ['**/*.{js,cjs,mjs}'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
