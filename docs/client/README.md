@@ -7,7 +7,7 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 ### Current deployed state — 2026-09-09
 
 Production is live from `main` at commit/image
-`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. The protected root-domain publish
+`a287800735d465a41ad9e45d2c7914ab9cc34a26`. The protected root-domain publish
 workflow passed, Dokploy convergence passed, and the live deployment-health
 endpoint reports `status=live` and `deploymentEnv=production`. PR #31 contains
 the production-hygiene release and PR #32 contains the production image
@@ -18,7 +18,8 @@ The current production release is operational. PR #30 and PR #33 were
 closed without merging. PR #34 records the deployed state, PR #35 contains the
 account-unlock authorization hardening fix, and PR #36 contains the read-only
 production migration verifier; all three are merged. There are no open pull
-requests; PR #37 completed the documentation-only closeout. Historical
+requests; PR #37 completed the documentation-only closeout and PR #38 recorded
+its final deployed identity. Historical
 pre-deployment snapshots below retain their original commit identities and
 claims.
 
@@ -32,7 +33,7 @@ The client go-live plan does not authorize migration execution. No separate
 production migration workflow was run for the 2026-09-09 deployment.
 
 The current production release authority is `main` at
-`41662c7df7ec6f5c3aa912e784aa2b0c812c0869`. The canonical staging target is
+`a287800735d465a41ad9e45d2c7914ab9cc34a26`. The canonical staging target is
 `https://staging.jpvbootcamp.com`. The 2026-09-09 hygiene candidate and its
 Bookworm image fix are now historical merged release inputs.
 The older `feature/course-branding-and-preview` deployment wording is retained
