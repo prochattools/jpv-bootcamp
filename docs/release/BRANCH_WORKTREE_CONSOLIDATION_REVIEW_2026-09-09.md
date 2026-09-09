@@ -1,17 +1,19 @@
 # JPV Bootcamp — Branch and Worktree Consolidation Review — 2026-09-09
 
-**Status:** POST-DEPLOYMENT REVIEW — PR #31 and PR #32 are merged and production
-is verified on `c72ad378`; no branch/worktree/ref deletion was performed
+**Status:** POST-DEPLOYMENT REVIEW — PR #31, PR #32, PR #34, PR #35, and PR #36
+are merged; production is verified on `d55ac6a3`; merged-only local refs were
+cleaned after ancestry checks
 
 **Audit repository:** `jpv-bootcamp`
 
-**Audit branch:** `codex/production-status-documentation-20260909`
+**Audit branch:** post-deployment closeout on `main`
 
 The reviewed hygiene release was merged as PR #31 and the production image
-Bookworm fix was merged as PR #32. Publish workflow `34375016540` passed and
-the live deployment-health endpoint reports the same production image. The
-branch and worktree inventory below is retained as the pre-deployment audit;
-unfinished and dirty work remains preserved.
+Bookworm fix was merged as PR #32. PR #34, PR #35, and PR #36 completed the
+documentation, authorization, and read-only verification follow-ups. Publish
+workflow `34392897174` passed and the live deployment-health endpoint reports
+the same production image. The remaining branch and worktree inventory is
+preserved because it contains independent work.
 
 This review records the current Git topology and safe disposition. An ancestry
 relationship is evidence for review; it is not authorization to delete a branch,
@@ -21,34 +23,21 @@ remove a worktree, or rewrite history.
 
 | Ref | Tip | Relation to `main` | Worktree | Disposition |
 | --- | --- | --- | --- | --- |
-| `main` | `c72ad378c6cf43a2d0a474000e3e979f834f784e` | Production authority | No dedicated worktree | Preserve |
-| `codex/production-status-documentation-20260909` | current PR #34 head | documentation-only PR #34 | `jpv-bootcamp-production-hygiene-20260907` — clean | Preserve; PR #34 requires independent review |
-| `codex/production-hygiene-20260907` | `cfe4eb1f8cd321da73852906794cbe137842c9d7` | Fully contained in `main`; PR #31 merged | No dedicated worktree | Preserve until cleanup is explicitly authorized |
-| `codex/production-image-build-fix-20260909` | `78f115931ea594286a2b2cb2fee9fc44b54f7bce` | Fully contained in `main`; PR #32 merged | No dedicated worktree | Preserve until cleanup is explicitly authorized |
-| `codex/post-release-baseline-closeout` | `761087a1fedfdbefcdbe14b1ad92c1b6ebf0ac2a` | 16 commits behind and 15 ahead; contains hygiene, preflight, and reconciliation histories | `jpv-bootcamp-main` — clean | Preserve; candidate integration line requires review |
-| `codex/production-migration-preflight-20260907` | `16b3424c4339a355fcd9e15067d1fc6341b3ef52` | 21 commits behind and 13 ahead; ancestry contained in closeout | `jpv-bootcamp-production-preflight-20260907` — clean | Preserve until closeout disposition is verified |
-| `codex/repository-reconciliation-20260905` | `8b1f459fed358776fda791553ef225cc9f03b2ae` | 21 commits behind and 10 ahead; ancestry contained in closeout | `jpv-bootcamp-reconciliation` — clean | Preserve until closeout disposition is verified |
-| `codex/repository-hardening-20260902` | `31c79574854ec6fc70e3e094da3d3537c112c6cd` | 21 commits behind and 11 ahead; PR #30 is dirty | No dedicated worktree | Preserve; unique verifier and gate work require extraction review |
-| `codex/ux-architecture-consolidation` | `a9629399554336436393029b501e93fc4b03b98c` | Diverged; 293 commits behind and 1 ahead | `jpv-bootcamp` — dirty | Preserve; unfinished feature work |
+| `main` | `d55ac6a3` | Production authority; PR #34 deployment verified | No dedicated worktree | Preserve |
+| `codex/post-release-baseline-closeout` | `761087a1` | Divergent clean closeout line | `jpv-bootcamp-main` — clean | Preserve for separate review |
+| `codex/production-migration-preflight-20260907` | `16b3424c` | Divergent clean preflight line | `jpv-bootcamp-production-preflight-20260907` — clean | Preserve |
+| `codex/repository-reconciliation-20260905` | `8b1f459f` | Divergent clean reconciliation line | `jpv-bootcamp-reconciliation` — clean | Preserve |
+| `codex/ux-architecture-consolidation` | `a9629399` | Divergent feature work | `jpv-bootcamp` — dirty | Preserve; do not clean automatically |
 
-The closeout line contains the pre-split hygiene tip, plus the preflight and
-reconciliation branch tips, by ancestry. It is not dependency-current and is
-not a production release candidate until its divergent history is reconciled
-against `main`.
+The local branches for the merged production-hygiene and image-fix work were
+deleted only after ancestry checks proved both tips were contained in main.
+The local main ref was fast-forwarded to origin/main. Their remote refs remain
+as recovery references. The PR #34 worktree was removed after its merge and
+its remote branch ref remains preserved.
 
-The closeout line is not dependency-current: its committed tree still declares
-Next.js `^16.3.0` and Sharp `^0.35.0`. The new dependency closure is committed
-on the hygiene line only and must be applied exactly once if the closeout line
-is selected; ancestry alone does not prove that the newer dependency
-remediation is present.
-
-The patch-equivalence audit confirms that the closeout line contains the
-hygiene branch, while `codex/repository-hardening-20260902` is not redundant:
-its ten unique commits include the guarded production migration verifier,
-deterministic main-branch CI gating, staging migration-gate reconciliation,
-the Stripe `qs` advisory patch, and related evidence. Those changes require a
-separate review and dependency reconciliation before landing. The UX branch is
-divergent and dirty, so it remains an independent preserved workstream.
+The remaining clean and dirty worktrees contain independent work. They are
+preserved because ancestry alone does not establish that their unique work is
+obsolete or safe to delete.
 
 ## Dependency ownership reconciliation
 
@@ -99,47 +88,34 @@ The local merge inventory also showed only `main` as a merged local branch. The
 merged remote refs above are ancestry observations only; no local or remote ref
 was deleted, archived, or rewritten.
 
-The current open review set is:
+The current pull-request state is closed and clean:
 
-- PR #34: `codex/production-status-documentation-20260909`, CI passed; review
-  required before merge. Merging it would trigger the root production publish
-  workflow because it targets `main`.
-- PR #35: `codex/payload-unlock-hardening-20260909`, CI passed; review required
-  before merge. It restricts Payload's account-unlock operation to
-  administrator-authenticated requests and does not add a migration or feature.
-- PR #30: `codex/repository-hardening-20260902`, dirty and review required;
-  its dependency pins overlap the current remediation and its unique verifier
-  still needs contract review.
-- PR #33: `dependabot/npm_and_yarn/vitest-4.1.11`, behind `main` and review
-  required; development-only.
+- PR #34 merged as `d55ac6a3` and is deployed.
+- PR #35 merged as `cb0fb0c6` and is deployed.
+- PR #36 merged as `7ba93c31` and is deployed.
+- PR #30 and PR #33 were closed without merging.
+- No pull requests are open.
 
-PR #31 and PR #32 are merged. PR #29 is closed.
+Remote branches associated with the merged PRs remain preserved as recovery
+references. Other remote branches with unique or unresolved work remain listed
+below for separate review; they are not production release inputs.
 
 ## Worktree safety
 
 | Worktree | Branch | Dirty state | Safe action |
 | --- | --- | ---: | --- |
-| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp` | `codex/ux-architecture-consolidation` | 57 entries | Preserve; inspect and commit or archive deliberately |
-| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-main` | `codex/post-release-baseline-closeout` | 0 entries | Preserve as clean closeout candidate |
-| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-hygiene-20260907` | `codex/production-status-documentation-20260909` | clean; synchronized with origin | Preserve; PR #34 is documentation-only and review-gated |
-| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-preflight-20260907` | `codex/production-migration-preflight-20260907` | 0 entries | Preserve until closeout landing is verified |
-| `/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-reconciliation` | `codex/repository-reconciliation-20260905` | 0 entries | Preserve until closeout landing is verified |
+| /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp | `codex/ux-architecture-consolidation` | dirty | Preserve; independent UX work |
+| /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-main | `codex/post-release-baseline-closeout` | clean | Preserve; separate closeout candidate |
+| /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-production-preflight-20260907 | `codex/production-migration-preflight-20260907` | clean | Preserve; separate preflight history |
+| /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-reconciliation | `codex/repository-reconciliation-20260905` | clean | Preserve; separate reconciliation history |
+
+The merged PR #34 worktree was removed after the merge. No active worktree
+containing unfinished or dirty work was removed.
 
 ## Consolidation decision
 
-The safe landing sequence is:
-
-1. Select either the hygiene branch or the closeout branch as the single
-   landing line.
-2. Reconcile the current dependency remediation against PR #30 and PR #29,
-   retaining one final dependency patch.
-3. Keep the five logical commit boundaries described in the hygiene review:
-   dependency remediation, baseline response security hardening, runtime
-   topology evidence, branch/worktree review, and release/operator documentation.
-4. Re-run the full release and static gates on the selected landing line.
-5. Only after successful landing and a complete content review should any
-   contained branch or clean redundant worktree be considered for removal.
-
-No branch or worktree is removed by this record. The dirty UX work remains
-preserved, the hygiene and image-fix commits are already contained in `main`,
-and the production release authority remains `main`.
+The production hygiene sequence is complete on main. Merged release work is
+deployed and verified; local merged-only branches were removed after ancestry
+checks; remote refs remain preserved. The independent closeout, preflight,
+reconciliation, and UX worktrees remain available for separately reviewed work.
+Production data and schema were not changed by this closeout.

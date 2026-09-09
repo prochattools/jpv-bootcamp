@@ -14,7 +14,7 @@ the packet-specific authorization and validation described in
 ## Current deployed production identity — 2026-09-09
 
 The production release authority is `main` at commit/image
-`c72ad378c6cf43a2d0a474000e3e979f834f784e`. Publish workflow `34375016540`
+`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. Publish workflow `34392897174`
 passed immutable image publication, Dokploy update, deployment trigger, and
 root-production convergence. The live deployment-health endpoint reports
 `status=live`, `deploymentEnv=production`, and that image tag.
@@ -74,10 +74,10 @@ Evidence: `docs/release/LIVE_RUNTIME_IDENTITY_REFRESH_2026-09-09.md`.
 | Authority | Current value | Evidence boundary |
 | --- | --- | --- |
 | Release branch | `main` | Verified locally after fetch; `origin/main` matches. |
-| Production image tag | `c72ad378c6cf43a2d0a474000e3e979f834f784e` | Publish workflow `34375016540` and post-deployment health probe. |
-| GitHub Actions | Publish run `34375016540` passed; read-only migration-status run `34147184195` is historical evidence | Publish passed source verification, build, immutable image publication, Dokploy update, deployment trigger, and convergence; no separate production migration workflow ran. |
-| Deployment | Serving image tag observed after successful publish and Dokploy convergence | Publish run `34375016540` and post-deployment health probe. |
-| Live identity | `status=live`; `deploymentEnv=production`; image tag `c72ad378c6cf43a2d0a474000e3e979f834f784e` | Post-deployment health probe. |
+| Production image tag | `d55ac6a30bcd78c63bd2a0a46db709617efc48f2` | Publish workflow `34392897174` and post-deployment health probe. |
+| GitHub Actions | Publish run `34392897174` passed; read-only migration-status run `34147184195` is historical evidence | Publish passed source verification, build, immutable image publication, Dokploy update, deployment trigger, and convergence; no separate production migration workflow ran. |
+| Deployment | Serving image tag observed after successful publish and Dokploy convergence | Publish run `34392897174` and post-deployment health probe. |
+| Live identity | `status=live`; `deploymentEnv=production`; image tag `d55ac6a30bcd78c63bd2a0a46db709617efc48f2` | Post-deployment health probe. |
 | Database change | No separate production migration workflow or manual database write was run for this deployment; no migration/schema files changed relative to the previous image | Deployment record and repository diff boundary; this does not substitute for a row-level database snapshot. |
 | Health | HTTP 200; `status=live` | 2026-09-09 read-only health probe. |
 | Working tree | Reported clean at the production checkpoint | Current architecture worktree is clean before A0 edits. |

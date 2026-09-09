@@ -7,17 +7,17 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 The production release authority is `main` at
-`c72ad378c6cf43a2d0a474000e3e979f834f784e`. PR #31 merged the reviewed hygiene
-release and PR #32 merged the Bookworm production-image fix. Publish workflow
-`34375016540` passed and the live deployment-health endpoint reports
+`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. PR #31 and PR #32 are merged, followed
+by PR #36’s guarded production migration verifier, PR #35’s Payload account
+unlock authorization fix, and PR #34’s deployed-state documentation. Publish
+workflow `34392897174` passed and the live deployment-health endpoint reports
 `status=live`, `deploymentEnv=production`, and the expected image tag.
 
 No separate production migration workflow was run, no migration or schema
 files changed relative to the previous production image, and no manual
-database write was performed. PR #34 records this deployed state and remains
-review-gated; follow-on security PR #35 also passed CI and remains review-gated.
-PR #30 remains deferred for review; PR #33 is a development-only dependency
-update. The pre-deployment review below is kept as historical evidence.
+database write was performed. PR #30 and PR #33 were closed without merging;
+there are currently no open pull requests. The pre-deployment review below is
+kept as historical evidence.
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE REVIEW — 2026-09-09
 

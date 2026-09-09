@@ -15,17 +15,17 @@
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 Production is live from `main` at commit/image
-`c72ad378c6cf43a2d0a474000e3e979f834f784e`. Publish workflow `34375016540`
+`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. Publish workflow `34392897174`
 passed immutable image publication, Dokploy update, deployment trigger, and
 root-production convergence. The live deployment-health endpoint reports
 `status=live`, `deploymentEnv=production`, and the expected image tag.
 
 No separate production migration workflow was run for this deployment, and no
 migration or schema files changed relative to the previous production image.
-PR #34 records this deployed state and remains review-gated. Follow-on security
-PR #35 passed CI and remains review-gated. PR #30 remains deferred for separate
-review; PR #33 is development-only. The pre-deployment validation below remains
-a historical record.
+PR #34 documentation, PR #35 Payload authorization hardening, and PR #36
+read-only migration verification are merged. PR #30 and PR #33 were closed
+without merging; there are no open pull requests. The pre-deployment
+validation below remains a historical record.
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 

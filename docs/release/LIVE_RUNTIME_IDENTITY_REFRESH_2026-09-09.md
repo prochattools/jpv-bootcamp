@@ -1,22 +1,22 @@
 # JPV Bootcamp — Live Runtime Identity Refresh — 2026-09-09
 
-**Status:** POST-DEPLOYMENT READ-ONLY OBSERVATION — historical pre-deployment
-values are retained below for audit continuity
+**Status:** POST-DEPLOYMENT READ-ONLY OBSERVATION — final production identity verified;
+dated pre-deployment values are retained below for audit continuity
 
 **Initial observation:** `2026-09-09T12:20:47.955Z`
 
-**Post-deployment verification observed at:** `2026-09-09T16:40:47Z`
+**Final post-deployment verification observed at:** `2026-09-09T19:15:24Z`
 
-This record captures the pre-deployment public DNS and HTTP health probe. It
-remains historical evidence and does not override the post-deployment result.
+This record preserves the pre-deployment public DNS and HTTP health probe as
+historical evidence and records the final post-deployment result below.
 
 ## Post-deployment verification — 2026-09-09
 
-Publish workflow `34375016540` completed successfully for `main` commit/image
-`c72ad378c6cf43a2d0a474000e3e979f834f784e`, including Dokploy convergence. A
+Publish workflow `34392897174` completed successfully for `main` commit/image
+`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`, including Dokploy convergence. A
 follow-up read-only deployment-health probe returned HTTP 200 with
 `status=live`, `deploymentEnv=production`, and image tag
-`c72ad378c6cf43a2d0a474000e3e979f834f784e`. No separate production migration
+`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. No separate production migration
 workflow was run for this deployment.
 
 The configured production origin is `https://jpvbootcamp.com`. The separate
@@ -29,7 +29,7 @@ production origin used by the publish workflow.
 | Origin | DNS | HTTP | `status` | `deploymentEnv` | `imageTag` | `commit` |
 | --- | --- | ---: | --- | --- | --- | --- |
 | `https://staging.jpvbootcamp.com` | Resolved | 200 | `live` | `staging` | `8b1f459fed358776fda791553ef225cc9f03b2ae` | `8b1f459fed358776fda791553ef225cc9f03b2ae` |
-| `https://jpvbootcamp.com` | Resolved | 200 | `live` | `production` | `c72ad378c6cf43a2d0a474000e3e979f834f784e` | `c72ad378c6cf43a2d0a474000e3e979f834f784e` |
+| `https://jpvbootcamp.com` | Resolved | 200 | `live` | `production` | `d55ac6a30bcd78c63bd2a0a46db709617efc48f2` | `d55ac6a30bcd78c63bd2a0a46db709617efc48f2` |
 | `https://jpv-bootcamp.prochat.tools` | Resolved | 530 / Cloudflare 1033 | — | — | — | — |
 | `https://preview.jpvbootcamp.com` | `ENOTFOUND` | Not reached | — | — | — | — |
 | `https://legacy.jpvbootcamp.com` | Resolved | 404 | — | — | — | — |

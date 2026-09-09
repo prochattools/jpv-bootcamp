@@ -9,22 +9,14 @@
 ## Current production-hygiene review — 2026-09-09
 
 `main` remains the production release authority at
-`f93ffac7dd299c39d8daf242d6a436272cc79188`. The reviewed hygiene candidate is
-`codex/production-hygiene-20260907` is pushed and synchronized with the
-remote; its functional split and post-split handoff refreshes are committed,
-the worktree is clean, and the candidate is not deployed. PR #31 remains open
-for human review.
-The dependency, response-header, documentation, and evidence boundaries are
-now locally committed for remote review.
-
-Repository validation passes `pnpm test:release` at `184/184`, static
-preflight, lint, TypeScript, build, Prisma checks, and the high-severity audit
-gate. One moderate Payload advisory remains. Read-only public probes report
-staging image `8b1f459fed358776fda791553ef225cc9f03b2ae` and production image
-`f93ffac7dd299c39d8daf242d6a436272cc79188`; preview DNS is unresolved and the
-legacy health route returns 404. These probes establish runtime identity only;
-they do not prove migrations or authorize provider, deployment, database, or
-production-data actions.
+`d55ac6a30bcd78c63bd2a0a46db709617efc48f2`. PR #31, PR #32, PR #34, PR #35, and PR #36 are merged into `main`; PR #30
+and PR #33 were closed without merging. Production is live at `d55ac6a30bcd78c63bd2a0a46db709617efc48f2`
+following successful publish workflow `34392897174`. Repository validation
+passes `pnpm test:release` at `184/184`, static preflight, lint,
+TypeScript, build, Prisma checks, and the high-severity audit gate. No separate
+production migration workflow or manual database write was performed. The
+remaining runtime alias observation and dependency advisories are recorded as
+operational follow-up; they do not change the canonical production authority.
 
 ## Historical A6 Gate 2 production integration closeout — 2026-08-30 (superseded for current identity)
 
