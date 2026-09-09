@@ -18,6 +18,7 @@ was mutated.
 | Local process environment | All six `MIGHTY_*` variables not configured |
 | Repository `.env*` files | No configured Mighty values; `.env.example` contains empty placeholders only |
 | Canonical staging Dokploy application | Read-only `application.one` returned HTTP 200; all six Mighty variables missing |
+| GitHub staging scheduler environment | Read-only secret metadata lookup returned HTTP 404; `staging-mighty-sync` is not configured |
 | Canonical production application | Not queried or modified |
 
 Required non-production values are `MIGHTY_API_BASE_URL`,
@@ -31,7 +32,9 @@ Read-only `schedule.list` for the canonical staging application returned HTTP
 staging scheduler in
 `.github/workflows/staging-mighty-access-sync.yml`: every five minutes,
 non-overlapping, fixed to `https://staging.jpvbootcamp.com`, with a dedicated
-environment secret and no target override.
+environment secret and no target override. The workflow is not active until the
+`staging-mighty-sync` GitHub environment and secret are created through the
+non-production operator path.
 
 ## Acceptance matrix
 
