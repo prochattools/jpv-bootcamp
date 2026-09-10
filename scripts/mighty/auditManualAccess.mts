@@ -35,6 +35,10 @@ async function main(): Promise<void> {
 		api.listMembers(),
 		api.findAllPurchases(),
 	])
+	const memberPlans = new Map<string, Awaited<ReturnType<typeof api.listMemberPlans>>>()
+	await Promise.all(mightyMembers.map(async (member) => {
+		memberPlans.set(String(member.id), await api.listMemberPlans(member.id))
+	}))
 
 	const stripeSummary = summarizeStripeRoster(stripeRows as StripeRosterRow[])
 	const entitledByEmail = new Map<string, StripeEntitled>()
@@ -55,6 +59,9 @@ async function main(): Promise<void> {
 		const email = normalizeEmail(member.email)
 		const entitled = email ? entitledByEmail.get(email) : undefined
 		const purchases = mightyPurchases.filter((purchase) => isPurchaseForMember(purchase, member))
+		const plans = memberPlans.get(String(member.id)) ?? []
+		const targetPlanMembership = plans.some((plan) => String(plan.id) === String(config.accessPlanId))
+		const otherPlanMemberships = plans.filter((plan) => String(plan.id) !== String(config.accessPlanId))
 		const targetPlanPurchases = purchases.filter((purchase) => String(purchase.plan?.id ?? '') === String(config.accessPlanId))
 		const otherPlanPurchases = purchases.filter((purchase) => {
 			const planId = String(purchase.plan?.id ?? '')
@@ -63,12 +70,12 @@ async function main(): Promise<void> {
 
 		if (entitled) {
 			matchedEntitledMembers += 1
-			if (targetPlanPurchases.length === 0) entitledMissingTargetPlan += 1
-			if (otherPlanPurchases.length > 0) entitledWithOtherPlanOverlap += 1
+			if (targetPlanPurchases.length === 0 && !targetPlanMembership) entitledMissingTargetPlan += 1
+			if (otherPlanPurchases.length > 0 || otherPlanMemberships.length > 0) entitledWithOtherPlanOverlap += 1
 		} else {
-			if (targetPlanPurchases.length > 0) nonEntitledMemberWithTargetPlan += 1
-			if (otherPlanPurchases.length > 0) nonEntitledMemberWithOtherPlan += 1
-			if (purchases.length === 0) directMemberWithoutPlan += 1
+			if (targetPlanPurchases.length > 0 || targetPlanMembership) nonEntitledMemberWithTargetPlan += 1
+			if (otherPlanPurchases.length > 0 || otherPlanMemberships.length > 0) nonEntitledMemberWithOtherPlan += 1
+			if (purchases.length === 0 && plans.length === 0) directMemberWithoutPlan += 1
 		}
 	}
 
@@ -79,6 +86,7 @@ async function main(): Promise<void> {
 		stripeEntitledSubscriberCount: entitledByEmail.size,
 		mightyMemberCount: mightyMembers.length,
 		mightyPurchaseCount: mightyPurchases.length,
+		mightyMemberPlanLookupCount: memberPlans.size,
 		matchedEntitledMembers,
 		overlapRisk: {
 			stripeEntitledMissingTargetPlan: entitledMissingTargetPlan,

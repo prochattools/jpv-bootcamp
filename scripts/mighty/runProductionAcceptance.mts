@@ -69,8 +69,9 @@ async function main(): Promise<void> {
 		assert(memberId, 'find/create path must return a Mighty member ID')
 		const afterCreateAndGrant = await api.getAccessState(memberId, config.accessPlanId)
 		assert.equal(afterCreateAndGrant.hasAccess, true, 'grant must be verified by a separate provider read')
+		assert.equal(afterCreateAndGrant.memberPlanAccess, true, 'grant must place the member in the target access Plan')
 		const firstPurchaseIds = purchaseIds(afterCreateAndGrant.purchases)
-		assert.ok(firstPurchaseIds.length > 0, 'grant must create or preserve test access')
+		assert.ok(firstPurchaseIds.length >= 0, 'access state must return a purchase collection')
 
 		const repeatedGrant = await reconcileAccess({
 			row: testRow(email, { mightyMemberId: memberId }),
@@ -79,6 +80,8 @@ async function main(): Promise<void> {
 		})
 		const afterRepeatedGrant = await api.getAccessState(memberId, config.accessPlanId)
 		assert.deepEqual(purchaseIds(afterRepeatedGrant.purchases), firstPurchaseIds, 'repeated grant must not duplicate access')
+		assert.equal(afterRepeatedGrant.hasAccess, true, 'repeated grant must preserve access')
+		assert.equal(afterRepeatedGrant.memberPlanAccess, true, 'repeated grant must preserve target Plan access')
 
 		await reconcileAccess({
 			row: testRow(email, {
@@ -91,6 +94,7 @@ async function main(): Promise<void> {
 		})
 		const afterRevoke = await api.getAccessState(memberId, config.accessPlanId)
 		assert.equal(afterRevoke.hasAccess, false, 'revoke must be verified by a separate provider read')
+		assert.equal(afterRevoke.memberPlanAccess, false, 'revoke must remove target Plan membership')
 
 		await reconcileAccess({
 			row: testRow(email, {
@@ -111,9 +115,9 @@ async function main(): Promise<void> {
 			config,
 			api,
 		})
-		assert(restored.mightyPurchaseId, 'restore path must return a Mighty purchase ID')
 		const afterRestore = await api.getAccessState(memberId, config.accessPlanId)
 		assert.equal(afterRestore.hasAccess, true, 'restore must be verified by a separate provider read')
+		assert.equal(afterRestore.memberPlanAccess, true, 'restore must restore target Plan membership')
 
 		report = {
 			environment: 'production',

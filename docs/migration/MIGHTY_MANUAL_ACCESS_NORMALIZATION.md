@@ -21,9 +21,9 @@ Run only from an approved production-data environment with:
 MIGHTY_PROVIDER_ENV=production pnpm mighty:manual-access-audit
 ```
 
-The command lists Mighty members and network purchases, compares normalized
-emails with currently entitled Stripe records, and prints aggregate counts
-only. It also reports active Stripe provisioning records whose subscription
+The command lists Mighty members, member Plan memberships, and network
+purchases, compares normalized emails with currently entitled Stripe records,
+and prints aggregate counts only. It also reports active Stripe provisioning records whose subscription
 status or identity fields are incomplete, rather than silently treating them
 as non-entitled. It performs no create, grant, revoke, delete, or update
 operation. It requires the normal Mighty API configuration and the real Plan
@@ -73,11 +73,14 @@ access route is closed.
 
 ## Current status
 
-The corrected read-only audit has run against the production database and JPV
+The pre-acceptance read-only audit ran against the production database and JPV
 Mighty Network without mutation. It found 6 active Stripe provisioning records,
 all 6 requiring manual review because `subscriptionStatus` is missing; Mighty
 reported 9 members, 0 Plan purchases, and 9 direct members without a Plan.
-No real member population has been migrated or modified. Because the Stripe
-records are not currently deterministically entitled, no normalization or
-revocation is authorized. Space-level membership was not enumerated by this
-audit and remains a separate review item.
+The authorized test identity was subsequently granted Plan `2000039` and is
+kept restored; it is not part of the real member population. The audit now also
+enumerates each member's Plan memberships so a nonpaid Plan grant cannot be
+mistaken for a direct no-Plan member. Because the Stripe records are not
+currently deterministically entitled, no real-member normalization or
+revocation is authorized. Space-level membership remains a separate review
+item.

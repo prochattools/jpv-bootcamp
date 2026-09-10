@@ -1,12 +1,24 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
-**Status:** Feature branch pushed; provider acceptance pending secure configuration and test execution
+**Status:** Feature branch pushed; bounded live provider acceptance passed; cutover remains separately unauthorized
 **Date:** 2026-09-09  
 **Branch:** `feature/mighty-stripe-migration`  
 **Implementation commit:** `b40faafeab0987905ed694056bc0faeea844558d`
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
 
 ## Current acceptance evidence — 2026-09-10
+
+- The bounded live acceptance passed against the existing JPV Mighty Network
+  for the authorized operator-controlled test identity only. It reused the
+  existing member, verified grant by a separate read, proved repeated-grant
+  idempotency, verified revoke by a separate read, proved repeated revoke was
+  safe, restored access, and verified the final access state. The identity is
+  left restored in Plan `2000039`.
+- The acceptance initially exposed that this non-paid access-only Plan has no
+  purchase row. The provider client now verifies member Plan membership through
+  `/members/{member_id}/plans` and revokes through the documented
+  `/plans/{plan_id}/members/{id}/` DELETE endpoint. No provider billing was
+  introduced.
 
 - The implementation branch is pushed to `origin` through
   `c5883e280650b0a3a466786986d9ec388a8bcaf0`.
@@ -18,10 +30,12 @@
   authenticated successfully and confirmed Plan `2000039` as `JPV Member
   Access`, hidden, and non-paid. No credential or Network ID is recorded in
   Git.
-- The production Dokploy values need correction before acceptance/cutover:
-  `MIGHTY_API_BASE_URL` currently points at a `/networks/.../me` resource rather
-  than the Admin API base, and `MIGHTY_STUDENT_LOGIN_URL` currently points at a
-  landing URL rather than the canonical `/sign_in` URL.
+- The production Dokploy inspection still returns legacy endpoint values:
+  `MIGHTY_API_BASE_URL` points at a `/networks/.../me` resource rather than the
+  Admin API base, and `MIGHTY_STUDENT_LOGIN_URL` points at a landing URL rather
+  than the canonical `/sign_in` URL. The live acceptance used the canonical
+  values in memory and did not rewrite Dokploy. Correct these two values before
+  deployment or worker enablement.
 - The corrected read-only production roster audit completed without mutation:
   6 active Stripe provisioning records were found and all 6 require manual
   review because `subscriptionStatus` is missing; Mighty reports 9 members,
@@ -29,8 +43,8 @@
   performed.
 - The local `.env` and `.env.production` contain no configured Mighty values;
   only `.env.example` contains placeholders. No secret values are recorded.
-- The guarded real-network command is ready but has not run because the
-  provider configuration is not available to the local execution environment.
+- The guarded real-network command passed with the production mutation guard
+  and left the authorized test identity restored. No real student was touched.
 - The read-only roster bridge was attempted and stopped because its local
   database target at `localhost:5444` was unavailable. No production database
   was contacted and no records were changed.
@@ -43,9 +57,12 @@
   unauthorized-token, and malformed-request fail-closed behavior. No worker
   request was sent to a deployed application.
 - The read-only `pnpm mighty:manual-access-audit` command is implemented. It
-  compares all Mighty members and purchases with Stripe-entitled records and
-  reports aggregate direct/overlapping-access risk without mutation. It has not
-  run because the remaining production API values are not available locally.
+  compares all Mighty members, member Plan memberships, and purchases with
+  Stripe-entitled records and reports aggregate direct/overlapping-access risk
+  without mutation. The post-acceptance audit found 6 active Stripe records,
+  all requiring manual review because subscription status is missing; Mighty
+  reported 9 members, 0 purchase rows, 8 direct no-Plan members, and 1
+  non-entitled member with Plan `2000039` (the authorized test identity).
 - Mighty API requests include the required identifying `User-Agent` header for
   the provider’s bot-protection boundary.
 
@@ -217,9 +234,9 @@ as a separate, explicitly authorized operator action.
 - Dedicated Admin API token owner, rotation policy, and target environment.
 - Production application worker secret and GitHub `production-mighty-sync`
   scheduled-execution secret/owner.
-- Bounded real-network Mighty API acceptance evidence using the authorized
-  `info@prochat.tools` identity; the local guarded attempt stopped before any
-  provider request because Dokploy values are not inherited by the local shell.
+- Correct the two legacy endpoint values still returned by the production
+  Dokploy application: `MIGHTY_API_BASE_URL=https://api.mn.co/admin/v1` and
+  the canonical `MIGHTY_STUDENT_LOGIN_URL` ending in `/sign_in`.
 - Secure manual roster execution and aggregate reconciliation evidence.
 - Production verification for billing, support, sponsored membership,
   operator/admin, and the cutover/rollback routes.

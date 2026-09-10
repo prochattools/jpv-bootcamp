@@ -2,6 +2,30 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT MIGHTY ACCEPTANCE UPDATE — 2026-09-10
+
+The bounded live Mighty acceptance passed on `feature/mighty-stripe-migration`
+using only the authorized operator-controlled test identity. The existing
+Mighty member was reused; access was granted and verified by a separate read,
+the repeated grant was idempotent, access was revoked and separately verified
+absent, repeated revoke was safe, and access was restored and separately
+verified present. The final restored state is confirmed in Plan `2000039`.
+No real student, Stripe object, staging application, production deployment,
+merge, migration apply, or scheduler enablement was performed.
+
+The live check exposed and fixed an implementation mismatch: Mighty’s
+non-paid access-only Plan is represented by member Plan membership, not a
+purchase row. The client now reads `/members/{member_id}/plans` and revokes
+with the documented plan-member DELETE endpoint. Local provider/sync tests and
+the migration contract suite pass.
+
+The production Dokploy application still returns the legacy endpoint values
+when inspected: `MIGHTY_API_BASE_URL` is a `/networks/.../me` URL and
+`MIGHTY_STUDENT_LOGIN_URL` is a `/landing?...` URL. The acceptance used the
+canonical values in memory and did not rewrite Dokploy. Before deployment or
+worker enablement, set the API URL to `https://api.mn.co/admin/v1` and the
+student URL to the canonical `/sign_in` URL for `jpv-community.mn.co`.
+
 ---
 
 ## CURRENT MIGHTY MIGRATION — 2026-09-09

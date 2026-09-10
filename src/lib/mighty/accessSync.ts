@@ -428,20 +428,18 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 			memberId = String(member.id)
 		}
 
-		const existingPurchases = purchaseId
-			? []
-			: (await api.getAccessState(memberId, config.accessPlanId)).purchases
-		purchaseId = purchaseId ?? (String(existingPurchases[0]?.purchase?.id ?? '') || null)
-		if (!purchaseId) {
+		const currentState = await api.getAccessState(memberId, config.accessPlanId)
+		purchaseId = purchaseId ?? (String(currentState.purchases[0]?.purchase?.id ?? '') || null)
+		if (!currentState.hasAccess) {
 			try {
 				await api.restoreAccess(memberId, config.accessPlanId)
 			} catch (error) {
 				if (!(error instanceof MightyApiError) || error.status !== 422) throw error
 			}
-			const grantedPurchases = (await api.getAccessState(memberId, config.accessPlanId)).purchases
-			purchaseId = String(grantedPurchases[0]?.purchase?.id ?? '') || null
+			const grantedState = await api.getAccessState(memberId, config.accessPlanId)
+			if (!grantedState.hasAccess) throw new Error('mighty_access_not_found_after_grant')
+			purchaseId = purchaseId ?? (String(grantedState.purchases[0]?.purchase?.id ?? '') || null)
 		}
-		if (!purchaseId) throw new Error('mighty_purchase_not_found_after_grant')
 
 		if (params.row.welcomeRequired && !params.row.welcomeSentAt) {
 			await (params.sendWelcome ?? sendMightyWelcome)(params.row)
@@ -456,13 +454,17 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 		memberId = String(member.id)
 	}
 
+	const currentState = await api.getAccessState(memberId as string, config.accessPlanId)
 	const purchaseIds = purchaseId
 		? [purchaseId]
-		: (await api.getAccessState(memberId as string, config.accessPlanId)).purchases
+		: currentState.purchases
 			.map((purchase) => String(purchase.purchase?.id ?? ''))
 			.filter(Boolean)
 	for (const matchingPurchaseId of purchaseIds) {
 		await api.revokeAccess(matchingPurchaseId, { immediate: true })
+	}
+	if (currentState.memberPlanAccess) {
+		await api.revokePlanAccess(memberId as string, config.accessPlanId)
 	}
 	return { mightyMemberId: memberId, mightyPurchaseId: null, welcomeSent: false }
 }

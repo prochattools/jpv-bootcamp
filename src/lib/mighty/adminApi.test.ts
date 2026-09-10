@@ -83,8 +83,36 @@ test('getAccessState reports the current plan purchase state', async () => {
 		memberId: '11',
 		planId: '678',
 		purchases: [{ member_id: 11, purchase: { id: 'purchase-1' } }],
+		memberPlanAccess: false,
 		hasAccess: true,
 	})
+})
+
+test('getAccessState reports direct nonpaid plan membership as access', async () => {
+	const api = new MightyAdminApi(config, async (input) => {
+		if (String(input).includes('/members/11/plans')) return response({ items: [{ id: 678 }], links: {} })
+		return response({ items: [], links: {} })
+	})
+
+	assert.deepEqual(await api.getAccessState(11, 678), {
+		memberId: '11',
+		planId: '678',
+		purchases: [],
+		memberPlanAccess: true,
+		hasAccess: true,
+	})
+})
+
+test('revokePlanAccess uses the documented plan-member DELETE endpoint', async () => {
+	let requestUrl = ''
+	const api = new MightyAdminApi(config, async (input, init) => {
+		requestUrl = String(input)
+		assert.equal(init?.method, 'DELETE')
+		return response({}, 404)
+	})
+
+	await api.revokePlanAccess(11, 678)
+	assert.match(requestUrl, /\/plans\/678\/members\/11\/$/)
 })
 
 test('listMembers and findAllPurchases paginate the whole network for read-only audits', async () => {

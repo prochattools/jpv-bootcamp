@@ -28,6 +28,7 @@ export type MightyAccessState = {
 	memberId: string
 	planId: string
 	purchases: MightyPurchase[]
+	memberPlanAccess: boolean
 	hasAccess: boolean
 }
 
@@ -189,6 +190,15 @@ export class MightyAdminApi {
 		return result?.items ?? []
 	}
 
+	async listMemberPlans(memberId: number | string): Promise<MightyPlan[]> {
+		const firstPage = await this.request<Paginated<MightyPlan>>(
+			'GET',
+			`networks/${numericId(this.config.networkId)}/members/${numericId(memberId)}/plans`,
+			{ per_page: 100 },
+		)
+		return firstPage ? this.collectPages(firstPage) : []
+	}
+
 	async findAllPurchases(): Promise<MightyPurchase[]> {
 		const firstPage = await this.request<Paginated<MightyPurchase>>(
 			'GET',
@@ -201,12 +211,17 @@ export class MightyAdminApi {
 	async getAccessState(memberId: number | string, planId: number | string = this.config.accessPlanId): Promise<MightyAccessState> {
 		const normalizedMemberId = numericId(memberId)
 		const normalizedPlanId = numericId(planId)
-		const purchases = await this.findPurchases(normalizedMemberId, normalizedPlanId)
+		const [purchases, memberPlans] = await Promise.all([
+			this.findPurchases(normalizedMemberId, normalizedPlanId),
+			this.listMemberPlans(normalizedMemberId),
+		])
+		const memberPlanAccess = memberPlans.some((plan) => String(plan.id) === normalizedPlanId)
 		return {
 			memberId: normalizedMemberId,
 			planId: normalizedPlanId,
 			purchases,
-			hasAccess: purchases.some((purchase) => String(purchase.purchase?.id ?? '').trim().length > 0),
+			memberPlanAccess,
+			hasAccess: memberPlanAccess || purchases.some((purchase) => String(purchase.purchase?.id ?? '').trim().length > 0),
 		}
 	}
 
@@ -235,6 +250,17 @@ export class MightyAdminApi {
 			undefined,
 			true,
 		)
+	}
+
+	async revokePlanAccess(memberId: number | string, planId = this.config.accessPlanId): Promise<null> {
+		await this.request<null>(
+			'DELETE',
+			`networks/${numericId(this.config.networkId)}/plans/${numericId(planId)}/members/${numericId(memberId)}/`,
+			undefined,
+			undefined,
+			true,
+		)
+		return null
 	}
 }
 

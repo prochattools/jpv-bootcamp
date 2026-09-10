@@ -9,6 +9,7 @@ test('manual access audit is production-scoped, read-only, and aggregate-only', 
 	assert.match(source, /requires_production_provider_env/)
 	assert.match(source, /listMembers\(\)/)
 	assert.match(source, /findAllPurchases\(\)/)
+	assert.match(source, /listMemberPlans\(member\.id\)/)
 	assert.match(source, /readOnly: true/)
 	assert.match(source, /mutationPerformed: false/)
 	assert.match(source, /stripeEntitledWithOtherPlanOverlap/)
