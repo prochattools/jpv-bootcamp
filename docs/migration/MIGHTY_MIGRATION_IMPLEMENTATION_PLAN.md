@@ -8,6 +8,21 @@
 
 ## Current acceptance evidence — 2026-09-10
 
+- Phase C administrator canary was not executed because the current goal brief
+  contains the literal placeholder `<ADMIN_EMAIL>` rather than one exact,
+  owner-authorized administrator email. No administrator, student, or existing
+  member population was mutated. The exact email must be supplied before the
+  controlled administrator procedure can start.
+- The six unresolved active Stripe provisioning records were reconciled
+  read-only against the production Stripe account and production database:
+  `ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`. These are sanitized
+  preparation counts only; no Stripe or Mighty state was changed and the six
+  records were not moved into Mighty.
+- A second scheduler safety check found no
+  `MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no visible
+  `production-mighty-sync` environment variable endpoint. Production automatic
+  processing therefore remains disabled.
+
 - The bounded live acceptance passed against the existing JPV Mighty Network
   for the authorized operator-controlled test identity only. It reused the
   existing member, verified grant by a separate read, proved repeated-grant
@@ -90,7 +105,10 @@ manual/direct access until the later migration stages are explicitly approved.
   `docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md`.
 - Use only administrator identities explicitly supplied and authorized by the
   owner. Do not infer identities from repository or database data.
-- This phase is prepared but intentionally unexecuted.
+- This phase is prepared but unexecuted: the authorized identity is still
+  missing because the brief contains `<ADMIN_EMAIL>` literally. The next
+  required operator step is to replace that placeholder with exactly one
+  owner-authorized administrator email; no other identity may be selected.
 
 ### Phase D — Member migration
 
@@ -302,6 +320,9 @@ as a separate, explicitly authorized operator action.
 - GitHub `production-mighty-sync` environment and scheduled-execution secret/
   owner, followed by explicit `MIGHTY_ACCESS_SYNC_ENABLED=true` enablement.
 - Explicit administrator identity authorization for the Phase C canary.
+- Sanitized production Stripe reconciliation is `ALLOWED: 4`, `DENIED: 0`,
+  `AMBIGUOUS: 0`, `UNMATCHED: 2`; the two unmatched records require a separate
+  read-only operator resolution before any member pilot.
 - Secure manual roster execution and aggregate reconciliation sign-off before
   any Phase D member migration.
 - Production verification for billing, support, sponsored membership,

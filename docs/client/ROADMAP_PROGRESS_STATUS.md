@@ -12,8 +12,11 @@ normalized, migrated, revoked, or otherwise modified.
 The rollout order is canonical: Phase A — silent build; Phase B — owner
 acceptance; Phase C — explicitly authorized administrator canaries; Phase D —
 one-at-a-time or controlled-batch existing-member migration; and Phase E —
-automation enablement only after member normalization. The administrator procedure is prepared in
-`docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md`; it has not been executed.
+automation enablement only after member normalization. The administrator
+procedure is prepared in `docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md`;
+Phase C remains unexecuted because the current authorization contains the
+literal `<ADMIN_EMAIL>` placeholder rather than an exact administrator email.
+No administrator or real member was mutated.
 The existing-member algorithm, overlap risks, stop-on-error boundary, and
 resumability requirements are documented in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
@@ -24,7 +27,10 @@ the canonical public values, and Plan `2000039` is configured. Secrets were
 not printed or committed. GitHub has no `MIGHTY_ACCESS_SYNC_ENABLED`
 repository variable and no `production-mighty-sync` environment is visible;
 the production scheduler therefore remains inert. No deploy, merge, Stripe
-mutation, or production database mutation is part of this phase.
+mutation, or production database mutation is part of this phase. A read-only
+production Stripe reconciliation of the six unresolved records returned
+`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; these records remain
+outside Mighty pending operator resolution.
 
 ## HISTORICAL MIGHTY MIGRATION PRE-CANARY — 2026-09-09
 

@@ -4,6 +4,24 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ## CURRENT MIGHTY ACCEPTANCE UPDATE — 2026-09-10
 
+Phase C administrator acceptance is safely blocked before mutation: the active
+goal brief supplies the literal `<ADMIN_EMAIL>` placeholder rather than one
+exact owner-authorized administrator identity. No administrator, student, or
+existing Mighty member population was changed. The next operator action is to
+supply exactly one authorized administrator email; do not infer it from the
+repository, local database, or Mighty roster.
+
+The six unresolved active Stripe provisioning records were checked read-only
+against production Stripe and the production database. Sanitized result:
+`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`. They remain outside
+Mighty and require separate read-only resolution before an ordinary-member
+pilot.
+
+The production scheduler safety check still finds no
+`MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no visible
+`production-mighty-sync` environment variable endpoint, so automatic
+processing remains disabled.
+
 The bounded live Mighty acceptance passed on `feature/mighty-stripe-migration`
 using only the authorized operator-controlled test identity. The existing
 Mighty member was reused; access was granted and verified by a separate read,
