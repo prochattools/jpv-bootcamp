@@ -56,19 +56,23 @@ Network/Space state was not normalized.
 The grant returned HTTP 200 and independently verified one target Plan. The
 repeat grant returned HTTP 422 with `User already has access to this plan`,
 while the independent read remained exactly one Plan. Plan-only revoke
-returned HTTP 204 but unexpectedly removed the member from the active Network
-index and made member/Plan/Space reads return HTTP 404. This matches Mighty’s
+returned HTTP 204, removed the member from the active Network index, and made
+member/Plan/Space reads return HTTP 404. This matches Mighty’s
 documented behavior for removing a non-paid Network-access Plan. No
 legacy/direct bypass was observed, but the operation does not safely remove
 only the old direct Network source. Effective access denial was observed
 before normalization, not accepted as post-normalization proof.
 
 Recovery re-added the same email with `send_welcome_email=false` and returned
-the original member ID. The five direct Spaces were already present after
-rejoin. Final API/UI checks confirm the exact pre-canary state: same account,
-Full Member, Direct access, five Spaces, zero Plans, and zero purchases. No
-duplicate account, profile/content/history operation, other-member change,
-Stripe mutation, deployment, merge, or scheduler enablement occurred.
+the original member ID. A targeted probe of Mighty’s documented
+`network_membership` DELETE endpoint with `cancel_plans=false` returned HTTP
+204 but removed Plan `2000039` and changed the member from `full` to
+`limited`; it is not a safe direct-Network-only transition. Explicitly
+re-adding the same account as `full` restored the five direct Spaces. Final
+API/UI checks confirm the exact pre-canary state: same account, Full Member,
+Direct access, five Spaces, zero Plans, and zero purchases. No duplicate
+account, profile/content/history operation, other-member change, Stripe
+mutation, deployment, merge, or scheduler enablement occurred.
 
 Result: `NORMALIZATION BLOCKED`; bulk migration is not ready. Resolve a
 nondestructive way to remove the legacy direct Network source and restore the

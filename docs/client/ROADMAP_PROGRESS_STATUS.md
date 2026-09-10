@@ -100,11 +100,15 @@ Effective access denial was observed before normalization, not accepted as a
 post-normalization proof.
 
 The same account was restored with HTTP 201 and `send_welcome_email=false`; the
-original member ID was returned. The five direct Spaces were already present
-after rejoin, and final API/UI checks confirmed the exact pre-canary state:
-same Full Member, Direct access, five Spaces, zero Plans, and zero purchases.
-No duplicate account, profile/content/history operation, other-member change,
-Stripe mutation, deployment, merge, or scheduler enablement occurred.
+original member ID was returned. A targeted probe of Mighty’s documented
+`network_membership` DELETE endpoint with `cancel_plans=false` returned HTTP
+204 but removed Plan `2000039` and changed the member from `full` to
+`limited`, so it is not a safe direct-Network-only transition. Explicitly
+re-adding the same account as `full` restored the five direct Spaces; final
+API/UI checks confirmed the exact pre-canary state: same account, Full Member,
+Direct access, five Spaces, zero Plans, and zero purchases. No duplicate
+account, profile/content/history operation, other-member change, Stripe
+mutation, deployment, merge, or scheduler enablement occurred.
 
 Phase D is therefore blocked pending a nondestructive way to remove the legacy
 direct Network source and restore the account under Plan control. The next

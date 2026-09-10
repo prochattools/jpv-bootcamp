@@ -117,6 +117,12 @@
   post-normalization result. The same member ID and five direct Spaces were
   restored by rejoining the existing account; final state is the exact
   pre-canary state with zero Plans and zero purchases.
+- A second targeted normalization probe used Mighty’s documented
+  `network_membership` DELETE endpoint with `cancel_plans=false`. It returned
+  HTTP 204 but removed Plan `2000039` and changed the member from `full` to
+  `limited`, so it is not a safe direct-Network-only transition. The account
+  was explicitly re-added as `full` with the same member ID and the exact
+  five-Space, zero-Plan state was reverified.
 - No duplicate account or other-member mutation occurred. No profile,
   content, or history operation was performed; no Stripe, deployment, merge,
   or scheduler mutation occurred. The next step is provider-scope/rollback
@@ -238,9 +244,9 @@ manual/direct access until the later migration stages are explicitly approved.
 - The Plan grant returned HTTP 200 and was independently verified. A repeated
   grant returned the exact duplicate-assignment HTTP 422
   (`User already has access to this plan`) and remained exactly one target
-  membership. Plan-only revoke returned HTTP 204 but unexpectedly removed the
-  member from the active Network index and made all Plan/Space/member lookups
-  return HTTP 404. This matches Mighty’s documented behavior for removing a
+  membership. Plan-only revoke returned HTTP 204, removed the member from the
+  active Network index, and made all Plan/Space/member lookups return HTTP 404.
+  This matches Mighty’s documented behavior for removing a
   non-paid Network-access Plan. No legacy/direct bypass was observed, but the
   operation is not a safe way to remove only the old direct Network source. No
   legacy access was normalized.
@@ -251,11 +257,13 @@ manual/direct access until the later migration stages are explicitly approved.
   duplicate account, profile/content/history operation, other-member change,
   Stripe mutation, deployment, merge, or scheduler enablement occurred.
 - `NORMALIZATION BLOCKED`: Plan scope is complete, but Mighty exposes only the
-  destructive Network-level “Remove From Everything” operation for removing
-  the legacy direct Network source. The Plan revoke produced effective denial
-  in the pre-normalization state, but it was not accepted as post-normalization
-  proof. Do not run a small batch or another member canary until a
-  nondestructive normalization and rollback path is verified.
+  available removal operations do not provide an isolated direct-Network
+  transition. The Plan revoke produced effective denial in the
+  pre-normalization state, while the `network_membership` probe removed the
+  Plan and changed the member type despite `cancel_plans=false`; neither was
+  accepted as post-normalization proof. Do not run a small batch or another
+  member canary until a nondestructive normalization and rollback path is
+  verified.
 
 ### Phase E — Automation enablement
 

@@ -57,14 +57,17 @@ content, or history operation was performed. The final state matches the
 pre-canary state.
 
 `NORMALIZATION BLOCKED`: the Plan scope is complete, but the member had legacy
-direct Network access and Mighty exposes only the destructive Network-level
-"Remove From Everything" operation for removing that source. The Plan-member
-DELETE is an effective access denial, not a safe direct-source normalization
-operation; restoring the member requires re-adding Network membership, which
-recreates the legacy state. Effective denial was observed for the
-pre-normalization state but was not accepted as a post-normalization proof.
-No other member may be used for a follow-up batch until a nondestructive
-normalization and rollback mechanism is resolved.
+direct Network access and neither available removal operation provides an
+isolated source transition. A targeted probe of Mighty’s documented
+`network_membership` DELETE endpoint with `cancel_plans=false` returned HTTP
+204, but it removed Plan `2000039` and changed the member from `full` to
+`limited`; it did not preserve the Plan as the parameter implies. The
+Plan-member DELETE similarly removes active Network membership for a
+Network-access Plan. Neither operation is a safe direct-source normalization
+operation. Effective denial was observed for the pre-normalization state but
+was not accepted as a post-normalization proof. No other member may be used
+for a follow-up batch until Mighty provides or confirms a nondestructive
+direct-source transition and rollback mechanism.
 
 ## Read-only audit
 
