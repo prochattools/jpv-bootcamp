@@ -32,7 +32,7 @@ student URL to the canonical `/sign_in` URL for `jpv-community.mn.co`.
 
 The approved JPV migration is now being executed on
 `feature/mighty-stripe-migration`, based on synchronized `origin/main`, was
-pushed through `c5883e280650b0a3a466786986d9ec388a8bcaf0` and is protected by
+pushed through `873c8f82` and is protected by
 the pushed annotated tag. It is based on synchronized `origin/main` and
 protected by annotated tag `pre-mighty-migration-2026-09-09` at the documented
 live production revision `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
@@ -63,9 +63,9 @@ controlled rollback and operator continuity.
 The owner has since manually created the hidden, non-paid, access-only JPV
 member Plan `2000039`. The Plan ID is supplied through environment configuration
 only. The guarded acceptance entry point was invoked with the authorized test
-identity and stopped before any API request because the local shell lacked
-`MIGHTY_API_BASE_URL`; the provider acceptance and manual-access overlap audit
-therefore remain pending.
+identity and passed after the client was corrected to verify nonpaid member
+Plan membership. The test identity remains restored; the manual-access audit
+also completed read-only.
 Subsequent read-only verification through the masked production Dokploy
 configuration authenticated successfully against the JPV Mighty Network and
 confirmed the configured Plan as `JPV Member Access`, hidden, and non-paid. The
@@ -87,7 +87,9 @@ The real-network acceptance command is `pnpm mighty:production-acceptance`.
 It requires `MIGHTY_PROVIDER_ENV=production`, an explicit production mutation
 guard, the configured Plan ID, and one disposable operator-controlled test
 email. The guarded entry point was tested but stopped before the provider call
-because the local shell does not inherit Dokploy's production environment.
+because the local shell does not inherit Dokploy's production environment; the
+successful run securely loaded the remote secrets in memory and used canonical
+endpoint overrides without writing Dokploy.
 The read-only roster bridge was attempted but could not reach the local
 database at `localhost:5444`; no production database access or mutation was
 performed.
@@ -100,9 +102,10 @@ risk and performs no provider mutation. The normalization procedure is in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
 The corrected read-only production audit has now run without mutation: 6 active
 Stripe provisioning records were found, all 6 require manual review because
-their subscription status is missing; Mighty reports 9 members and 0 Plan
-purchases, with all 9 currently classified as direct members without a Plan.
-This is roster evidence, not permission to normalize or revoke any member.
+their subscription status is missing; Mighty reports 9 members and 0 purchase
+rows, with 8 direct no-Plan members and 1 member in Plan `2000039` (the
+authorized test identity). This is roster evidence, not permission to
+normalize or revoke any real member.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

@@ -3,7 +3,7 @@
 **Status:** Feature branch pushed; bounded live provider acceptance passed; cutover remains separately unauthorized
 **Date:** 2026-09-09  
 **Branch:** `feature/mighty-stripe-migration`  
-**Implementation commit:** `b40faafeab0987905ed694056bc0faeea844558d`
+**Implementation commit:** `873c8f82`
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
 
 ## Current acceptance evidence — 2026-09-10
@@ -21,7 +21,7 @@
   introduced.
 
 - The implementation branch is pushed to `origin` through
-  `c5883e280650b0a3a466786986d9ec388a8bcaf0`.
+  `873c8f82`.
 - The annotated baseline tag is pushed to `origin` and resolves to
   `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
 - The owner has manually created the hidden, non-paid, access-only JPV member
@@ -236,7 +236,7 @@ as a separate, explicitly authorized operator action.
   scheduled-execution secret/owner.
 - Correct the two legacy endpoint values still returned by the production
   Dokploy application: `MIGHTY_API_BASE_URL=https://api.mn.co/admin/v1` and
-  the canonical `MIGHTY_STUDENT_LOGIN_URL` ending in `/sign_in`.
+  `MIGHTY_STUDENT_LOGIN_URL=https://jpv-community.mn.co/sign_in?from=https%3A%2F%2Fjpv-community.mn.co%2F`.
 - Secure manual roster execution and aggregate reconciliation evidence.
 - Production verification for billing, support, sponsored membership,
   operator/admin, and the cutover/rollback routes.
