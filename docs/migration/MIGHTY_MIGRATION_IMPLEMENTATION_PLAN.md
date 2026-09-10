@@ -14,6 +14,14 @@
   `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
 - The owner has manually created the hidden, non-paid, access-only JPV member
   Plan. The application does not create or configure this provider object.
+- A read-only provider lookup using the production Dokploy credentials
+  authenticated successfully and confirmed Plan `2000039` as `JPV Member
+  Access`, hidden, and non-paid. No credential or Network ID is recorded in
+  Git.
+- The production Dokploy values need correction before acceptance/cutover:
+  `MIGHTY_API_BASE_URL` currently points at a `/networks/.../me` resource rather
+  than the Admin API base, and `MIGHTY_STUDENT_LOGIN_URL` currently points at a
+  landing URL rather than the canonical `/sign_in` URL.
 - The local `.env` and `.env.production` contain no configured Mighty values;
   only `.env.example` contains placeholders. No secret values are recorded.
 - The guarded real-network command is ready but has not run because the

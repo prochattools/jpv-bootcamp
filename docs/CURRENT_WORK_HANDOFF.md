@@ -42,6 +42,12 @@ only. The guarded acceptance entry point was invoked with the authorized test
 identity and stopped before any API request because the local shell lacked
 `MIGHTY_API_BASE_URL`; the provider acceptance and manual-access overlap audit
 therefore remain pending.
+Subsequent read-only verification through the masked production Dokploy
+configuration authenticated successfully against the JPV Mighty Network and
+confirmed the configured Plan as `JPV Member Access`, hidden, and non-paid. The
+Dokploy values still require correction before cutover: `MIGHTY_API_BASE_URL`
+must be the Admin API base (not a `/networks/.../me` endpoint), and
+`MIGHTY_STUDENT_LOGIN_URL` must be the canonical `/sign_in` URL.
 
 Staging is intentionally unchanged and is not a prerequisite for this
 production feature-branch lane. Its provider verification blockers remain
