@@ -17,6 +17,50 @@ Stripe remains the billing authority. The canonical access path is:
 The application worker currently reconciles only the configured access Plan. It does not
 remove other Mighty Plans, direct Network membership, or Space membership.
 
+## Current Phase D ordinary-member canary result — 2026-09-10
+
+The owner-authorized canary for `westhoek@hotmail.com` was executed only for
+that identity and is **BLOCKED**. Live Stripe inspection resolved exactly one
+matching JPV customer with one active monthly JPV subscription, current period
+ending `2026-09-23`, and a paid latest invoice; the effective Stripe
+classification was `ALLOWED`. The existing Mighty identity was found and
+reused as member ID `41580317`, `member_type=full`, with `Network Access:
+Direct`, five direct Spaces (Activity Feed, Chat, Course, Events, and JPV
+Resource Library), no Plan memberships, and no purchase rows. The Mighty admin
+surface showed `Full Member`, not Host/Admin.
+
+Plan `2000039` is hidden, non-paid, and configured for Network access only;
+there is no explicit Space bundle or per-Space inclusion exposed for this Plan.
+Because the member's five existing direct Spaces could not be proven to be
+represented by the Plan, the result is `PLAN_SCOPE_INCOMPLETE`. No direct
+Space membership was removed.
+
+The bounded Plan lifecycle was tested without normalization: grant returned
+HTTP 200 and an independent read showed exactly one target Plan; the repeated
+grant returned HTTP 422 with exact response `User already has access to this
+plan`, and the independent read still showed exactly one target Plan.
+Plan-only revoke returned HTTP 204, but subsequent Plan, Space, and member
+lookups returned HTTP 404 and the admin UI reported that the person was no
+longer a member. This is an unexpected provider coupling: removing the
+non-paid Plan removed active Network membership/direct Space visibility for
+this full member. It is not valid evidence of a safe legacy bypass or
+effective Plan denial.
+
+The original account was restored without creating a duplicate: re-adding the
+same email returned HTTP 201 with the original member ID and
+`send_welcome_email=false`. The five original Space memberships were already
+present after rejoin (direct-add retries returned "already a member"), and
+independent reads plus the admin member list confirmed the same `Full Member`,
+`Direct` access, five Spaces, zero Plans, and zero purchases. No profile,
+content, or history operation was performed. The final state matches the
+pre-canary state.
+
+`NORMALIZATION BLOCKED`: the Plan scope is not sufficiently explicit for the
+five legacy Spaces, and the provider's Plan-member DELETE operation is not a
+safe isolated revoke for this member state. `EFFECTIVE DENIAL` was not tested,
+and no other member may be used for a follow-up batch until the provider
+behavior and a nondestructive rollback/normalization mechanism are resolved.
+
 ## Read-only audit
 
 Run only from an approved production-data environment with:
@@ -104,13 +148,13 @@ must remain a separately reviewed overlap until nondestructive removal is
 proven safe. No routine billing enforcement may use ban, account deletion, or
 “Remove From Everything.”
 
-## Ordinary-member pilot — pending owner authorization
+## Ordinary-member pilot — Phase D result and future procedure
 
-Do not select or mutate a member automatically. The owner must provide exactly
-one existing legitimate JPV member email who is not Host/Admin, has normal
-Mighty access, is contactable, and has explicitly approved this pilot. The
-email is the only member-selection input; it is not permission to test any
-other identity.
+The owner provided and authorized exactly one existing legitimate JPV member,
+`westhoek@hotmail.com`. The canary result above is the canonical Phase D
+evidence. Do not select or mutate another member automatically. The email is
+the only member-selection input; it is not permission to test any other
+identity.
 
 For that one member, stop immediately on any unexpected result and preserve the
 read-only evidence:

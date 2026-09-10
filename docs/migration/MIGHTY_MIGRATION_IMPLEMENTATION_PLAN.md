@@ -102,6 +102,24 @@
   exactly one Plan `2000039` membership. No duplicate account, welcome email,
   profile/content/history mutation, student/member-population mutation,
   Stripe mutation, deployment, merge, or scheduler enablement occurred.
+- Phase D was then attempted for `westhoek@hotmail.com`. The live Stripe
+  entitlement was `ALLOWED`; the existing Mighty member ID `41580317` was a
+  Full Member with Direct Network access, five direct Spaces, no Plans, and no
+  purchases. The Plan's admin settings exposed Network access only and no
+  explicit Space bundle, so full migration was classified
+  `PLAN_SCOPE_INCOMPLETE`.
+- The grant/repeat Plan checks passed (HTTP 200, then exact duplicate HTTP 422
+  with `User already has access to this plan`, and exactly one membership).
+  Plan-only revoke returned HTTP 204 but removed the active Network membership
+  and direct Space visibility, causing member/Plan/Space reads to return 404.
+  This unsafe provider coupling prevented normalization and effective-denial
+  testing. The same member ID and five direct Spaces were restored by rejoining
+  the existing account; final state is the exact pre-canary state with zero
+  Plans and zero purchases.
+- No duplicate account or other-member mutation occurred. No profile,
+  content, or history operation was performed; no Stripe, deployment, merge,
+  or scheduler mutation occurred. The next step is provider-scope/rollback
+  remediation, not a batch migration.
 - The six unresolved active Stripe provisioning records were reconciled
   read-only against the production Stripe account and production database:
   `ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`. These are sanitized
@@ -208,6 +226,30 @@ manual/direct access until the later migration stages are explicitly approved.
   approval and a successful verification.
 - Use stop-on-error, resumable checkpoints, idempotent retries, and aggregate
   audit evidence. The procedure is documented but not executed.
+- Phase D was attempted only for the explicitly authorized ordinary member
+  `westhoek@hotmail.com`. Stripe resolved one live JPV customer/subscription
+  as `ALLOWED` with a paid latest invoice and current period through
+  `2026-09-23`. The existing Mighty `Full Member` identity `41580317` was
+  reused; it had Direct Network access, five direct Spaces, no Plans, and no
+  purchases. Plan `2000039` was configured for Network access only, with no
+  explicit Space bundle exposed, so the migration is classified
+  `PLAN_SCOPE_INCOMPLETE`.
+- The Plan grant returned HTTP 200 and was independently verified. A repeated
+  grant returned the exact duplicate-assignment HTTP 422
+  (`User already has access to this plan`) and remained exactly one target
+  membership. Plan-only revoke returned HTTP 204 but unexpectedly removed the
+  member from the active Network index and made all Plan/Space/member lookups
+  return HTTP 404. This is unsafe provider coupling, not a valid effective
+  denial or legacy-bypass result. No legacy access was normalized.
+- Recovery re-added the same email with `send_welcome_email=false` and
+  returned the original member ID; the five direct Spaces were already present
+  after rejoin. Final reads and the admin list confirm the original Full
+  Member, Direct access, five Spaces, zero Plans, and zero purchases. No
+  duplicate account, profile/content/history operation, other-member change,
+  Stripe mutation, deployment, merge, or scheduler enablement occurred.
+- `NORMALIZATION BLOCKED` and `EFFECTIVE DENIAL: NOT TESTED`. Do not run a
+  small batch or another member canary until Plan scope is made explicit and a
+  nondestructive Plan revoke/rollback path is verified.
 
 ### Phase E — Automation enablement
 
@@ -240,7 +282,7 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | M6 | Read-only entitled-member bridge for controlled manual migration | **Implemented locally** |
 | M7 | Focused regression tests and validation matrix | **Local focused matrix green; provider/live checks remain cutover gates** |
 | M8 | Staging configuration and controlled provider/API verification | **Skipped for this implementation lane; staging remains unchanged** |
-| M9 | Production cutover readiness, rollback, and go/no-go | **Owner and second-administrator Plan canaries passed; ordinary-member pilot pending; cutover not started / not authorized** |
+| M9 | Production cutover readiness, rollback, and go/no-go | **Owner and second-administrator canaries passed; Phase D ordinary-member canary blocked by Plan scope/provider coupling; cutover not started / not authorized** |
 
 ## Approved execution sequence
 
