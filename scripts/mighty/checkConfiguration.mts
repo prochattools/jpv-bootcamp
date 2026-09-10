@@ -53,14 +53,25 @@ export function checkConfiguration(env: Record<string, string | undefined> = pro
 	const missingOrInvalid = [...Object.entries(provider), ...Object.entries(controls)]
 		.filter(([, state]) => state !== 'PRESENT')
 		.map(([key, state]) => `${key}_${state}`)
+	const planIdVerification = provider.MIGHTY_ACCESS_PLAN_ID === 'PRESENT'
+		? 'provider_lookup_required'
+		: 'not_configured'
+	const configurationShapeReady = missingOrInvalid.length === 0
+	const blockingReasons = [
+		...missingOrInvalid,
+		...(planIdVerification === 'provider_lookup_required'
+			? ['MIGHTY_ACCESS_PLAN_ID_PROVIDER_VERIFICATION_REQUIRED']
+			: []),
+	]
 
 	return {
 		readOnly: true,
 		provider,
 		controls,
-		planIdVerification: provider.MIGHTY_ACCESS_PLAN_ID === 'PRESENT' ? 'provider_lookup_required' : 'not_configured',
-		readyForAcceptance: missingOrInvalid.length === 0,
-		blockingReasons: missingOrInvalid,
+		planIdVerification,
+		configurationShapeReady,
+		readyForAcceptance: configurationShapeReady && planIdVerification === 'verified',
+		blockingReasons,
 	}
 }
 

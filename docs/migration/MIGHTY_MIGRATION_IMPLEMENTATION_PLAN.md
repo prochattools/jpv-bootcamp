@@ -22,7 +22,8 @@
 - The read-only configuration check is available as `pnpm mighty:config-check`.
   It reports only PRESENT/MISSING/INVALID states, never secret values, and
   identifies a configured Plan ID as requiring provider lookup rather than
-  treating it as proof that a real access Plan exists.
+  treating it as proof that a real access Plan exists. It does not report
+  acceptance readiness until that provider verification is complete.
 - The worker route has local runtime coverage for missing-secret,
   unauthorized-token, and malformed-request fail-closed behavior. No worker
   request was sent to a deployed application.

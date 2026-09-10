@@ -154,6 +154,7 @@ test('configuration check is read-only and reports Plan verification separately'
 	assert.match(configurationCheck, /MIGHTY_ACCESS_PLAN_ID/)
 	assert.match(configurationCheck, /planIdVerification/)
 	assert.match(configurationCheck, /provider_lookup_required/)
+	assert.match(configurationCheck, /readyForAcceptance: configurationShapeReady && planIdVerification === 'verified'/)
 })
 
 test('public Sign In targets the canonical Mighty URL', () => {

@@ -28,9 +28,10 @@ test('configuration check marks a complete shape ready while keeping Plan existe
 		MIGHTY_PRODUCTION_TEST_EMAIL: 'info@prochat.tools',
 	})
 
-	assert.equal(result.readyForAcceptance, true)
+	assert.equal(result.configurationShapeReady, true)
+	assert.equal(result.readyForAcceptance, false)
 	assert.equal(result.planIdVerification, 'provider_lookup_required')
-	assert.deepEqual(result.blockingReasons, [])
+	assert.deepEqual(result.blockingReasons, ['MIGHTY_ACCESS_PLAN_ID_PROVIDER_VERIFICATION_REQUIRED'])
 })
 
 test('configuration check reports invalid shapes without exposing their values', () => {
