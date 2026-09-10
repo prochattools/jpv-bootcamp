@@ -137,13 +137,14 @@ test('staging acceptance harness requires explicit non-production guards', () =>
 	assert.match(stagingEvidence, /MIGHTY_STAGING_TEST_EMAIL_CHANGED/)
 })
 
-test('production acceptance harness requires explicit production guards and cleans up access', () => {
+test('production acceptance harness requires explicit production guards and preserves final access', () => {
 	assert.match(productionAcceptance, /MIGHTY_PROVIDER_ENV\?\.trim\(\) !== 'production'/)
 	assert.match(productionAcceptance, /MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS/)
 	assert.match(productionAcceptance, /MIGHTY_PRODUCTION_TEST_EMAIL/)
 	assert.match(productionAcceptance, /reconcileAccess\(/)
 	assert.match(productionAcceptance, /getAccessState\(/)
-	assert.match(productionAcceptance, /acceptance cleanup must remove disposable test access/)
+	assert.match(productionAcceptance, /acceptance cleanup must leave disposable test access granted/)
+	assert.match(productionAcceptance, /finalStateAccessGranted: true/)
 	assert.doesNotMatch(productionAcceptance, /MIGHTY_STAGING|staging\.jpvbootcamp\.com/)
 })
 

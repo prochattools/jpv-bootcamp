@@ -29,8 +29,8 @@ API was live-exercised and no provider production objects were created.
 The bounded real-network acceptance command is
 `pnpm mighty:production-acceptance`; it requires an operator-controlled
 disposable test email and an explicit production mutation guard. It is not run
-automatically and leaves the test member account intact while removing all JPV
-access at cleanup.
+automatically and leaves the test member account intact with JPV access granted
+at final state.
 
 The acceptance command is currently pending secure provider configuration. The
 read-only roster bridge was also attempted but could not reach its local

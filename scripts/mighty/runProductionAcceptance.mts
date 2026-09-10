@@ -123,12 +123,17 @@ async function main(): Promise<void> {
 			revokeVerifiedBySeparateRead: true,
 			repeatedRevokeWasSafe: true,
 			restoreVerifiedBySeparateRead: true,
+			finalStateAccessGranted: true,
 		}
 	} finally {
 		if (memberId) {
-			const remainingPurchases = purchaseIds((await api.getAccessState(memberId, config.accessPlanId)).purchases)
-			for (const purchaseId of remainingPurchases) await api.revokeAccess(purchaseId, { immediate: true })
-			assert.equal((await api.getAccessState(memberId, config.accessPlanId)).hasAccess, false, 'acceptance cleanup must remove disposable test access')
+			const currentState = await api.getAccessState(memberId, config.accessPlanId)
+			if (!currentState.hasAccess) await api.restoreAccess(memberId, config.accessPlanId)
+			assert.equal(
+				(await api.getAccessState(memberId, config.accessPlanId)).hasAccess,
+				true,
+				'acceptance cleanup must leave disposable test access granted',
+			)
 		}
 	}
 
