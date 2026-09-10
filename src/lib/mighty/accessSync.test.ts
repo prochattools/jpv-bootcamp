@@ -115,6 +115,35 @@ test('allowed reconciliation reuses an existing Mighty member, grants once, then
 	assert.equal(result.mightyPurchaseId, 'purchase-1')
 })
 
+test('allowed reconciliation creates an absent member before granting access', async () => {
+	const state: FakeState = {
+		member: null,
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	let welcomeCalls = 0
+
+	const result = await reconcileAccess({
+		row: row(),
+		config,
+		api: fakeApi(state),
+		sendWelcome: async () => {
+			welcomeCalls += 1
+		},
+	})
+
+	assert.equal(state.findMemberCalls, 1)
+	assert.equal(state.createMemberCalls, 1)
+	assert.equal(state.grantCalls, 1)
+	assert.equal(welcomeCalls, 1)
+	assert.equal(result.mightyMemberId, '22')
+})
+
 test('allowed reconciliation does not duplicate an existing Mighty purchase', async () => {
 	const state: FakeState = {
 		member: { id: 22, email: 'student@example.com' },
