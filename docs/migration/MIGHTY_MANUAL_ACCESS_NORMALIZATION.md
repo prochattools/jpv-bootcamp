@@ -29,22 +29,23 @@ Direct`, five direct Spaces (Activity Feed, Chat, Course, Events, and JPV
 Resource Library), no Plan memberships, and no purchase rows. The Mighty admin
 surface showed `Full Member`, not Host/Admin.
 
-Plan `2000039` is hidden, non-paid, and configured for Network access only;
-there is no explicit Space bundle or per-Space inclusion exposed for this Plan.
-Because the member's five existing direct Spaces could not be proven to be
-represented by the Plan, the result is `PLAN_SCOPE_INCOMPLETE`. No direct
-Space membership was removed.
+Plan `2000039` is hidden, non-paid, and configured for Network access only.
+Mighty documents that Network access includes the entire Network and all
+Spaces, so the scope is `PLAN_SCOPE_COMPLETE` for this member's five Spaces.
+The API does not expose a separate per-Space bundle because one is not needed
+for a full-Network Plan. No direct Space membership was removed.
 
 The bounded Plan lifecycle was tested without normalization: grant returned
 HTTP 200 and an independent read showed exactly one target Plan; the repeated
 grant returned HTTP 422 with exact response `User already has access to this
 plan`, and the independent read still showed exactly one target Plan.
-Plan-only revoke returned HTTP 204, but subsequent Plan, Space, and member
-lookups returned HTTP 404 and the admin UI reported that the person was no
-longer a member. This is an unexpected provider coupling: removing the
-non-paid Plan removed active Network membership/direct Space visibility for
-this full member. It is not valid evidence of a safe legacy bypass or
-effective Plan denial.
+Plan-only revoke returned HTTP 204, and subsequent Plan, Space, and member
+lookups returned HTTP 404 while the admin UI reported that the person was no
+longer a member. This matches Mighty’s documented behavior for removing a
+non-paid Plan that includes Network access: the member loses Network access and
+is removed from the active member list. No legacy/direct bypass was observed,
+but this is not a nondestructive way to remove only the old direct Network
+source.
 
 The original account was restored without creating a duplicate: re-adding the
 same email returned HTTP 201 with the original member ID and
@@ -55,11 +56,15 @@ independent reads plus the admin member list confirmed the same `Full Member`,
 content, or history operation was performed. The final state matches the
 pre-canary state.
 
-`NORMALIZATION BLOCKED`: the Plan scope is not sufficiently explicit for the
-five legacy Spaces, and the provider's Plan-member DELETE operation is not a
-safe isolated revoke for this member state. `EFFECTIVE DENIAL` was not tested,
-and no other member may be used for a follow-up batch until the provider
-behavior and a nondestructive rollback/normalization mechanism are resolved.
+`NORMALIZATION BLOCKED`: the Plan scope is complete, but the member had legacy
+direct Network access and Mighty exposes only the destructive Network-level
+"Remove From Everything" operation for removing that source. The Plan-member
+DELETE is an effective access denial, not a safe direct-source normalization
+operation; restoring the member requires re-adding Network membership, which
+recreates the legacy state. Effective denial was observed for the
+pre-normalization state but was not accepted as a post-normalization proof.
+No other member may be used for a follow-up batch until a nondestructive
+normalization and rollback mechanism is resolved.
 
 ## Read-only audit
 

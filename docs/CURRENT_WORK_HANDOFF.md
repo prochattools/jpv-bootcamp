@@ -34,7 +34,7 @@ scheduler was modified.
 
 The additional administrator canary is complete. Phase D was attempted for
 the explicitly authorized `westhoek@hotmail.com` identity and is blocked by
-Plan scope and unsafe provider coupling. Do not choose another member or run a
+legacy direct-Network normalization and rollback limitations. Do not choose another member or run a
 batch. The exact read-only/grant/verify/Plan-denial/legacy-bypass/restore/
 final-experience sequence and the blocker evidence are documented in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
@@ -48,17 +48,20 @@ invoice, and current period through `2026-09-23`; Stripe classification was
 `Full Member` with Direct Network access, five direct Spaces, no Plans, and no
 purchases. The admin member list did not classify it as Host/Admin.
 
-Plan `2000039` is hidden/non-paid and configured for Network access only, with
-no explicit Space bundle exposed. Because the five existing Spaces could not
-be proven to be Plan-provided, the canary is `PLAN_SCOPE_INCOMPLETE` and no
-legacy Space membership was removed.
+Plan `2000039` is hidden/non-paid and configured for Network access only.
+Mighty documents that Network access includes the entire Network and all
+Spaces, so the canary is `PLAN_SCOPE_COMPLETE` for this member. Legacy direct
+Network/Space state was not normalized.
 
 The grant returned HTTP 200 and independently verified one target Plan. The
 repeat grant returned HTTP 422 with `User already has access to this plan`,
 while the independent read remained exactly one Plan. Plan-only revoke
 returned HTTP 204 but unexpectedly removed the member from the active Network
-index and made member/Plan/Space reads return HTTP 404. This is unsafe provider
-coupling, not proof of a safe legacy bypass or effective denial.
+index and made member/Plan/Space reads return HTTP 404. This matches Mighty’s
+documented behavior for removing a non-paid Network-access Plan. No
+legacy/direct bypass was observed, but the operation does not safely remove
+only the old direct Network source. Effective access denial was observed
+before normalization, not accepted as post-normalization proof.
 
 Recovery re-added the same email with `send_welcome_email=false` and returned
 the original member ID. The five direct Spaces were already present after
@@ -67,9 +70,9 @@ Full Member, Direct access, five Spaces, zero Plans, and zero purchases. No
 duplicate account, profile/content/history operation, other-member change,
 Stripe mutation, deployment, merge, or scheduler enablement occurred.
 
-Result: `NORMALIZATION BLOCKED`; `EFFECTIVE DENIAL: NOT TESTED`; bulk
-migration is not ready. Resolve explicit Plan scope and a nondestructive
-provider revoke/rollback path before any further member canary.
+Result: `NORMALIZATION BLOCKED`; bulk migration is not ready. Resolve a
+nondestructive way to remove the legacy direct Network source and restore the
+account under Plan control before any further member canary.
 
 ## CURRENT MIGHTY ACCEPTANCE UPDATE — 2026-09-10
 

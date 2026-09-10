@@ -33,8 +33,8 @@ The Phase D ordinary-member canary was attempted only for the owner-authorized
 batch. The required read-only-before, grant, duplicate-identity, access,
 Plan-denial, legacy-bypass, restore, final-experience, and stop-on-unexpected-
 change procedure is documented in
-`docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`; its new provider
-coupling and rollback blocker must be resolved first.
+`docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`; the documented
+Network-plan removal semantics and rollback blocker must be resolved first.
 
 ## CURRENT MIGHTY OWNER/ADMIN CANARY — 2026-09-10
 
@@ -84,18 +84,20 @@ no purchases. The admin member list did not classify this identity as a
 Network Host or Admin.
 
 Plan `2000039` is hidden and non-paid, and its settings show Network access
-only with no explicit Space bundle. Since the member's five existing Spaces
-could not be proven to be represented by the Plan, the result is
-`PLAN_SCOPE_INCOMPLETE` and legacy Space memberships were not normalized.
+only. Mighty documents that Network access includes the entire Network and all
+Spaces, so the result is `PLAN_SCOPE_COMPLETE` for this member. Legacy direct
+Network/Space state was not normalized.
 
 Grant returned HTTP 200 and independently showed exactly one target Plan.
 Repeat grant returned HTTP 422 with the exact duplicate message `User already
 has access to this plan`, while the independent read remained exactly one
 membership. Plan-only revoke returned HTTP 204, but subsequent member, Plan,
 and Space reads returned HTTP 404 and the admin UI reported that the person was
-no longer a member. Removing this non-paid Plan unexpectedly removed active
-Network membership/direct Space visibility. Therefore `LEGACY ACCESS BYPASS`
-was not confirmed and `EFFECTIVE DENIAL` was not tested or claimed.
+no longer a member. This matches Mighty’s documented behavior for removing a
+non-paid Plan with Network access. No legacy/direct bypass was observed, but
+the operation does not safely remove only the old direct Network source.
+Effective access denial was observed before normalization, not accepted as a
+post-normalization proof.
 
 The same account was restored with HTTP 201 and `send_welcome_email=false`; the
 original member ID was returned. The five direct Spaces were already present
@@ -104,9 +106,9 @@ same Full Member, Direct access, five Spaces, zero Plans, and zero purchases.
 No duplicate account, profile/content/history operation, other-member change,
 Stripe mutation, deployment, merge, or scheduler enablement occurred.
 
-Phase D is therefore blocked pending explicit Plan scope and a verified
-nondestructive provider revoke/rollback path. The next action is remediation,
-not another member canary or small migration batch.
+Phase D is therefore blocked pending a nondestructive way to remove the legacy
+direct Network source and restore the account under Plan control. The next
+action is remediation, not another member canary or small migration batch.
 
 Production configuration was freshly verified through Dokploy: all six
 required Mighty values are present, the API base and student login URL match

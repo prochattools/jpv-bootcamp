@@ -105,17 +105,18 @@
 - Phase D was then attempted for `westhoek@hotmail.com`. The live Stripe
   entitlement was `ALLOWED`; the existing Mighty member ID `41580317` was a
   Full Member with Direct Network access, five direct Spaces, no Plans, and no
-  purchases. The Plan's admin settings exposed Network access only and no
-  explicit Space bundle, so full migration was classified
-  `PLAN_SCOPE_INCOMPLETE`.
+  purchases. The Plan's admin settings exposed Network access only. Mighty
+  documents that Network access includes the entire Network and all Spaces,
+  so the plan scope was classified `PLAN_SCOPE_COMPLETE` for this member.
 - The grant/repeat Plan checks passed (HTTP 200, then exact duplicate HTTP 422
   with `User already has access to this plan`, and exactly one membership).
   Plan-only revoke returned HTTP 204 but removed the active Network membership
   and direct Space visibility, causing member/Plan/Space reads to return 404.
-  This unsafe provider coupling prevented normalization and effective-denial
-  testing. The same member ID and five direct Spaces were restored by rejoining
-  the existing account; final state is the exact pre-canary state with zero
-  Plans and zero purchases.
+  This matches Mighty’s documented Network-access Plan removal behavior. It
+  showed effective denial before normalization, but did not prove a
+  post-normalization result. The same member ID and five direct Spaces were
+  restored by rejoining the existing account; final state is the exact
+  pre-canary state with zero Plans and zero purchases.
 - No duplicate account or other-member mutation occurred. No profile,
   content, or history operation was performed; no Stripe, deployment, merge,
   or scheduler mutation occurred. The next step is provider-scope/rollback
@@ -231,25 +232,30 @@ manual/direct access until the later migration stages are explicitly approved.
   as `ALLOWED` with a paid latest invoice and current period through
   `2026-09-23`. The existing Mighty `Full Member` identity `41580317` was
   reused; it had Direct Network access, five direct Spaces, no Plans, and no
-  purchases. Plan `2000039` was configured for Network access only, with no
-  explicit Space bundle exposed, so the migration is classified
-  `PLAN_SCOPE_INCOMPLETE`.
+  purchases. Plan `2000039` was configured for Network access only. Mighty
+  documents that Network access includes the entire Network and all Spaces, so
+  the plan scope is `PLAN_SCOPE_COMPLETE` for this member.
 - The Plan grant returned HTTP 200 and was independently verified. A repeated
   grant returned the exact duplicate-assignment HTTP 422
   (`User already has access to this plan`) and remained exactly one target
   membership. Plan-only revoke returned HTTP 204 but unexpectedly removed the
   member from the active Network index and made all Plan/Space/member lookups
-  return HTTP 404. This is unsafe provider coupling, not a valid effective
-  denial or legacy-bypass result. No legacy access was normalized.
+  return HTTP 404. This matches Mighty’s documented behavior for removing a
+  non-paid Network-access Plan. No legacy/direct bypass was observed, but the
+  operation is not a safe way to remove only the old direct Network source. No
+  legacy access was normalized.
 - Recovery re-added the same email with `send_welcome_email=false` and
   returned the original member ID; the five direct Spaces were already present
   after rejoin. Final reads and the admin list confirm the original Full
   Member, Direct access, five Spaces, zero Plans, and zero purchases. No
   duplicate account, profile/content/history operation, other-member change,
   Stripe mutation, deployment, merge, or scheduler enablement occurred.
-- `NORMALIZATION BLOCKED` and `EFFECTIVE DENIAL: NOT TESTED`. Do not run a
-  small batch or another member canary until Plan scope is made explicit and a
-  nondestructive Plan revoke/rollback path is verified.
+- `NORMALIZATION BLOCKED`: Plan scope is complete, but Mighty exposes only the
+  destructive Network-level “Remove From Everything” operation for removing
+  the legacy direct Network source. The Plan revoke produced effective denial
+  in the pre-normalization state, but it was not accepted as post-normalization
+  proof. Do not run a small batch or another member canary until a
+  nondestructive normalization and rollback path is verified.
 
 ### Phase E — Automation enablement
 
@@ -282,7 +288,7 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | M6 | Read-only entitled-member bridge for controlled manual migration | **Implemented locally** |
 | M7 | Focused regression tests and validation matrix | **Local focused matrix green; provider/live checks remain cutover gates** |
 | M8 | Staging configuration and controlled provider/API verification | **Skipped for this implementation lane; staging remains unchanged** |
-| M9 | Production cutover readiness, rollback, and go/no-go | **Owner and second-administrator canaries passed; Phase D ordinary-member canary blocked by Plan scope/provider coupling; cutover not started / not authorized** |
+| M9 | Production cutover readiness, rollback, and go/no-go | **Owner and second-administrator canaries passed; Phase D ordinary-member canary blocked by legacy direct-Network normalization/rollback limitation; cutover not started / not authorized** |
 
 ## Approved execution sequence
 
