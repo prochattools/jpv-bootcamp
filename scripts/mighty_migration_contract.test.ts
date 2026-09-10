@@ -21,6 +21,7 @@ const stagingAcceptance = readFileSync('scripts/mighty/runStagingAcceptance.mts'
 const productionAcceptance = readFileSync('scripts/mighty/runProductionAcceptance.mts', 'utf8')
 const configurationCheck = readFileSync('scripts/mighty/checkConfiguration.mts', 'utf8')
 const manualAccessAudit = readFileSync('scripts/mighty/auditManualAccess.mts', 'utf8')
+const cutoverRehearsal = readFileSync('scripts/mighty/rehearseCutover.mts', 'utf8')
 const adminCanaryProcedure = readFileSync('docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md', 'utf8')
 const migrationPlan = readFileSync('docs/migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md', 'utf8')
 const roadmapStatus = readFileSync('docs/client/ROADMAP_PROGRESS_STATUS.md', 'utf8')
@@ -128,7 +129,11 @@ test('reconciliation and dry-run remain read-only and classify overlap/privilege
 	assert.match(reconciliation, /readOnly: true/)
 	assert.match(reconciliation, /mutationPerformed: false/)
 	assert.match(dryRun, /assertReadOnlyProductionBoundary/)
-	assert.equal(JSON.parse(packageJson).scripts['mighty:access-dry-run'], 'tsx scripts/mighty/reconcileAccessDryRun.mts')
+	assert.equal(JSON.parse(packageJson).scripts['mighty:access-dry-run'], 'tsx scripts/mighty/rehearseCutover.mts')
+	assert.equal(JSON.parse(packageJson).scripts['mighty:cutover-rehearsal'], 'tsx scripts/mighty/rehearseCutover.mts')
+	assert.match(cutoverRehearsal, /STRIPE_ENV !== 'live'/)
+	assert.match(cutoverRehearsal, /MIGHTY_PROVIDER_ENV\?\.trim\(\) !== 'production'/)
+	assert.match(cutoverRehearsal, /mutationPerformed: false/)
 })
 
 test('scheduled cancellation is not treated as an immediate revoke', () => {

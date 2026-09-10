@@ -2,6 +2,22 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT FINAL PRE-CUTOVER MANIFEST + READ-ONLY REHEARSAL — 2026-09-11
+
+`INTEGRATION LOGIC: READY`
+`REAL MEMBER MIGRATION: NOT STARTED`
+`CURRENT GATE: FINAL ROLE / IDENTITY / OVERLAP MANIFEST + READ-ONLY CUTOVER REHEARSAL`
+
+The complete live rehearsal covered 17 active Stripe subscriptions, 15 Mighty
+members, zero Mighty purchases, and 17 manifest rows. It reported 17 allowed,
+0 denied, 0 ambiguous, 0 unmatched, and `mutationPerformed=false`. The result
+is canonical in `docs/migration/MIGHTY_FINAL_PRE_CUTOVER_MANIFEST_2026-09-11.md`.
+Unknown provider roles fail closed: 1 already-controlled canary, 2 privileged
+exclusions, 6 future-create candidates, 7 identity reviews, 1 overlap review,
+and no safe automated grant row. The production scheduler is disabled; no real
+member migration, deployment, merge, or Stripe mutation occurred. The next
+gate is owner go/no-go for an explicitly named future batch.
+
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
 Phase D and E0 are complete. The active goal is to harden and test the

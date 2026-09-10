@@ -1,5 +1,20 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT FINAL PRE-CUTOVER MANIFEST + READ-ONLY REHEARSAL — 2026-09-11
+
+`INTEGRATION LOGIC: READY`
+`REAL MEMBER MIGRATION: NOT STARTED`
+`CURRENT GATE: FINAL ROLE / IDENTITY / OVERLAP MANIFEST + READ-ONLY CUTOVER REHEARSAL`
+
+The complete production-shaped rehearsal found 17 active Stripe subscriptions,
+15 Mighty members, zero Mighty purchases, and 17/17 complete manifest rows:
+17 allowed, 0 denied, 0 ambiguous, 0 unmatched, with no mutation. The exact
+per-record result is in
+`docs/migration/MIGHTY_FINAL_PRE_CUTOVER_MANIFEST_2026-09-11.md`. Unknown
+provider roles remain review-only. Scheduler disabled; real-member migration,
+merge, deployment, and Stripe mutation remain not performed. Next gate is the
+owner's explicit go/no-go for a future bounded batch.
+
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
 Phase D and E0 are complete; the current roadmap phase is implementation
@@ -268,7 +283,7 @@ justify a migration apply or deployment. Full evidence is recorded in
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
-`pnpm test:release` passed `191/191`; the release manifest contains 192 entries including one
+`pnpm test:release` passed `195/195`; the release manifest contains 196 entries including one
 conditional browser gate. Lint, root TypeScript, the controlled production
 build, both Prisma validations, and the production high-severity audit gate
 also passed.

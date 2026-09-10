@@ -1,5 +1,17 @@
 # JPV Bootcamp Architecture
 
+## Current Stripe-to-Mighty cutover boundary — 2026-09-11
+
+`INTEGRATION LOGIC: READY`; `REAL MEMBER MIGRATION: NOT STARTED`.
+The current gate is the complete role/identity/overlap manifest and read-only
+cutover rehearsal in
+`docs/migration/MIGHTY_FINAL_PRE_CUTOVER_MANIFEST_2026-09-11.md`. The
+production scheduler remains disabled. Stripe is the sole billing authority;
+Plan `2000039` is the downstream Mighty access projection. Unknown provider
+roles, privileged identities, alternate Plans, extra Spaces, ambiguous
+identities, and provider uncertainty fail closed. No direct Network/Space
+normalization is part of the future runner.
+
 > **Current production authority — 2026-08-27:** JPV Bootcamp is live on
 > `main` at `08605e52af4abb0b1bdcdfbe6890d010c545b636`; GitHub Actions run
 > `33093612107` passed and the production deployment reported the exact SHA with

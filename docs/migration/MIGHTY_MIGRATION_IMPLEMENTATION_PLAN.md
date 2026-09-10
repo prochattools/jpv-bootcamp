@@ -1,5 +1,22 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
+## CURRENT FINAL PRE-CUTOVER MANIFEST + READ-ONLY REHEARSAL — 2026-09-11
+
+`INTEGRATION LOGIC: READY`
+`REAL MEMBER MIGRATION: NOT STARTED`
+`CURRENT GATE: FINAL ROLE / IDENTITY / OVERLAP MANIFEST + READ-ONLY CUTOVER REHEARSAL`
+
+The complete live rehearsal now reads the 17 active Stripe subscriptions and
+the complete 15-member Mighty inventory, producing 17 deterministic rows:
+17 allowed, 0 denied, 0 ambiguous, 0 unmatched, zero purchases, and
+`mutationPerformed=false`. It supersedes the old local `customerProvisioning`
+partial audit as the cutover population source. See
+`docs/migration/MIGHTY_FINAL_PRE_CUTOVER_MANIFEST_2026-09-11.md` for the exact
+manifest and future normalization procedure. Unknown roles, privileged
+identities, extra Spaces, alternate Plans, ambiguous identities, and provider
+uncertainty fail closed. The scheduler remains disabled and no real member has
+been migrated.
+
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
 Phase D and E0 are complete. This branch is now limited to hardening the

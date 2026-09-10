@@ -1,5 +1,19 @@
 # Mighty Manual Access Normalization
 
+## Current final manifest gate — 2026-09-11
+
+`INTEGRATION LOGIC: READY`
+`REAL MEMBER MIGRATION: NOT STARTED`
+`CURRENT GATE: FINAL ROLE / IDENTITY / OVERLAP MANIFEST + READ-ONLY CUTOVER REHEARSAL`
+
+The authoritative complete rehearsal is
+`docs/migration/MIGHTY_FINAL_PRE_CUTOVER_MANIFEST_2026-09-11.md`. It covered
+all 17 live Stripe-entitled identities against the 15-member Mighty inventory:
+17 allowed, 0 denied, 0 ambiguous, 0 unmatched, zero purchases, and no
+mutation. The older local provisioning audit is partial and is not a
+population migration manifest. The scheduler is disabled. Unknown provider
+roles fail closed, so no automated grant batch is ready.
+
 ## Current gate — integration hardening only — 2026-09-10
 
 This procedure remains read-only for the real member population. Phase D and
