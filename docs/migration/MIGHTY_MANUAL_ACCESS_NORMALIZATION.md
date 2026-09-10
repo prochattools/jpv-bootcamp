@@ -1,5 +1,16 @@
 # Mighty Manual Access Normalization
 
+## Current gate — integration hardening only — 2026-09-10
+
+This procedure remains read-only for the real member population. Phase D and
+E0 are complete; only the three bounded live test identities
+(`westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`) are
+authorized for provider mutation checks, and the ordinary test identity is
+restored/allowed. `Missaquadri@gmail.com` and every other real member remain
+unmodified. No Stripe mutation, production scheduler enablement, deployment,
+or merge is authorized. Unknown role, Host/Admin, unexpected Space, and
+alternate-Plan overlap cases must remain review-only.
+
 ## Purpose
 
 This procedure is required before enabling automated Stripe-derived Mighty
@@ -36,11 +47,10 @@ The read-only Mighty inventory classified the current Stripe-ALLOWED set as:
 | `OTHER_PLAN_OVERLAP_REVIEW` | None observed |
 | `DUPLICATE_IDENTITY_REVIEW` | None observed; masked email-prefix collisions are not duplicate proof |
 
-The smallest proposed next batch is one identity only:
-`Missaquadri@gmail.com` / Mighty `41567828`. It is a full member with the five
-standard JPV Spaces, zero Plans and purchases, and no known privilege
-exception. It remains unmodified. Fresh owner authorization naming this exact
-identity is required before granting Plan `2000039`.
+The historical proposed next batch was one identity only:
+`Missaquadri@gmail.com` / Mighty `41567828`. It remains unmodified and is
+explicitly NOT AUTHORIZED and NOT EXECUTED. Fresh owner authorization naming
+this exact identity would be required before any future Plan `2000039` grant.
 
 The older six-record unmatched snapshot is historical. The two records cannot
 be named from that redacted evidence, while the current authoritative live set

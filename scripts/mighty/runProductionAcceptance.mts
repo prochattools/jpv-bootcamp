@@ -20,6 +20,8 @@ function assertProductionBoundary(): void {
 	}
 }
 
+const AUTHORIZED_ORDINARY_TEST_EMAIL = 'westhoek@hotmail.com'
+
 function purchaseIds(purchases: Array<{ purchase?: { id?: number | string | null } }>): string[] {
 	return purchases
 		.map((purchase) => String(purchase.purchase?.id ?? ''))
@@ -66,6 +68,12 @@ async function main(): Promise<void> {
 	assertProductionBoundary()
 	const email = normalizeEmail(required('MIGHTY_PRODUCTION_TEST_EMAIL'))
 	if (!email) throw new Error('mighty_acceptance_test_email_must_be_valid')
+	if (email !== AUTHORIZED_ORDINARY_TEST_EMAIL) {
+		throw new Error('mighty_acceptance_allows_only_authorized_ordinary_test_member')
+	}
+	if (!process.env.MIGHTY_IDENTITY_ROLE_OVERRIDES?.toLowerCase().includes(`${email}:ordinary`)) {
+		throw new Error('mighty_acceptance_requires_explicit_ordinary_role_override')
+	}
 
 	const config = getMightyConfig()
 	const api = createMightyAdminApi(config)

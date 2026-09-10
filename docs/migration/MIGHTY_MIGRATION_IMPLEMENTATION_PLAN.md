@@ -1,16 +1,31 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
+## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
+
+Phase D and E0 are complete. This branch is now limited to hardening the
+Stripe → Mighty implementation and proving synthetic lifecycle, ordering,
+identity, privilege, overlap, and reconciliation behavior. Live mutations are
+limited to the explicitly authorized test identities
+`westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`; the
+ordinary identity remains restored/allowed.
+
+No real member population is being migrated or normalized. The historical
+`Missaquadri@gmail.com` proposal is NOT AUTHORIZED and NOT EXECUTED. Stripe,
+the production scheduler, deployment, and merge remain untouched. Unknown
+provider roles, Host/Admin identities, unexpected Spaces, and alternate Plans
+fail closed to review.
+
 **Status:** Feature branch reconciled with the production hotfix; bounded live provider acceptance passed; cutover remains separately unauthorized
 **Date:** 2026-09-10
 **Branch:** `feature/mighty-stripe-migration`  
-**Current branch HEAD:** `cb33aaa57d2b372fef06753d01e00b6045fb7537`
+**Current branch HEAD:** `8f803cade09f3a3197eae2c6b4828143dae50eea`
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
 
 ## Current Phase E0 read-only reconciliation — 2026-09-10
 
 Phase E0 is complete as a read-only production reconciliation and controlled
 migration preparation gate. The feature branch is
-`feature/mighty-stripe-migration` at `cb33aaa57d2b372fef06753d01e00b6045fb7537`,
+`feature/mighty-stripe-migration` at `8f803cade09f3a3197eae2c6b4828143dae50eea`,
 matching `origin`; only unrelated `newrelic_agent.log` is dirty. No member
 migration, Stripe mutation, scheduler enablement, merge, or production deploy
 was performed.
@@ -31,11 +46,11 @@ Mighty candidate manifest is:
 | `OTHER_PLAN_OVERLAP_REVIEW` | None observed |
 | `DUPLICATE_IDENTITY_REVIEW` | None observed; provider-masked prefix collisions are not duplicate proof |
 
-The smallest proposed next batch is exactly one unmodified identity:
-`Missaquadri@gmail.com` / Mighty `41567828`. It has a full member record, the
-five standard JPV Spaces, zero Plans and purchases, and no known privilege
-exception. Execution requires fresh owner authorization naming that exact
-identity and approving a single Plan `2000039` grant plus independent reads.
+The historical proposed next batch was exactly one unmodified identity:
+`Missaquadri@gmail.com` / Mighty `41567828`. It is explicitly NOT AUTHORIZED
+and NOT EXECUTED under the current hardening gate. Any future execution
+requires fresh owner authorization naming that exact identity and approving a
+single Plan `2000039` grant plus independent reads.
 The two old redacted unmatched records cannot be named retrospectively, but
 the current authoritative report resolves the live set with zero unmatched and
 zero ambiguous records. Missing Mighty identities, alternate Plans, extra

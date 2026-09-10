@@ -35,6 +35,7 @@ export type MightyAccessState = {
 	memberId: string
 	planId: string
 	purchases: MightyPurchase[]
+	plans: MightyPlan[]
 	memberPlanAccess: boolean
 	hasAccess: boolean
 }
@@ -46,11 +47,15 @@ type Paginated<T> = {
 
 export class MightyApiError extends Error {
 	readonly status: number
+	readonly providerCode: string | null
+	readonly providerMessage: string | null
 
-	constructor(status: number) {
+	constructor(status: number, details: { code?: string | null; message?: string | null } = {}) {
 		super(`mighty_api_error_${status}`)
 		this.name = 'MightyApiError'
 		this.status = status
+		this.providerCode = details.code?.trim() || null
+		this.providerMessage = details.message?.trim() || null
 	}
 }
 
@@ -101,7 +106,21 @@ export class MightyAdminApi {
 		})
 
 		if (response.status === 404 && allowNotFound) return null
-		if (!response.ok) throw new MightyApiError(response.status)
+		if (!response.ok) {
+			let providerCode: string | null = null
+			let providerMessage: string | null = null
+			try {
+				const body = await response.clone().json() as Record<string, unknown>
+				const nested = body.error && typeof body.error === 'object' ? body.error as Record<string, unknown> : null
+				const code = nested?.code ?? body.code ?? body.error_code
+				const message = nested?.message ?? body.message ?? body.error
+				providerCode = typeof code === 'string' ? code : null
+				providerMessage = typeof message === 'string' ? message : null
+			} catch {
+				// Keep provider failures sanitized when the response is not JSON.
+			}
+			throw new MightyApiError(response.status, { code: providerCode, message: providerMessage })
+		}
 		if (response.status === 204) return null
 		return (await response.json()) as T
 	}
@@ -259,6 +278,7 @@ export class MightyAdminApi {
 			memberId: normalizedMemberId,
 			planId: normalizedPlanId,
 			purchases,
+			plans: memberPlans,
 			memberPlanAccess,
 			hasAccess: memberPlanAccess || purchases.some((purchase) => String(purchase.purchase?.id ?? '').trim().length > 0),
 		}
@@ -301,6 +321,12 @@ export class MightyAdminApi {
 		)
 		return null
 	}
+}
+
+export function isDuplicatePlanAssignmentError(error: unknown): boolean {
+	if (!(error instanceof MightyApiError) || error.status !== 422) return false
+	const evidence = `${error.providerCode ?? ''} ${error.providerMessage ?? ''}`.toLowerCase()
+	return /duplicate|already[_ -]?assigned|already[_ -]?member|plan[_ -]?membership.*exist|member.*plan.*exist/.test(evidence)
 }
 
 export function createMightyAdminApi(

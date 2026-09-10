@@ -4,6 +4,11 @@ import test from 'node:test'
 
 const api = readFileSync('src/lib/mighty/adminApi.ts', 'utf8')
 const sync = readFileSync('src/lib/mighty/accessSync.ts', 'utf8')
+const entitlement = readFileSync('src/lib/mighty/entitlement.ts', 'utf8')
+const mutationPolicy = readFileSync('src/lib/mighty/mutationPolicy.ts', 'utf8')
+const reconciliation = readFileSync('src/lib/mighty/reconciliation.ts', 'utf8')
+const dryRun = readFileSync('scripts/mighty/reconcileAccessDryRun.mts', 'utf8')
+const packageJson = readFileSync('package.json', 'utf8')
 const provider = readFileSync('src/lib/mighty/adminApi.ts', 'utf8')
 const config = readFileSync('src/lib/mighty/config.ts', 'utf8')
 const webhook = readFileSync('src/lib/stripe-webhook-handler.ts', 'utf8')
@@ -54,10 +59,12 @@ test('grant uses the existing non-paid Plan endpoint and user_id query', () => {
 	assert.match(api, /user_id: numericId\(memberId\)/)
 })
 
-test('revoke uses immediate purchase removal and tolerates 404', () => {
+test('revoke targets Plan membership and preserves legacy purchase cleanup as overlap handling', () => {
+	assert.match(api, /plans\/\$\{numericId\(planId\)\}\/members\/\$\{numericId\(memberId\)\}/)
 	assert.match(api, /purchases\/\$\{numericId\(purchaseId\)\}/)
 	assert.match(api, /immediate: params\.immediate === false \? 'false' : 'true'/)
 	assert.match(api, /response\.status === 404 && allowNotFound/)
+	assert.match(sync, /revokePlanAccess\(memberId as string, config\.accessPlanId\)/)
 })
 
 test('durable schema stores provider IDs, event ordering, desired access, retries, and reconciliation timestamps', () => {
@@ -91,10 +98,37 @@ test('Stripe identity remains primary when the billing email changes', () => {
 })
 
 test('payment failure denies immediately and paid recovery allows/restores', () => {
-	assert.match(sync, /case 'invoice\.payment_failed'/)
-	assert.match(sync, /desiredAccess = 'DENIED'/)
-	assert.match(sync, /case 'invoice\.paid'/)
-	assert.match(sync, /desiredAccess = 'ALLOWED'/)
+	assert.match(entitlement, /eventType === 'invoice\.payment_failed'/)
+	assert.match(entitlement, /eventType === 'invoice\.paid'/)
+	assert.match(entitlement, /return 'DENIED'/)
+	assert.match(entitlement, /return 'ALLOWED'/)
+})
+
+test('one canonical entitlement function drives Stripe projection and access reconciliation', () => {
+	assert.match(entitlement, /export function deriveMightyDesiredAccess/)
+	assert.match(entitlement, /invoice\.payment_failed/)
+	assert.match(entitlement, /customer\.subscription\.deleted/)
+	assert.match(readFileSync('src/lib/mighty/stripeEntitlementSummary.ts', 'utf8'), /deriveMightyDesiredAccess/)
+	assert.match(sync, /deriveMightyDesiredAccess/)
+})
+
+test('production mutations are explicitly scoped and fail closed for unresolved identity roles', () => {
+	assert.match(mutationPolicy, /MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST/)
+	assert.match(mutationPolicy, /MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS/)
+	assert.match(mutationPolicy, /mighty_identity_review_required/)
+	assert.match(mutationPolicy, /mighty_host_mutation_protected/)
+	assert.match(sync, /assertMightyMutationAllowed/)
+	assert.match(sync, /assertIdentityMutationSafe/)
+})
+
+test('reconciliation and dry-run remain read-only and classify overlap/privilege risks', () => {
+	assert.match(reconciliation, /OVERLAPPING_ACCESS_REVIEW/)
+	assert.match(reconciliation, /PRIVILEGED_EXCLUDED/)
+	assert.match(reconciliation, /mutationPerformed: false/)
+	assert.match(reconciliation, /readOnly: true/)
+	assert.match(reconciliation, /mutationPerformed: false/)
+	assert.match(dryRun, /assertReadOnlyProductionBoundary/)
+	assert.equal(JSON.parse(packageJson).scripts['mighty:access-dry-run'], 'tsx scripts/mighty/reconcileAccessDryRun.mts')
 })
 
 test('scheduled cancellation is not treated as an immediate revoke', () => {
@@ -158,6 +192,8 @@ test('production acceptance harness requires explicit production guards and pres
 	assert.match(productionAcceptance, /acceptance cleanup must leave disposable test access granted/)
 	assert.match(productionAcceptance, /finalStateAccessGranted: true/)
 	assert.doesNotMatch(productionAcceptance, /MIGHTY_STAGING|staging\.jpvbootcamp\.com/)
+	assert.match(productionAcceptance, /westhoek@hotmail\.com/)
+	assert.match(productionAcceptance, /MIGHTY_IDENTITY_ROLE_OVERRIDES/)
 })
 
 test('configuration check is read-only and reports Plan verification separately', () => {

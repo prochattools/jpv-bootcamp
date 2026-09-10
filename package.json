@@ -121,6 +121,7 @@
     "stripe:check-products": "tsx scripts/stripe/check_price_products.ts",
     "mighty:bridge-roster": "tsx scripts/mighty/buildEntitledMemberBridge.mts",
     "mighty:manual-access-audit": "tsx scripts/mighty/auditManualAccess.mts",
+    "mighty:access-dry-run": "tsx scripts/mighty/reconcileAccessDryRun.mts",
     "mighty:config-check": "tsx scripts/mighty/checkConfiguration.mts",
     "mighty:staging-acceptance": "tsx scripts/mighty/runStagingAcceptance.mts",
     "mighty:production-acceptance": "tsx scripts/mighty/runProductionAcceptance.mts",

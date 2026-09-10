@@ -2,11 +2,25 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
+
+Phase D and E0 are complete. The active goal is to harden and test the
+Stripe → Mighty implementation with synthetic lifecycle coverage and the
+three explicitly authorized live identities only:
+`westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`.
+The ordinary identity is restored/allowed after its bounded acceptance.
+
+No real member population is migrated or normalized, `Missaquadri@gmail.com`
+is not authorized and was not touched, Stripe is not mutated, the production
+scheduler remains disabled, and there is no deploy or merge. Provider role
+unknown, Host/Admin, unexpected Space, and alternate-Plan cases fail closed to
+review. The read-only access dry run and focused tests are the current gate.
+
 ## CURRENT PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10
 
 Phase E0 is complete as a read-only reconciliation and controlled-migration
 preparation gate. The branch is `feature/mighty-stripe-migration` at
-`cb33aaa57d2b372fef06753d01e00b6045fb7537`, matching `origin`; the only dirty
+`8f803cade09f3a3197eae2c6b4828143dae50eea`, matching `origin`; the only dirty
 file is unrelated `newrelic_agent.log`. No migration batch, Stripe mutation,
 scheduler enablement, merge, or production deployment was performed.
 
@@ -30,11 +44,11 @@ Stripe-ALLOWED identities, the exact manifest is:
 | `OTHER_PLAN_OVERLAP_REVIEW` | None | No additional Plan membership was found for any exact ordinary match. |
 | `DUPLICATE_IDENTITY_REVIEW` | None observed | Exact lookup returned one identity for each existing match. Provider-masked email prefixes collide in the list response, but differing names/IDs do not prove duplicate email identities. |
 
-The smallest proposed next batch is one identity: `Missaquadri@gmail.com`,
-Mighty member `41567828`. It has a full member record, the five standard
-Spaces, no target or other Plan, and no known privilege exception. It remains
-unmodified. Execution requires fresh owner authorization naming this exact
-identity and approving one Plan `2000039` grant with independent verification.
+The historical proposed next batch was one identity:
+`Missaquadri@gmail.com`, Mighty member `41567828`. It remains unmodified and
+is explicitly NOT AUTHORIZED and NOT EXECUTED under the current hardening gate.
+Any future migration requires a new owner decision naming the exact identity
+and approving the Plan `2000039` grant with independent verification.
 
 The two historical unmatched records are no longer unmatched in the current
 authoritative live identity report; the current set is `UNMATCHED: 0` and

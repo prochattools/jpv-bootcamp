@@ -1,10 +1,4 @@
-const BLOCKED_PAYMENT_STATUSES = new Set([
-	'failed',
-	'action_required',
-	'disputed',
-	'refunded',
-	'dispute_lost',
-])
+import { deriveMightyDesiredAccess } from './entitlement'
 
 export type StripeRosterRow = {
 	status: string
@@ -14,11 +8,11 @@ export type StripeRosterRow = {
 }
 
 export function isStripeEntitled(row: StripeRosterRow): boolean {
-	return (
-		row.status === 'active' &&
-		(row.subscriptionStatus === 'active' || row.subscriptionStatus === 'trialing') &&
-		(row.paymentStatus === null || !BLOCKED_PAYMENT_STATUSES.has(row.paymentStatus))
-	)
+	return deriveMightyDesiredAccess({
+		recordStatus: row.status,
+		subscriptionStatus: row.subscriptionStatus,
+		paymentStatus: row.paymentStatus,
+	}) === 'ALLOWED'
 }
 
 export function summarizeStripeRoster(rows: StripeRosterRow[]) {

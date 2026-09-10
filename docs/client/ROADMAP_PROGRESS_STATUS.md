@@ -1,10 +1,21 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
+
+Phase D and E0 are complete; the current roadmap phase is implementation
+hardening and synthetic/test-account validation. Only the bounded identities
+`westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools` are
+authorized for live Mighty checks, and the ordinary test identity is restored.
+No real member migration or normalization is authorized, including the former
+`Missaquadri@gmail.com` proposal; no Stripe mutation, scheduler enablement,
+deployment, or merge occurred. Unknown role, Host/Admin, unexpected Space, and
+alternate-Plan cases remain review-only.
+
 ## CURRENT PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10
 
 Phase E0 is complete as a read-only production reconciliation and controlled
 migration preparation gate. The feature branch is
-`feature/mighty-stripe-migration` at `cb33aaa57d2b372fef06753d01e00b6045fb7537`,
+`feature/mighty-stripe-migration` at `8f803cade09f3a3197eae2c6b4828143dae50eea`,
 matching `origin`; only unrelated `newrelic_agent.log` is dirty. No member
 migration, Stripe mutation, scheduler enablement, merge, or production deploy
 was performed.
@@ -25,11 +36,11 @@ Mighty candidate manifest is:
 | `OTHER_PLAN_OVERLAP_REVIEW` | None observed |
 | `DUPLICATE_IDENTITY_REVIEW` | None observed; provider-masked prefix collisions are not duplicate proof |
 
-The smallest proposed next batch is exactly one unmodified identity:
-`Missaquadri@gmail.com` / Mighty `41567828`. It has a full member record, the
-five standard JPV Spaces, zero Plans and purchases, and no known privilege
-exception. Execution requires fresh owner authorization naming that exact
-identity and approving a single Plan `2000039` grant plus independent reads.
+The historical proposed next batch was exactly one unmodified identity:
+`Missaquadri@gmail.com` / Mighty `41567828`. It is explicitly NOT AUTHORIZED
+and NOT EXECUTED in the current hardening phase. Any future execution requires
+fresh owner authorization naming that exact identity and approving a single
+Plan `2000039` grant plus independent reads.
 The two old redacted unmatched records cannot be named retrospectively, but
 the current authoritative report resolves the live set with zero unmatched and
 zero ambiguous records. Missing Mighty identities, alternate Plans, extra
@@ -257,7 +268,7 @@ justify a migration apply or deployment. Full evidence is recorded in
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
-`pnpm test:release` passed `184/184`; the release manifest contains 185 entries including one
+`pnpm test:release` passed `190/190`; the release manifest contains 191 entries including one
 conditional browser gate. Lint, root TypeScript, the controlled production
 build, both Prisma validations, and the production high-severity audit gate
 also passed.

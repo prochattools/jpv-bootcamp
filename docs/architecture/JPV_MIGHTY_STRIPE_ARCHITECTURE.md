@@ -6,6 +6,21 @@
 **Production billing authority:** Existing Stripe integration  
 **Student platform target:** Mighty Networks
 
+## Current implementation gate — 2026-09-10
+
+Phase D and E0 evidence are complete. The current branch work is integration
+hardening and test-account validation only. No real member population is being
+migrated, no Stripe object is being changed, the production scheduler remains
+disabled, and this work is not being deployed or merged.
+
+The only live mutation identities permitted by the bounded acceptance are
+`westhoek@hotmail.com` (ordinary), `steve@yeshua.academy` (administrator), and
+`info@prochat.tools` (owner/Host). All other members—including the historical
+proposed `Missaquadri@gmail.com` candidate—remain untouched and unauthorized.
+Provider role `null` is not inferred to mean ordinary; unresolved roles,
+Hosts, administrators, unexpected Spaces, and other Plan overlaps fail closed
+to review.
+
 ## Canonical decision
 
 Stripe remains the sole billing authority. Existing Stripe products, prices,
@@ -31,19 +46,26 @@ Public website
                          existing JPV Stripe webhook/application
                                       │
                                       ▼
-                    Stripe-derived local Mighty desired-state row
+                    one canonical Stripe-derived local Mighty desired-state row
                                       │
                                       ▼
                     authenticated Mighty Admin API worker
                                       │
-                                      ├── find/create Mighty member by email
+                                      ├── resolve one Mighty member by normalized email/ID
                                       ├── grant existing non-paid JPV access Plan
-                                      └── revoke/restore access from Stripe state
+                                      └── revoke/restore only the target Plan from Stripe state
 ```
 
 The webhook persists the desired state locally and does not synchronously call
 Mighty. Provider outage therefore cannot corrupt Stripe webhook processing or
 cause duplicate provider writes. The worker owns retries and reconciliation.
+
+`deriveMightyDesiredAccess` is the canonical entitlement function used by
+Stripe event projection and the entitlement summary. It has an explicit
+`ALLOWED`/`DENIED` state machine: active/trialing paid state and confirmed
+payment recovery allow access; failed/action-required/refunded/disputed or
+ended subscription state denies access immediately; scheduled cancellation
+does not deny access before the paid period ends.
 
 The staging worker is scheduled by
 `.github/workflows/staging-mighty-access-sync.yml`. It runs every five minutes
@@ -63,10 +85,15 @@ The implementation uses the documented Mighty Admin API operations only:
 - `POST /admin/v1/networks/{network_id}/plans/{plan_id}/members?user_id={id}`
   to grant an existing free/non-paid access Plan immediately, without an
   invitation;
+- `GET /admin/v1/networks/{network_id}/members/{member_id}/plans` to verify
+  target Plan membership independently;
 - `GET /admin/v1/networks/{network_id}/purchases?member_id={id}&plan_id={id}`
-  to recover the purchase identifier needed for durable idempotency and revoke;
-- `DELETE /admin/v1/networks/{network_id}/purchases/{id}?immediate=true` to
-  remove access immediately after a failed payment or an ended subscription.
+  to inspect any legacy purchase overlap;
+- `DELETE /admin/v1/networks/{network_id}/plans/{plan_id}/members/{id}/` to
+  remove the target Plan membership immediately after a failed payment or an
+  ended subscription. Legacy target-plan purchase rows are removed only when
+  present; other Plans, direct membership, Spaces, profiles, history, and
+  accounts are not deleted.
 
 The access Plan must already exist in Mighty. The application never creates or
 archives a production Network, Space, Plan, or billing object.
@@ -109,6 +136,13 @@ The scheduled worker can be rerun safely because member and purchase discovery
 precedes grant/revoke operations. A reconciliation pass may also be invoked
 manually through the same authenticated staging endpoint.
 
+Live mutation scope is enforced in production and staging. The allowlist,
+explicit role override, and new-member guard must permit a mutation; a missing
+provider role is review-only. A duplicate Plan-assignment 422 is accepted only
+when its provider error evidence is explicitly duplicate-related and an
+independent Plan/access read proves the desired state. Successful and failed
+reconciliations emit sanitized row/action/result/error evidence.
+
 ## Durable state
 
 `jpvbootcamp.mighty_access_sync` is the local outbox/reconciliation record. It
@@ -143,11 +177,13 @@ may explicitly request `--format=csv` for a secure local transfer; that output
 contains customer contact data and must remain outside the repository, logs,
 commits, and shared evidence. The tool performs no Stripe or Mighty mutation.
 
-Existing subscribers can then be added to the already-created Mighty Network
-and access Plan through a separately controlled operator procedure. Automatic
-provisioning is not considered complete until the live Network/Plan IDs and
-credential ownership are configured and the worker is exercised in the target
-environment.
+Existing subscribers can eventually be added to the already-created Mighty
+Network and access Plan through a separately controlled operator procedure.
+Automatic provisioning is not considered complete until the live
+Network/Plan IDs, credential ownership, per-identity role/overlap manifest,
+and future owner go/no-go approval are complete. The current read-only dry run
+classifies rows as in-sync, Plan grant/revoke needed, identity review,
+privileged excluded, overlap review, or provider error; it performs no writes.
 
 ## Staging verification harness
 

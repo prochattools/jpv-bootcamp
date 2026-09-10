@@ -4,6 +4,7 @@ import test from 'node:test'
 import { reconcileAccess } from './accessSync'
 import { MightyApiError, type MightyAdminApi, type MightyMember } from './adminApi'
 import type { MightyConfig } from './config'
+import { getMightyMutationScope } from './mutationPolicy'
 
 const config: MightyConfig = {
 	apiBaseUrl: 'https://api.mn.co/admin/v1',
@@ -242,4 +243,85 @@ test('denied reconciliation removes direct nonpaid plan access', async () => {
 
 	assert.deepEqual(state.revokePlanCalls, ['678'])
 	assert.equal(state.memberPlanAccess, false)
+})
+
+test('duplicate Plan 422 is accepted only after independent target-Plan verification', async () => {
+	let reads = 0
+	const api = {
+		findMember: async () => ({ id: 22, email: 'student@example.com', member_type: 'full', role: 'contributor' }),
+		getAccessState: async () => {
+			reads += 1
+			return {
+				memberId: '22',
+				planId: '678',
+				purchases: [],
+				plans: reads > 1 ? [{ id: 678 }] : [],
+				memberPlanAccess: reads > 1,
+				hasAccess: reads > 1,
+			}
+		},
+		restoreAccess: async () => {
+			throw new MightyApiError(422, { code: 'duplicate_assignment', message: 'member already has this Plan' })
+		},
+	} as unknown as MightyAdminApi
+
+	await assert.doesNotReject(() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api }))
+	assert.equal(reads, 3)
+})
+
+test('unrelated Plan 422 remains a failure even when current access is absent', async () => {
+	const api = {
+		findMember: async () => ({ id: 22, email: 'student@example.com', member_type: 'full', role: 'contributor' }),
+		getAccessState: async () => ({ memberId: '22', planId: '678', purchases: [], plans: [], memberPlanAccess: false, hasAccess: false }),
+		restoreAccess: async () => {
+			throw new MightyApiError(422, { code: 'validation_error', message: 'invalid member state' })
+		},
+	} as unknown as MightyAdminApi
+
+	await assert.rejects(() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api }), /mighty_api_error_422/)
+})
+
+test('production mutation scope rejects an identity outside the explicit test allowlist', async () => {
+	const scope = getMightyMutationScope({
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
+		MIGHTY_PRODUCTION_TEST_EMAIL: 'authorized@example.com',
+		MIGHTY_IDENTITY_ROLE_OVERRIDES: 'student@example.com:ordinary',
+	})
+	const state: FakeState = {
+		member: { id: 22, email: 'student@example.com', role: 'contributor' },
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }),
+		(error: unknown) => error instanceof Error && 'code' in error && (error as { code?: string }).code === 'mighty_mutation_scope_denied',
+	)
+	assert.equal(state.grantCalls, 0)
+})
+
+test('production host override is protected from ordinary billing mutation', async () => {
+	const scope = getMightyMutationScope({
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
+		MIGHTY_PRODUCTION_TEST_EMAIL: 'host@example.com',
+		MIGHTY_IDENTITY_ROLE_OVERRIDES: 'host@example.com:host',
+	})
+	const state: FakeState = {
+		member: { id: 22, email: 'host@example.com', role: null },
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	await assert.rejects(() => reconcileAccess({ row: row({ email: 'host@example.com', normalizedEmail: 'host@example.com', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }), /mighty_host_mutation_protected/)
+	assert.equal(state.grantCalls, 0)
 })

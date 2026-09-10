@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { isStripeEntitled, summarizeStripeRoster } from './stripeEntitlementSummary'
+import { deriveMightyDesiredAccess } from './entitlement'
 
 const entitled = {
 	status: 'active',
@@ -31,4 +32,18 @@ test('summarizes ambiguous active records instead of dropping them', () => {
 		missingStripeSubscriptionIdCount: 1,
 		missingSubscriptionStatusCount: 1,
 	})
+})
+
+test('the canonical entitlement function handles payment failure, recovery, cancellation, and terminal states', () => {
+	assert.equal(deriveMightyDesiredAccess({ subscriptionStatus: 'active', paymentStatus: 'paid' }), 'ALLOWED')
+	assert.equal(deriveMightyDesiredAccess({ subscriptionStatus: 'trialing' }), 'ALLOWED')
+	assert.equal(deriveMightyDesiredAccess({ eventType: 'invoice.payment_failed' }), 'DENIED')
+	assert.equal(deriveMightyDesiredAccess({ eventType: 'invoice.paid' }), 'ALLOWED')
+	assert.equal(deriveMightyDesiredAccess({ eventType: 'customer.subscription.deleted' }), 'DENIED')
+	assert.equal(deriveMightyDesiredAccess({ subscriptionStatus: 'past_due' }), 'DENIED')
+	assert.equal(deriveMightyDesiredAccess({ subscriptionStatus: 'active', paymentStatus: 'refunded' }), 'DENIED')
+})
+
+test('scheduled cancellation remains allowed while the subscription is still active', () => {
+	assert.equal(deriveMightyDesiredAccess({ subscriptionStatus: 'active' }), 'ALLOWED')
 })

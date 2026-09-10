@@ -9,11 +9,22 @@ import {
 	createMightyAdminApi,
 	MightyAdminApi,
 	MightyApiError,
+	isDuplicatePlanAssignmentError,
 	type MightyMember,
 } from './adminApi'
 import { getMightyConfig, type MightyConfig } from './config'
+import { deriveMightyDesiredAccess, type MightyDesiredAccess } from './entitlement'
+import {
+	assertIdentityMutationSafe,
+	assertMightyMemberCreationAllowed,
+	assertMightyMutationAllowed,
+	assertMightyRecoveryAllowed,
+	classifyMightyIdentity,
+	getMightyMutationScope,
+	MightySafetyError,
+	type MightyMutationScope,
+} from './mutationPolicy'
 
-export type MightyDesiredAccess = 'ALLOWED' | 'DENIED'
 export type MightySyncStatus = 'pending' | 'processing' | 'succeeded' | 'failed'
 
 type AccessSyncRow = {
@@ -138,7 +149,10 @@ export function projectMightyAccessFromStripeEvent(event: Stripe.Event): MightyS
 	switch (event.type) {
 		case 'checkout.session.completed':
 		case 'checkout.session.async_payment_succeeded': {
-			if (object.mode !== 'subscription' || !['paid', 'no_payment_required'].includes(String(object.payment_status))) {
+			if (object.mode !== 'subscription' || deriveMightyDesiredAccess({
+				eventType: event.type,
+				checkoutPaymentStatus: typeof object.payment_status === 'string' ? object.payment_status : null,
+			}) !== 'ALLOWED') {
 				return null
 			}
 			email = typeof object.customer_email === 'string' ? object.customer_email : null
@@ -147,7 +161,10 @@ export function projectMightyAccessFromStripeEvent(event: Stripe.Event): MightyS
 			plan = typeof (object.metadata as Record<string, unknown> | undefined)?.membership === 'string'
 				? (object.metadata as Record<string, string>).membership
 				: null
-			desiredAccess = 'ALLOWED'
+			desiredAccess = deriveMightyDesiredAccess({
+				eventType: event.type,
+				checkoutPaymentStatus: typeof object.payment_status === 'string' ? object.payment_status : null,
+			})
 			break
 		}
 		case 'customer.subscription.created':
@@ -158,25 +175,24 @@ export function projectMightyAccessFromStripeEvent(event: Stripe.Event): MightyS
 			plan = typeof (object.metadata as Record<string, unknown> | undefined)?.membership === 'string'
 				? (object.metadata as Record<string, string>).membership
 				: null
-			desiredAccess = event.type === 'customer.subscription.deleted'
-				? 'DENIED'
-				: isActiveStripeSubscription(object as unknown as Stripe.Subscription)
-					? 'ALLOWED'
-					: 'DENIED'
+			desiredAccess = deriveMightyDesiredAccess({
+				eventType: event.type,
+				subscriptionStatus: typeof object.status === 'string' ? object.status : null,
+			})
 			break
 		}
 		case 'invoice.paid': {
 			email = typeof object.customer_email === 'string' ? object.customer_email : null
 			stripeCustomerId = relationshipId(object.customer)
 			stripeSubscriptionId = relationshipId(object.subscription)
-			desiredAccess = 'ALLOWED'
+			desiredAccess = deriveMightyDesiredAccess({ eventType: event.type })
 			break
 		}
 		case 'invoice.payment_failed': {
 			email = typeof object.customer_email === 'string' ? object.customer_email : null
 			stripeCustomerId = relationshipId(object.customer)
 			stripeSubscriptionId = relationshipId(object.subscription)
-			desiredAccess = 'DENIED'
+			desiredAccess = deriveMightyDesiredAccess({ eventType: event.type })
 			break
 		}
 		default:
@@ -251,6 +267,7 @@ export function shouldApplyMightyStripeEvent(
 
 function errorCode(error: unknown): string {
 	if (error instanceof MightyApiError) return error.message
+	if (error instanceof MightySafetyError) return error.code
 	if (error instanceof Error) {
 		const normalized = error.message.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
 		return normalized.startsWith('mighty_') ? normalized : error.name.toLowerCase()
@@ -265,10 +282,6 @@ function isPrismaUniqueError(error: unknown): boolean {
 		'code' in error &&
 		(error as { code?: unknown }).code === 'P2002',
 	)
-}
-
-function isActiveStripeSubscription(subscription: Stripe.Subscription): boolean {
-	return subscription.status === 'active' || subscription.status === 'trialing'
 }
 
 async function resolveQueueEmail(params: QueueParams): Promise<string | null> {
@@ -398,6 +411,7 @@ type ReconcileInput = {
 	config?: MightyConfig
 	api?: MightyAdminApi
 	sendWelcome?: (row: AccessSyncRow) => Promise<void>
+	mutationScope?: MightyMutationScope
 }
 
 export async function reconcileAccess(params: ReconcileInput): Promise<{
@@ -407,16 +421,21 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 }> {
 	const config = params.config ?? getMightyConfig()
 	const api = params.api ?? createMightyAdminApi(config)
+	const mutationScope = params.mutationScope ?? getMightyMutationScope()
 	let memberId = params.row.mightyMemberId
 	let purchaseId = params.row.mightyPurchaseId
 
 	if (params.row.desiredAccess === 'ALLOWED') {
 		let member: MightyMember | null = null
 		if (memberId) {
-			member = { id: memberId, email: params.row.email }
+			member = typeof api.findMember === 'function'
+				? await api.findMember(params.row.email)
+				: { id: memberId, email: params.row.email }
+			if (member && String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
 		} else {
 			member = await api.findMember(params.row.email)
 			if (!member) {
+				assertMightyMemberCreationAllowed(mutationScope, params.row.email)
 				try {
 					member = await api.createMember({ email: params.row.email })
 				} catch (error) {
@@ -431,14 +450,32 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 		const currentState = await api.getAccessState(memberId, config.accessPlanId)
 		purchaseId = purchaseId ?? (String(currentState.purchases[0]?.purchase?.id ?? '') || null)
 		if (!currentState.hasAccess) {
+			const spaces = typeof api.listMemberSpaces === 'function' ? await api.listMemberSpaces(memberId) : []
+			const identityClass = classifyMightyIdentity({
+				email: params.row.email,
+				member,
+				spaces,
+				plans: currentState.plans,
+				scope: mutationScope,
+			})
+			assertMightyMutationAllowed(mutationScope, params.row.email, 'grant_plan')
+			if (mutationScope.enforce) {
+				assertIdentityMutationSafe({ identityClass, desiredAccess: 'ALLOWED', mutationRequired: true })
+			}
 			try {
 				await api.restoreAccess(memberId, config.accessPlanId)
 			} catch (error) {
 				if (error instanceof MightyApiError && error.status === 404) {
+					assertMightyRecoveryAllowed(mutationScope, params.row.email)
 					const recoveredMember = await api.createMember({ email: params.row.email })
 					if (String(recoveredMember.id) !== memberId) throw new Error('mighty_member_identity_changed')
 					await api.restoreAccess(memberId, config.accessPlanId)
-				} else if (!(error instanceof MightyApiError) || error.status !== 422) {
+				} else if (isDuplicatePlanAssignmentError(error)) {
+					const duplicateVerification = await api.getAccessState(memberId, config.accessPlanId)
+					if (!duplicateVerification.hasAccess || !duplicateVerification.memberPlanAccess) {
+						throw new Error('mighty_duplicate_grant_not_verified')
+					}
+				} else {
 					throw error
 				}
 			}
@@ -461,6 +498,23 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 	}
 
 	const currentState = await api.getAccessState(memberId as string, config.accessPlanId)
+	if (!currentState.hasAccess) return { mightyMemberId: memberId, mightyPurchaseId: null, welcomeSent: false }
+	const member = typeof api.findMember === 'function'
+		? await api.findMember(params.row.email)
+		: { id: memberId, email: params.row.email }
+	if (member && String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
+	const spaces = typeof api.listMemberSpaces === 'function' ? await api.listMemberSpaces(memberId as string) : []
+	const identityClass = classifyMightyIdentity({
+		email: params.row.email,
+		member,
+		spaces,
+		plans: currentState.plans,
+		scope: mutationScope,
+	})
+	assertMightyMutationAllowed(mutationScope, params.row.email, 'revoke_plan')
+	if (mutationScope.enforce) {
+		assertIdentityMutationSafe({ identityClass, desiredAccess: 'DENIED', mutationRequired: true })
+	}
 	const purchaseIds = purchaseId
 		? [purchaseId]
 		: currentState.purchases
@@ -471,6 +525,10 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 	}
 	if (currentState.memberPlanAccess) {
 		await api.revokePlanAccess(memberId as string, config.accessPlanId)
+	}
+	const verifiedState = await api.getAccessState(memberId as string, config.accessPlanId)
+	if (verifiedState.hasAccess || verifiedState.memberPlanAccess || verifiedState.purchases.length > 0) {
+		throw new Error('mighty_access_present_after_revoke')
 	}
 	return { mightyMemberId: memberId, mightyPurchaseId: null, welcomeSent: false }
 }
@@ -582,11 +640,23 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 			})
 			if (finalized.count !== 1) {
 				superseded += 1
+				console.warn('mighty_access_sync_superseded', {
+					rowId: row.id,
+					desiredAccess: row.desiredAccess,
+					lastStripeEventId: row.lastStripeEventId,
+				})
 				continue
 			}
 			succeeded += 1
 			if (row.desiredAccess === 'ALLOWED') allowed += 1
 			else denied += 1
+			console.info('mighty_access_sync_reconciled', {
+				rowId: row.id,
+				desiredAccess: row.desiredAccess,
+				mightyMemberId: result.mightyMemberId,
+				outcome: 'succeeded',
+				attemptCount: row.attemptCount,
+			})
 		} catch (error) {
 			const attemptCount = row.attemptCount + 1
 			const failedUpdate = await prisma.mightyAccessSync.updateMany({
@@ -606,9 +676,20 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 			})
 			if (failedUpdate.count !== 1) {
 				superseded += 1
+				console.warn('mighty_access_sync_failure_superseded', {
+					rowId: row.id,
+					desiredAccess: row.desiredAccess,
+					lastStripeEventId: row.lastStripeEventId,
+				})
 				continue
 			}
 			failed += 1
+			console.warn('mighty_access_sync_retry_scheduled', {
+				rowId: row.id,
+				desiredAccess: row.desiredAccess,
+				attemptCount,
+				error: errorCode(error),
+			})
 		}
 	}
 

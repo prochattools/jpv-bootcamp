@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { MightyAdminApi, type MightyConfig } from './adminApi'
+import { isDuplicatePlanAssignmentError, MightyAdminApi, MightyApiError, type MightyConfig } from './adminApi'
 
 const config: MightyConfig = {
 	apiBaseUrl: 'https://api.mn.co/admin/v1',
@@ -101,16 +101,17 @@ test('revokeAccess is immediate and treats an already absent purchase as idempot
 })
 
 test('getAccessState reports the current plan purchase state', async () => {
-	const api = new MightyAdminApi(config, async () => response({
-		items: [{ member_id: 11, purchase: { id: 'purchase-1' } }],
-		links: {},
-	}))
+	const api = new MightyAdminApi(config, async (input) => {
+		if (String(input).includes('/members/11/plans')) return response({ items: [], links: {} })
+		return response({ items: [{ member_id: 11, purchase: { id: 'purchase-1' } }], links: {} })
+	})
 
 	const state = await api.getAccessState(11, 678)
 	assert.deepEqual(state, {
 		memberId: '11',
 		planId: '678',
 		purchases: [{ member_id: 11, purchase: { id: 'purchase-1' } }],
+		plans: [],
 		memberPlanAccess: false,
 		hasAccess: true,
 	})
@@ -126,6 +127,7 @@ test('getAccessState reports direct nonpaid plan membership as access', async ()
 		memberId: '11',
 		planId: '678',
 		purchases: [],
+		plans: [{ id: 678 }],
 		memberPlanAccess: true,
 		hasAccess: true,
 	})
@@ -138,6 +140,7 @@ test('getAccessState treats an inactive member 404 as no access', async () => {
 		memberId: '11',
 		planId: '678',
 		purchases: [],
+		plans: [],
 		memberPlanAccess: false,
 		hasAccess: false,
 	})
@@ -164,6 +167,14 @@ test('revokePlanAccess uses the documented plan-member DELETE endpoint', async (
 
 	await api.revokePlanAccess(11, 678)
 	assert.match(requestUrl, /\/plans\/678\/members\/11\/$/)
+})
+
+test('422 duplicate Plan assignment is recognized only with duplicate provider evidence', async () => {
+	const duplicateApi = new MightyAdminApi(config, async () => response({ error: { code: 'duplicate_assignment', message: 'member already has this Plan' } }, 422))
+	await assert.rejects(() => duplicateApi.grantAccess(11), (error: unknown) => isDuplicatePlanAssignmentError(error))
+	assert.equal(isDuplicatePlanAssignmentError(new MightyApiError(422)), false)
+	const unrelated = new MightyApiError(422, { code: 'validation_error', message: 'invalid member state' })
+	assert.equal(isDuplicatePlanAssignmentError(unrelated), false)
 })
 
 test('listMembers and findAllPurchases paginate the whole network for read-only audits', async () => {
