@@ -20,7 +20,7 @@ review. The read-only access dry run and focused tests are the current gate.
 
 Phase E0 is complete as a read-only reconciliation and controlled-migration
 preparation gate. The branch is `feature/mighty-stripe-migration` at
-`8f803cade09f3a3197eae2c6b4828143dae50eea`, matching `origin`; the only dirty
+the pushed validation tip, matching `origin`; the only dirty
 file is unrelated `newrelic_agent.log`. No migration batch, Stripe mutation,
 scheduler enablement, merge, or production deployment was performed.
 

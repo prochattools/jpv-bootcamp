@@ -18,14 +18,14 @@ fail closed to review.
 **Status:** Feature branch reconciled with the production hotfix; bounded live provider acceptance passed; cutover remains separately unauthorized
 **Date:** 2026-09-10
 **Branch:** `feature/mighty-stripe-migration`  
-**Current branch HEAD:** `8f803cade09f3a3197eae2c6b4828143dae50eea`
+**Current branch HEAD:** pushed validation tip (see repository log)
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
 
 ## Current Phase E0 read-only reconciliation — 2026-09-10
 
 Phase E0 is complete as a read-only production reconciliation and controlled
 migration preparation gate. The feature branch is
-`feature/mighty-stripe-migration` at `8f803cade09f3a3197eae2c6b4828143dae50eea`,
+`feature/mighty-stripe-migration` at the pushed validation tip,
 matching `origin`; only unrelated `newrelic_agent.log` is dirty. No member
 migration, Stripe mutation, scheduler enablement, merge, or production deploy
 was performed.

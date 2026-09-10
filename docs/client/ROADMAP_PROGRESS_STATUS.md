@@ -15,7 +15,7 @@ alternate-Plan cases remain review-only.
 
 Phase E0 is complete as a read-only production reconciliation and controlled
 migration preparation gate. The feature branch is
-`feature/mighty-stripe-migration` at `8f803cade09f3a3197eae2c6b4828143dae50eea`,
+`feature/mighty-stripe-migration` at the pushed validation tip,
 matching `origin`; only unrelated `newrelic_agent.log` is dirty. No member
 migration, Stripe mutation, scheduler enablement, merge, or production deploy
 was performed.
