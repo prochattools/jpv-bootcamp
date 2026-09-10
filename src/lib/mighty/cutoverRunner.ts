@@ -85,8 +85,12 @@ export async function runCutoverBatch(params: {
 		const adapter = params.adapter!
 		const started = checkpoint(row.email, 'IN_PROGRESS', row.mightyMemberId, null)
 		params.store.put(started)
+		let memberId = row.mightyMemberId
 		try {
-			const memberId = row.mightyMemberId ?? (await adapter.createMember(row.email)).id
+			if (!memberId) {
+				memberId = (await adapter.createMember(row.email)).id
+				mutationPerformed = true
+			}
 			await adapter.grantPlan(memberId, params.planId)
 			mutationPerformed = true
 			if (!await adapter.verifyPlan(memberId, params.planId)) throw new Error('cutover_verification_failed')
@@ -97,14 +101,14 @@ export async function runCutoverBatch(params: {
 			const message = error instanceof Error ? error.message : 'cutover_provider_error'
 			let finalStatus: CutoverCheckpointStatus = 'REVIEW_REQUIRED'
 			try {
-				if (row.mightyMemberId) {
-					await adapter.rollbackPlan(row.mightyMemberId, params.planId)
+				if (row.mightyMemberId && memberId) {
+					await adapter.rollbackPlan(memberId, params.planId)
 					finalStatus = 'FAILED_RESTORED'
 				}
 			} catch {
 				finalStatus = 'REVIEW_REQUIRED'
 			}
-			const failed = checkpoint(row.email, finalStatus, row.mightyMemberId, message)
+			const failed = checkpoint(row.email, finalStatus, memberId, message)
 			params.store.put(failed)
 			processed.push(failed)
 			return { dryRun: false, processed, stoppedOnError: true, mutationPerformed }

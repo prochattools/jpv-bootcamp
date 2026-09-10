@@ -58,3 +58,26 @@ test('runner skips identity, overlap, and privileged actions', async () => {
 	assert.equal(result.mutationPerformed, false)
 	assert.equal(result.processed.length, 0)
 })
+
+test('new-subscriber failure preserves the created ID for review and never deletes it', async () => {
+	const store = createMemoryCutoverCheckpointStore()
+	const calls: string[] = []
+	const result = await runCutoverBatch({
+		rows: [buildCutoverManifestRow({ email: 'new@example.com', stripeEntitled: true, member: null, plans: [], purchases: [], spaces: [], targetPlanId: 2000039 })],
+		batchSize: 1,
+		dryRun: false,
+		store,
+		adapter: {
+			createMember: async () => { calls.push('create'); return { id: '99' } },
+			grantPlan: async () => { calls.push('grant'); throw new Error('provider_timeout') },
+			verifyPlan: async () => false,
+			rollbackPlan: async () => { calls.push('rollback') },
+		},
+		planId: '2000039',
+	})
+	assert.equal(result.stoppedOnError, true)
+	assert.equal(result.mutationPerformed, true)
+	assert.equal(store.get('new@example.com')?.status, 'REVIEW_REQUIRED')
+	assert.equal(store.get('new@example.com')?.memberId, '99')
+	assert.deepEqual(calls, ['create', 'grant'])
+})
