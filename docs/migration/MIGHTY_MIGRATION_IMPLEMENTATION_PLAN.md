@@ -12,6 +12,8 @@
   `2bfa2052d67b527bf83da62e37b70b0a50a94c1e`.
 - The annotated baseline tag is pushed to `origin` and resolves to
   `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
+- The owner has manually created the hidden, non-paid, access-only JPV member
+  Plan. The application does not create or configure this provider object.
 - The local `.env` and `.env.production` contain no configured Mighty values;
   only `.env.example` contains placeholders. No secret values are recorded.
 - The guarded real-network command is ready but has not run because the
@@ -27,6 +29,12 @@
 - The worker route has local runtime coverage for missing-secret,
   unauthorized-token, and malformed-request fail-closed behavior. No worker
   request was sent to a deployed application.
+- The read-only `pnpm mighty:manual-access-audit` command is implemented. It
+  compares all Mighty members and purchases with Stripe-entitled records and
+  reports aggregate direct/overlapping-access risk without mutation. It has not
+  run because the remaining production API values are not available locally.
+- Mighty API requests include the required identifying `User-Agent` header for
+  the provider’s bot-protection boundary.
 
 ## Guardrails
 
@@ -62,6 +70,10 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
    Git. Record only redacted presence/ownership evidence.
 3. Run the read-only entitled roster bridge and manually add existing members
    under an operator-owned procedure.
+   Before enabling automatic revocation, run the read-only manual-access audit
+   and follow `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`; removing
+   Plan `2000039` alone is insufficient when another Plan or direct membership
+   grants access.
 4. Validate the worker against a non-production Mighty Network or an approved
    controlled test account when one is available. Confirm create/reuse, grant,
    restore, immediate revoke, retry, and welcome ordering.
@@ -187,8 +199,8 @@ as a separate, explicitly authorized operator action.
 
 ## Missing before controlled cutover
 
-- Existing Mighty Network ID and real non-paid JPV access Plan ID (the current
-  Plan ID is only a placeholder until the Plan exists).
+- Existing Mighty Network ID and provider verification of the manually created
+  non-paid JPV access Plan.
 - Dedicated Admin API token owner, rotation policy, and target environment.
 - Production application worker secret and GitHub `production-mighty-sync`
   scheduled-execution secret/owner.

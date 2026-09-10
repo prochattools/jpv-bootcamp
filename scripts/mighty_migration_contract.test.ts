@@ -15,6 +15,7 @@ const bridge = readFileSync('scripts/mighty/buildEntitledMemberBridge.mts', 'utf
 const stagingAcceptance = readFileSync('scripts/mighty/runStagingAcceptance.mts', 'utf8')
 const productionAcceptance = readFileSync('scripts/mighty/runProductionAcceptance.mts', 'utf8')
 const configurationCheck = readFileSync('scripts/mighty/checkConfiguration.mts', 'utf8')
+const manualAccessAudit = readFileSync('scripts/mighty/auditManualAccess.mts', 'utf8')
 const stagingScheduler = readFileSync('.github/workflows/staging-mighty-access-sync.yml', 'utf8')
 const productionScheduler = readFileSync('.github/workflows/mighty-access-sync.yml', 'utf8')
 const stagingEvidence = readFileSync('docs/migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md', 'utf8')
@@ -34,6 +35,7 @@ test('member discovery uses the documented paginated members endpoint', () => {
 	assert.match(api, /networks\/\$\{numericId\(this\.config\.networkId\)\}\/members/)
 	assert.match(api, /page\.links\?\.next/)
 	assert.match(api, /normalizeEmail\(member\.email\)/)
+	assert.match(api, /'User-Agent': MIGHTY_USER_AGENT/)
 })
 
 test('member creation suppresses Mighty invitation/welcome behavior', () => {
@@ -144,6 +146,9 @@ test('production acceptance harness requires explicit production guards and pres
 	assert.match(productionAcceptance, /MIGHTY_PRODUCTION_TEST_EMAIL/)
 	assert.match(productionAcceptance, /reconcileAccess\(/)
 	assert.match(productionAcceptance, /getAccessState\(/)
+	assert.match(productionAcceptance, /const preExistingMember = await api\.findMember\(email\)/)
+	assert.match(productionAcceptance, /memberReusedThroughReconcileAccess: Boolean\(preExistingMember\)/)
+	assert.doesNotMatch(productionAcceptance, /mighty_acceptance_test_member_must_be_disposable_and_absent/)
 	assert.match(productionAcceptance, /acceptance cleanup must leave disposable test access granted/)
 	assert.match(productionAcceptance, /finalStateAccessGranted: true/)
 	assert.doesNotMatch(productionAcceptance, /MIGHTY_STAGING|staging\.jpvbootcamp\.com/)
@@ -155,6 +160,16 @@ test('configuration check is read-only and reports Plan verification separately'
 	assert.match(configurationCheck, /planIdVerification/)
 	assert.match(configurationCheck, /provider_lookup_required/)
 	assert.match(configurationCheck, /readyForAcceptance: configurationShapeReady && planIdVerification === 'verified'/)
+})
+
+test('manual access audit is read-only and identifies direct or overlapping access risk', () => {
+	assert.match(manualAccessAudit, /config\.accessPlanId/)
+	assert.match(manualAccessAudit, /listMembers\(\)/)
+	assert.match(manualAccessAudit, /findAllPurchases\(\)/)
+	assert.match(manualAccessAudit, /directMemberWithoutAnyPlan/)
+	assert.match(manualAccessAudit, /stripeEntitledWithOtherPlanOverlap/)
+	assert.match(manualAccessAudit, /mutationPerformed: false/)
+	assert.doesNotMatch(manualAccessAudit, /createMember|grantAccess|restoreAccess|revokeAccess/)
 })
 
 test('public Sign In targets the canonical Mighty URL', () => {

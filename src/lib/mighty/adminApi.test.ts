@@ -34,6 +34,17 @@ test('findMember follows Mighty pagination and compares normalized email', async
 	assert.equal(requests.length, 2)
 })
 
+test('provider requests include the required User-Agent header', async () => {
+	let headers: HeadersInit | undefined
+	const api = new MightyAdminApi(config, async (_input, init) => {
+		headers = init?.headers
+		return response({ items: [], links: {} })
+	})
+
+	await api.findMember('student@example.com')
+	assert.equal(new Headers(headers).get('User-Agent'), 'jpv-bootcamp-mighty-sync/1.0 (+https://jpvbootcamp.com)')
+})
+
 test('createMember disables Mighty welcome email and grant uses the documented query parameter', async () => {
 	const calls: Array<{ url: string; method: string; body?: string }> = []
 	const api = new MightyAdminApi(config, async (input, init) => {
@@ -74,4 +85,24 @@ test('getAccessState reports the current plan purchase state', async () => {
 		purchases: [{ member_id: 11, purchase: { id: 'purchase-1' } }],
 		hasAccess: true,
 	})
+})
+
+test('listMembers and findAllPurchases paginate the whole network for read-only audits', async () => {
+	const requests: string[] = []
+	const api = new MightyAdminApi(config, async (input) => {
+		const url = String(input)
+		requests.push(url)
+		if (url.includes('members?page=2')) return response({ items: [{ id: 12, email: 'second@example.com' }], links: {} })
+		if (url.includes('/members')) {
+			return response({ items: [{ id: 11, email: 'member@example.com' }], links: { next: 'https://api.mn.co/admin/v1/networks/12345/members?page=2' } })
+		}
+		if (url.includes('purchases?page=2')) return response({ items: [], links: {} })
+		return response({ items: [{ member_id: 11, plan: { id: 678 }, purchase: { id: 'purchase-1' } }], links: { next: 'https://api.mn.co/admin/v1/networks/12345/purchases?page=2' } })
+	})
+
+	const members = await api.listMembers()
+	const purchases = await api.findAllPurchases()
+	assert.deepEqual(members.map((member) => member.id), [11, 12])
+	assert.deepEqual(purchases.map((purchase) => purchase.purchase?.id), ['purchase-1'])
+	assert.equal(requests.length, 4)
 })

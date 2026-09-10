@@ -36,6 +36,9 @@ mutation was performed. A read-only production health/configuration check
 confirmed the baseline image remains deployed; the production Mighty values
 were not revealed or used. The old portal remains in the repository for
 controlled rollback and operator continuity.
+The owner has since manually created the hidden, non-paid, access-only JPV
+member Plan. Its ID is supplied through environment configuration only; provider
+acceptance and the manual-access overlap audit remain pending.
 
 Staging is intentionally unchanged and is not a prerequisite for this
 production feature-branch lane. Its provider verification blockers remain
@@ -57,6 +60,10 @@ performed.
 The read-only `pnpm mighty:config-check` command can validate environment
 presence and URL/number shapes before a Mighty access Plan exists; it never
 prints secret values or contacts the provider.
+The read-only `pnpm mighty:manual-access-audit` command is available for the
+required pre-revocation review; it reports aggregate overlap/direct-access
+risk and performs no provider mutation. The normalization procedure is in
+`docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

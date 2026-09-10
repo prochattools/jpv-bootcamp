@@ -48,6 +48,8 @@ export class MightyApiError extends Error {
 
 type FetchLike = typeof fetch
 
+const MIGHTY_USER_AGENT = 'jpv-bootcamp-mighty-sync/1.0 (+https://jpvbootcamp.com)'
+
 function numericId(value: number | string): string {
 	const normalized = String(value).trim()
 	if (!normalized) throw new Error('Mighty ID is required')
@@ -84,6 +86,7 @@ export class MightyAdminApi {
 			headers: {
 				Authorization: `Bearer ${this.config.adminApiToken}`,
 				Accept: 'application/json',
+				'User-Agent': MIGHTY_USER_AGENT,
 				...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
 			},
 			...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -105,10 +108,33 @@ export class MightyAdminApi {
 			headers: {
 				Authorization: `Bearer ${this.config.adminApiToken}`,
 				Accept: 'application/json',
+				'User-Agent': MIGHTY_USER_AGENT,
 			},
 		})
 		if (!response.ok) throw new MightyApiError(response.status)
 		return (await response.json()) as Paginated<T>
+	}
+
+	private async collectPages<T>(firstPage: Paginated<T>): Promise<T[]> {
+		const items = [...firstPage.items]
+		let page: Paginated<T> | null = firstPage
+		let pageCount = 0
+		while (page?.links?.next) {
+			pageCount += 1
+			if (pageCount >= 100) throw new Error('Mighty pagination limit exceeded')
+			page = await this.getNextPage<T>(page.links.next)
+			if (page) items.push(...page.items)
+		}
+		return items
+	}
+
+	async listMembers(): Promise<MightyMember[]> {
+		const firstPage = await this.request<Paginated<MightyMember>>(
+			'GET',
+			`networks/${numericId(this.config.networkId)}/members`,
+			{ per_page: 100 },
+		)
+		return firstPage ? this.collectPages(firstPage) : []
 	}
 
 	async findMember(email: string): Promise<MightyMember | null> {
@@ -161,6 +187,15 @@ export class MightyAdminApi {
 			{ member_id: numericId(memberId), plan_id: planId, per_page: 100 },
 		)
 		return result?.items ?? []
+	}
+
+	async findAllPurchases(): Promise<MightyPurchase[]> {
+		const firstPage = await this.request<Paginated<MightyPurchase>>(
+			'GET',
+			`networks/${numericId(this.config.networkId)}/purchases`,
+			{ per_page: 100 },
+		)
+		return firstPage ? this.collectPages(firstPage) : []
 	}
 
 	async getAccessState(memberId: number | string, planId: number | string = this.config.accessPlanId): Promise<MightyAccessState> {

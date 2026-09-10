@@ -23,8 +23,10 @@ restores it on `invoice.paid`. Welcome/login email is deferred until the Mighty
 grant succeeds. Event ordering and worker lease/finalization guards are covered
 by local tests. The production scheduler is explicitly disabled until
 `MIGHTY_ACCESS_SYNC_ENABLED=true` is set in the production GitHub environment;
-manual dispatch separately requires an explicit confirmation input. No Mighty
-API was live-exercised and no provider production objects were created.
+manual dispatch separately requires an explicit confirmation input. The owner
+has manually created the hidden, non-paid, access-only JPV member Plan; no
+application-created provider object exists and no Mighty API acceptance call
+has yet been completed.
 
 The bounded real-network acceptance command is
 `pnpm mighty:production-acceptance`; it requires an operator-controlled
@@ -36,6 +38,11 @@ The read-only `pnpm mighty:config-check` command now validates the environment
 shape without contacting Mighty or printing secret values. A Plan ID, when
 present, is reported as requiring provider lookup and does not make the
 acceptance command ready; no Plan is created by the application.
+
+The read-only `pnpm mighty:manual-access-audit` command is implemented for the
+pre-revocation review. It compares the full Mighty member/purchase inventory
+with active Stripe entitlements and reports aggregate overlap/direct-access
+risk. No member population has been changed.
 
 The acceptance command is currently pending secure provider configuration. The
 read-only roster bridge was also attempted but could not reach its local
