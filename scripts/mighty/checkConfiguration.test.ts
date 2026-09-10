@@ -48,6 +48,25 @@ test('configuration check reports invalid shapes without exposing their values',
 	assert.ok(result.blockingReasons.includes('MIGHTY_ACCESS_PLAN_ID_INVALID'))
 })
 
+test('configuration check rejects provider resource URLs and non-login landing URLs', () => {
+	const result = checkConfiguration({
+		MIGHTY_API_BASE_URL: 'https://api.mn.co/admin/v1/networks/24903412/me',
+		MIGHTY_NETWORK_ID: '24903412',
+		MIGHTY_ACCESS_PLAN_ID: '2000039',
+		MIGHTY_ADMIN_API_TOKEN: 'secret-token',
+		MIGHTY_STUDENT_LOGIN_URL: 'https://jpv-community.mn.co/landing?space_id=24903412',
+		MIGHTY_ACCESS_SYNC_WORKER_SECRET: 'worker-secret',
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
+		MIGHTY_PRODUCTION_TEST_EMAIL: 'info@prochat.tools',
+	})
+
+	assert.equal(result.provider.MIGHTY_API_BASE_URL, 'INVALID')
+	assert.equal(result.provider.MIGHTY_STUDENT_LOGIN_URL, 'INVALID')
+	assert.ok(result.blockingReasons.includes('MIGHTY_API_BASE_URL_INVALID'))
+	assert.ok(result.blockingReasons.includes('MIGHTY_STUDENT_LOGIN_URL_INVALID'))
+})
+
 test('configuration check distinguishes missing Plan configuration from provider verification', () => {
 	assert.match(source, /planIdVerification/)
 	assert.match(source, /provider_lookup_required/)

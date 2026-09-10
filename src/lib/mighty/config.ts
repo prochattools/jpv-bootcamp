@@ -28,6 +28,30 @@ function requiredUrl(env: Env, key: string): string {
 	return value.replace(/\/$/, '')
 }
 
+export function isMightyApiBaseUrl(value: string): boolean {
+	try {
+		const parsed = new URL(value)
+		return (
+			parsed.protocol === 'https:' &&
+			parsed.hostname === 'api.mn.co' &&
+			parsed.pathname.replace(/\/+$/, '') === '/admin/v1' &&
+			!parsed.search &&
+			!parsed.hash
+		)
+	} catch {
+		return false
+	}
+}
+
+export function isMightyStudentLoginUrl(value: string): boolean {
+	try {
+		const parsed = new URL(value)
+		return parsed.protocol === 'https:' && parsed.hostname === 'jpv-community.mn.co' && parsed.pathname === '/sign_in'
+	} catch {
+		return false
+	}
+}
+
 function requiredPositiveInteger(env: Env, key: string): number {
 	const value = required(env, key)
 	const parsed = Number(value)
@@ -38,12 +62,17 @@ function requiredPositiveInteger(env: Env, key: string): number {
 }
 
 export function parseMightyConfig(env: Env = process.env): MightyConfig {
+	const apiBaseUrl = requiredUrl(env, 'MIGHTY_API_BASE_URL')
+	if (!isMightyApiBaseUrl(apiBaseUrl)) throw new Error('MIGHTY_API_BASE_URL must be https://api.mn.co/admin/v1')
+	const studentLoginUrl = requiredUrl(env, 'MIGHTY_STUDENT_LOGIN_URL')
+	if (!isMightyStudentLoginUrl(studentLoginUrl)) throw new Error('MIGHTY_STUDENT_LOGIN_URL must target the JPV /sign_in URL')
+
 	return {
-		apiBaseUrl: requiredUrl(env, 'MIGHTY_API_BASE_URL'),
+		apiBaseUrl,
 		networkId: required(env, 'MIGHTY_NETWORK_ID'),
 		accessPlanId: requiredPositiveInteger(env, 'MIGHTY_ACCESS_PLAN_ID'),
 		adminApiToken: required(env, 'MIGHTY_ADMIN_API_TOKEN'),
-		studentLoginUrl: requiredUrl(env, 'MIGHTY_STUDENT_LOGIN_URL'),
+		studentLoginUrl,
 	}
 }
 

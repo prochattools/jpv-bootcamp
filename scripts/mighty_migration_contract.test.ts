@@ -25,10 +25,12 @@ const eventOrderingMigration = readFileSync('prisma/migrations/20260909093000_ad
 
 test('typed Mighty config is fail-closed and environment-only', () => {
 	assert.match(config, /MIGHTY_API_BASE_URL/)
+	assert.match(config, /api\.mn\.co\/admin\/v1/)
 	assert.match(config, /MIGHTY_NETWORK_ID/)
 	assert.match(config, /MIGHTY_ACCESS_PLAN_ID/)
 	assert.match(config, /MIGHTY_ADMIN_API_TOKEN/)
 	assert.match(config, /MIGHTY_STUDENT_LOGIN_URL/)
+	assert.match(config, /jpv-community\.mn\.co.*sign_in/)
 })
 
 test('member discovery uses the documented paginated members endpoint', () => {

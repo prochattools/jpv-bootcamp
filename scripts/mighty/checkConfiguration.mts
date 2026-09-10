@@ -1,5 +1,7 @@
 import { pathToFileURL } from 'node:url'
 
+import { isMightyApiBaseUrl, isMightyStudentLoginUrl } from '../../src/lib/mighty/config'
+
 type Presence = 'PRESENT' | 'MISSING' | 'INVALID'
 
 const PROVIDER_KEYS = [
@@ -23,14 +25,6 @@ function presence(value: string | undefined, validator?: (value: string) => bool
 	return validator && !validator(normalized) ? 'INVALID' : 'PRESENT'
 }
 
-function httpsUrl(value: string): boolean {
-	try {
-		return new URL(value).protocol === 'https:'
-	} catch {
-		return false
-	}
-}
-
 function positiveInteger(value: string): boolean {
 	const parsed = Number(value)
 	return Number.isInteger(parsed) && parsed > 0
@@ -38,11 +32,11 @@ function positiveInteger(value: string): boolean {
 
 export function checkConfiguration(env: Record<string, string | undefined> = process.env) {
 	const provider: Record<string, Presence> = {
-		MIGHTY_API_BASE_URL: presence(env.MIGHTY_API_BASE_URL, httpsUrl),
+		MIGHTY_API_BASE_URL: presence(env.MIGHTY_API_BASE_URL, isMightyApiBaseUrl),
 		MIGHTY_NETWORK_ID: presence(env.MIGHTY_NETWORK_ID),
 		MIGHTY_ACCESS_PLAN_ID: presence(env.MIGHTY_ACCESS_PLAN_ID, positiveInteger),
 		MIGHTY_ADMIN_API_TOKEN: presence(env.MIGHTY_ADMIN_API_TOKEN),
-		MIGHTY_STUDENT_LOGIN_URL: presence(env.MIGHTY_STUDENT_LOGIN_URL, httpsUrl),
+		MIGHTY_STUDENT_LOGIN_URL: presence(env.MIGHTY_STUDENT_LOGIN_URL, isMightyStudentLoginUrl),
 		MIGHTY_ACCESS_SYNC_WORKER_SECRET: presence(env.MIGHTY_ACCESS_SYNC_WORKER_SECRET),
 	}
 	const controls: Record<string, Presence> = {
