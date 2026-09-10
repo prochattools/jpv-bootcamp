@@ -3,6 +3,7 @@
 **Status:** Feature-branch implementation complete locally; merge-ready pending review
 **Date:** 2026-09-09  
 **Branch:** `feature/mighty-stripe-migration`  
+**Implementation commit:** `b40faafeab0987905ed694056bc0faeea844558d`
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
 
 ## Guardrails
