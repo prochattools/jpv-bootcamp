@@ -48,12 +48,26 @@ The rollout order is canonical: Phase A — silent build; Phase B — owner
 acceptance; Phase C — explicitly authorized administrator canaries; Phase D —
 one-at-a-time or controlled-batch existing-member migration; and Phase E —
 automation enablement only after member normalization. The owner explicitly
-authorized Phase C against the existing owner identity. The canary reused one
-Mighty identity, proved target Plan grant/idempotency/removal/restoration, and
-left Plan `2000039` restored. The provider exposed `member_type=full` but no
+authorized Phase C against the existing owner identity and a second
+administrator identity. Both existing Mighty identities were reused, target
+Plan grant/idempotency/removal/restoration was verified, and Plan `2000039`
+was restored for both. The provider exposed `member_type=full` but no
 definitive network Host/Admin role field; effective Network denial was therefore
-not tested. No privilege, Space, Network, student, or other member state was
-changed. The ordinary-member pilot is the next gate.
+not tested for either administrator. No privilege, Space, Network, student, or
+other member state was changed. The ordinary-member pilot is the next gate.
+
+The second administrator canary reused exactly one existing Mighty identity
+for `steve@yeshua.academy` (stable member ID `41580680`). The read-only
+precheck found no Plan or purchase membership and five direct Space
+memberships. The first grant was verified independently; the repeated grant
+returned duplicate-assignment HTTP 422 while the independent read remained
+exactly one target Plan membership and zero other Plans. Plan-only revoke
+returned HTTP 204 and verified absence; restore returned HTTP 200 and verified
+presence. The five direct Space memberships and member ID were unchanged, so
+the administrator bypass was preserved and effective Network denial was not
+claimed. No duplicate account, welcome email, profile/content/history change,
+student/member-population mutation, Stripe mutation, deployment, merge, or
+scheduler enablement occurred.
 The existing-member algorithm, overlap risks, stop-on-error boundary, and
 resumability requirements are documented in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.

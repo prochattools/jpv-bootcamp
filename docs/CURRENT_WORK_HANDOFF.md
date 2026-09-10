@@ -32,25 +32,36 @@ excluded from automation. The owner `info@prochat.tools` is present, has Plan
 student, member population, Stripe object, staging application, or live
 scheduler was modified.
 
-The next canary requires the owner to provide exactly one existing legitimate
-JPV member email who is not Host/Admin, has normal Mighty access, is
-contactable, and has approved the pilot. Do not choose a member automatically.
-The exact read-only/grant/verify/Plan-denial/legacy-bypass/restore/final-
-experience sequence and outcomes A/B/C are documented in
+The additional administrator canary is complete. The next canary requires the
+owner to provide exactly one existing legitimate JPV member email who is not
+Host/Admin, has normal Mighty access, is contactable, and has approved the
+pilot. Do not choose a member automatically. The exact
+read-only/grant/verify/Plan-denial/legacy-bypass/restore/final-experience
+sequence and outcomes A/B/C are documented in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
 
 ## CURRENT MIGHTY ACCEPTANCE UPDATE — 2026-09-10
 
-The owner explicitly authorized Phase C against `info@prochat.tools`. The
-pre-canary read-only inspection found exactly one matching Mighty identity,
-`member_type=full`, the target Plan already present, no other Plan or purchase
-overlap, and six direct Space memberships. The provider exposed no definitive
-network Host/Admin role field, so effective Network denial was not tested.
-The bounded Plan canary then passed: existing identity reused, grant verified,
-repeat grant idempotent, Plan removal verified, repeat revoke safe, and Plan
-`2000039` restored and verified. No welcome email, privilege change, Space or
-Network removal, duplicate identity, student, or other member mutation occurred.
-The ordinary-member pilot is now the next gate.
+The owner explicitly authorized Phase C against `info@prochat.tools`, and the
+second administrator canary was authorized against `steve@yeshua.academy`. The
+owner pre-canary read-only inspection found exactly one matching Mighty
+identity, `member_type=full`, the target Plan already present, no other Plan or
+purchase overlap, and six direct Space memberships. The second administrator
+precheck found exactly one existing identity, stable member ID `41580680`,
+`member_type=full`, no Plan or purchase membership, and five direct Space
+memberships. The provider exposed no definitive network Host/Admin role field
+for either identity, so effective Network denial was not tested.
+
+The second administrator Plan canary passed: the existing identity was
+reused; the first grant was independently verified; the repeat grant returned
+duplicate-assignment HTTP 422 without creating a duplicate Plan membership;
+Plan-only revoke returned HTTP 204 and was independently verified absent; and
+restore returned HTTP 200 and was independently verified present. The member
+ID and all five direct Space memberships were preserved. No welcome email,
+privilege change, Space or Network removal, profile/content/history change,
+duplicate identity, student, other-member, Stripe, deployment, merge, or
+scheduler mutation occurred. The administrator remains fully restored and
+allowed, and the ordinary-member pilot is now the next gate.
 
 The six unresolved active Stripe provisioning records were checked read-only
 against production Stripe and the production database. Sanitized result:

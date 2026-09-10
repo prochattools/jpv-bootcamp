@@ -43,6 +43,30 @@
   exact sequence and stop conditions are in
   `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
 
+- The explicitly authorized second administrator canary for
+  `steve@yeshua.academy` passed against the same production Network. The
+  read-only lookup reused exactly one existing Mighty identity, stable member
+  ID `41580680`, with `member_type=full`, no target or other Plan membership,
+  no purchase rows, and five direct Space memberships. The provider did not
+  expose a definitive Host/Admin role field in the member or Space responses;
+  the direct Space memberships establish an administrator-access bypass that
+  must not be removed during a Plan test.
+- Plan `2000039` was granted and independently verified. A repeated grant
+  returned the provider's duplicate-assignment HTTP 422, while the
+  independent read remained exactly one target Plan membership and zero other
+  Plans; this proves idempotent state rather than duplicate access. Plan-only
+  revoke returned HTTP 204 and independently showed zero target Plan
+  memberships. Restore returned HTTP 200 and independently restored exactly
+  one target Plan membership. The member ID and five direct Space memberships
+  remained unchanged; no Host/Admin, Network, Space, profile, content, or
+  history operation was performed.
+- Effective Network denial was not tested because direct administrator Space
+  access is an independent bypass. The administrator remains fully restored
+  and allowed. No duplicate account, welcome email, student/member-population
+  mutation, Stripe mutation, deployment, merge, or scheduler enablement
+  occurred. The next gate is exactly one explicitly authorized ordinary
+  non-Host/non-Admin member canary.
+
 ## Current acceptance evidence — 2026-09-10
 
 - The owner explicitly authorized Phase C against `info@prochat.tools`, the
@@ -63,6 +87,21 @@
   direct Space memberships and the provider did not expose a definitive
   Host/Admin role classification. The canary proves only the target
   Plan-controlled lifecycle for this account.
+- A second administrator canary then passed for the explicitly authorized
+  existing identity `steve@yeshua.academy` (Mighty member ID `41580680`). The
+  identity was found through the provider's exact email lookup and reused;
+  the read-only precheck found no Plan or purchase membership and five direct
+  Space memberships. The provider again exposed `member_type=full` but no
+  definitive Host/Admin role field. The grant was verified, the repeated
+  grant returned duplicate-assignment HTTP 422 without creating a second Plan
+  membership, Plan-only revoke was verified absent, and restore was verified
+  present. All five direct Space memberships and the member ID were preserved.
+- Because direct administrator Space access bypasses the target Plan, this
+  canary did not claim effective Network denial. Host/Admin privileges and
+  direct access were preserved, and the final state is restored/allowed with
+  exactly one Plan `2000039` membership. No duplicate account, welcome email,
+  profile/content/history mutation, student/member-population mutation,
+  Stripe mutation, deployment, merge, or scheduler enablement occurred.
 - The six unresolved active Stripe provisioning records were reconciled
   read-only against the production Stripe account and production database:
   `ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`. These are sanitized
@@ -201,7 +240,7 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | M6 | Read-only entitled-member bridge for controlled manual migration | **Implemented locally** |
 | M7 | Focused regression tests and validation matrix | **Local focused matrix green; provider/live checks remain cutover gates** |
 | M8 | Staging configuration and controlled provider/API verification | **Skipped for this implementation lane; staging remains unchanged** |
-| M9 | Production cutover readiness, rollback, and go/no-go | **Owner/admin Plan canary passed; ordinary-member pilot pending; cutover not started / not authorized** |
+| M9 | Production cutover readiness, rollback, and go/no-go | **Owner and second-administrator Plan canaries passed; ordinary-member pilot pending; cutover not started / not authorized** |
 
 ## Approved execution sequence
 
