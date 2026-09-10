@@ -25,6 +25,12 @@ by local tests. The production scheduler is explicitly disabled until
 manual dispatch separately requires an explicit confirmation input. No Mighty
 API was live-exercised and no provider production objects were created.
 
+The bounded real-network acceptance command is
+`pnpm mighty:production-acceptance`; it requires an operator-controlled
+disposable test email and an explicit production mutation guard. It is not run
+automatically and leaves the test member account intact while removing all JPV
+access at cleanup.
+
 See `docs/architecture/JPV_MIGHTY_STRIPE_ARCHITECTURE.md` and
 `docs/migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md` for the canonical
 architecture, M0–M9 phase status, missing configuration, manual bridge, and

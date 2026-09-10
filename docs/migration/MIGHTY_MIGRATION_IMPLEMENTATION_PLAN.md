@@ -43,6 +43,10 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 4. Validate the worker against a non-production Mighty Network or an approved
    controlled test account when one is available. Confirm create/reuse, grant,
    restore, immediate revoke, retry, and welcome ordering.
+   For the real JPV Network, the bounded command is
+   `pnpm mighty:production-acceptance`; it requires
+   `MIGHTY_PROVIDER_ENV=production`, `MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS=true`,
+   and one disposable `MIGHTY_PRODUCTION_TEST_EMAIL`.
 5. Configure a scheduled worker call to
    `POST /api/admin/process-mighty-access-sync` with the dedicated worker
    secret. The Stripe webhook itself must never call Mighty synchronously.
@@ -165,6 +169,8 @@ as a separate, explicitly authorized operator action.
 - Production application worker secret and GitHub `production-mighty-sync`
   scheduled-execution secret/owner.
 - Non-production or otherwise approved Mighty API verification evidence.
+- One disposable/operator-controlled production test identity for the bounded
+  acceptance command, if the provider values are available to the operator.
 - Secure manual roster execution and aggregate reconciliation evidence.
 - Production verification for billing, support, sponsored membership,
   operator/admin, and the cutover/rollback routes.

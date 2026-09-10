@@ -45,6 +45,11 @@ worker-secret configuration, and the explicit GitHub environment variable
 `MIGHTY_ACCESS_SYNC_ENABLED=true`; manual dispatch also requires an explicit
 confirmation input.
 
+The real-network acceptance command is `pnpm mighty:production-acceptance`.
+It requires `MIGHTY_PROVIDER_ENV=production`, an explicit production mutation
+guard, and one disposable operator-controlled test email; it has not been run
+because those inputs are not available in the local environment.
+
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 The production release authority is `main`. The deployed production revision is

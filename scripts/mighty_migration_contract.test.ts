@@ -13,6 +13,7 @@ const login = readFileSync('src/app/(frontend)/login/page.tsx', 'utf8')
 const upgrade = readFileSync('src/app/(frontend)/upgrade/page.tsx', 'utf8')
 const bridge = readFileSync('scripts/mighty/buildEntitledMemberBridge.mts', 'utf8')
 const stagingAcceptance = readFileSync('scripts/mighty/runStagingAcceptance.mts', 'utf8')
+const productionAcceptance = readFileSync('scripts/mighty/runProductionAcceptance.mts', 'utf8')
 const stagingScheduler = readFileSync('.github/workflows/staging-mighty-access-sync.yml', 'utf8')
 const productionScheduler = readFileSync('.github/workflows/mighty-access-sync.yml', 'utf8')
 const stagingEvidence = readFileSync('docs/migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md', 'utf8')
@@ -134,6 +135,16 @@ test('staging acceptance harness requires explicit non-production guards', () =>
 	assert.match(stagingAcceptance, /MIGHTY_STAGING_ALLOW_API_MUTATIONS/)
 	assert.match(stagingAcceptance, /mighty_acceptance_test_member_must_be_disposable_and_absent/)
 	assert.match(stagingEvidence, /MIGHTY_STAGING_TEST_EMAIL_CHANGED/)
+})
+
+test('production acceptance harness requires explicit production guards and cleans up access', () => {
+	assert.match(productionAcceptance, /MIGHTY_PROVIDER_ENV\?\.trim\(\) !== 'production'/)
+	assert.match(productionAcceptance, /MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS/)
+	assert.match(productionAcceptance, /MIGHTY_PRODUCTION_TEST_EMAIL/)
+	assert.match(productionAcceptance, /reconcileAccess\(/)
+	assert.match(productionAcceptance, /getAccessState\(/)
+	assert.match(productionAcceptance, /acceptance cleanup must remove disposable test access/)
+	assert.doesNotMatch(productionAcceptance, /MIGHTY_STAGING|staging\.jpvbootcamp\.com/)
 })
 
 test('public Sign In targets the canonical Mighty URL', () => {
