@@ -1,5 +1,40 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10
+
+Phase E0 is complete as a read-only production reconciliation and controlled
+migration preparation gate. The feature branch is
+`feature/mighty-stripe-migration` at `cb33aaa57d2b372fef06753d01e00b6045fb7537`,
+matching `origin`; only unrelated `newrelic_agent.log` is dirty. No member
+migration, Stripe mutation, scheduler enablement, merge, or production deploy
+was performed.
+
+The authoritative deployed identity-dry-run ran in live Stripe mode and found
+17 active subscriptions, all matched to active Payload members:
+`ALLOWED: 17`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 0`. The exact current
+Mighty candidate manifest is:
+
+| Classification | Identities |
+| --- | --- |
+| `PHASE_D_CANARY_COMPLETE` | `westhoek@hotmail.com` (Mighty `41580317`) |
+| `OWNER_OR_ADMIN_EXCLUDED` | `steve@yeshua.academy` (Mighty `41580680`) |
+| `ELIGIBLE_ORDINARY_BATCH_CANDIDATE` | `Missaquadri@gmail.com` (`41567828`), `adaumoudit@gmail.com` (`41566725`), `amechiclarangozi2022@gmail.com` (`41567964`), `happyalamss@gmail.com` (`41566259`), `ronyaa@live.co.uk` (`41568214`), `Katherinecd7@yahoo.com` (`41585608`) |
+| `PRIVILEGED_OR_EXCEPTION_ACCESS_REVIEW` | `tosinotubanjo@gmail.com` (`41582168`), because of extra `FIRST FOUNDATION` Space |
+| `IDENTITY_MISMATCH_REVIEW` | `anita13steve@gmail.com`, `info@yeshua.academy`, `kem.okupa@gmail.com`, `marek_bed@yahoo.com`, `nsgonza2@gmail.com`, `prince.okoroego@gmail.com`, `samuel.roy.edward.hill@gmail.com`, `vimbaimt@gmail.com` |
+| `ALREADY_PLAN_CONTROLLED` (additional) | None; the two current Plan-controlled identities are classified above as canaries/exceptions |
+| `OTHER_PLAN_OVERLAP_REVIEW` | None observed |
+| `DUPLICATE_IDENTITY_REVIEW` | None observed; provider-masked prefix collisions are not duplicate proof |
+
+The smallest proposed next batch is exactly one unmodified identity:
+`Missaquadri@gmail.com` / Mighty `41567828`. It has a full member record, the
+five standard JPV Spaces, zero Plans and purchases, and no known privilege
+exception. Execution requires fresh owner authorization naming that exact
+identity and approving a single Plan `2000039` grant plus independent reads.
+The two old redacted unmatched records cannot be named retrospectively, but
+the current authoritative report resolves the live set with zero unmatched and
+zero ambiguous records. Missing Mighty identities, alternate Plans, extra
+Spaces, and privilege exceptions remain manual-review stops.
+
 ## CURRENT BRANCH RECONCILIATION AND SECURITY GATE — 2026-09-10
 
 The feature branch `feature/mighty-stripe-migration` now contains the
@@ -22,9 +57,9 @@ deployment must repeat the harmless read-only check before any scheduler action.
 The production scheduler remains disabled: no
 `MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no
 `production-mighty-sync` environment are configured. Stripe remains the sole
-billing authority. Current sanitized reconciliation is
-`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; unmatched records
-remain excluded from automation. The owner `info@prochat.tools` remains
+billing authority. The older six-record preparation snapshot was
+`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; it is historical and
+superseded by the Phase E0 live result above. The owner `info@prochat.tools` remains
 restored with Plan `2000039` and no other Plan overlap. No real student or
 member population was modified.
 
@@ -54,7 +89,9 @@ Plan grant/idempotency/removal/restoration was verified, and Plan `2000039`
 was restored for both. The provider exposed `member_type=full` but no
 definitive network Host/Admin role field; effective Network denial was therefore
 not tested for either administrator. No privilege, Space, Network, student, or
-other member state was changed. The ordinary-member pilot is the next gate.
+other member state was changed. Phase D has since completed for the authorized
+ordinary canary, and Phase E0 has prepared—but not executed—the next controlled
+batch.
 
 The second administrator canary reused exactly one existing Mighty identity
 for `steve@yeshua.academy` (stable member ID `41580680`). The read-only
@@ -111,10 +148,10 @@ the canonical public values, and Plan `2000039` is configured. Secrets were
 not printed or committed. GitHub has no `MIGHTY_ACCESS_SYNC_ENABLED`
 repository variable and no `production-mighty-sync` environment is visible;
 the production scheduler therefore remains inert. No deploy, merge, Stripe
-mutation, or production database mutation is part of this phase. A read-only
-production Stripe reconciliation of the six unresolved records returned
-`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; these records remain
-outside Mighty pending operator resolution.
+mutation, or production database mutation is part of this phase. The
+six-record unresolved provisioning snapshot in this historical section is
+retained for auditability only; the current authoritative identity-dry-run is
+recorded in the Phase E0 section above.
 
 ## HISTORICAL MIGHTY MIGRATION PRE-CANARY — 2026-09-09
 

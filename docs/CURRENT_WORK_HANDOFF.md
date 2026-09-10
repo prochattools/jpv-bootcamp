@@ -2,6 +2,48 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10
+
+Phase E0 is complete as a read-only reconciliation and controlled-migration
+preparation gate. The branch is `feature/mighty-stripe-migration` at
+`cb33aaa57d2b372fef06753d01e00b6045fb7537`, matching `origin`; the only dirty
+file is unrelated `newrelic_agent.log`. No migration batch, Stripe mutation,
+scheduler enablement, merge, or production deployment was performed.
+
+The deployed production identity-dry-run reported live Stripe mode with 17
+active subscriptions and 17 active Payload members: `ALLOWED: 17`,
+`DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 0`. The eight identities without an
+exact Mighty member remain excluded for identity review; this current result
+supersedes the older six-record preparation snapshot below.
+
+The read-only Mighty inventory found 15 active members. For the 17 current
+Stripe-ALLOWED identities, the exact manifest is:
+
+| Classification | Identity or identities | Read-only basis |
+| --- | --- | --- |
+| `PHASE_D_CANARY_COMPLETE` | `westhoek@hotmail.com` | Member `41580317`; target Plan present; final restored state from Phase D. |
+| `OWNER_OR_ADMIN_EXCLUDED` | `steve@yeshua.academy` | Authorized administrator canary; member `41580680`; target Plan present. |
+| `ELIGIBLE_ORDINARY_BATCH_CANDIDATE` | `Missaquadri@gmail.com`, `adaumoudit@gmail.com`, `amechiclarangozi2022@gmail.com`, `happyalamss@gmail.com`, `ronyaa@live.co.uk`, `Katherinecd7@yahoo.com` | Exact Mighty match; `member_type=full`; zero Plans and purchases; exactly the five standard JPV Spaces; no known privilege exception. |
+| `PRIVILEGED_OR_EXCEPTION_ACCESS_REVIEW` | `tosinotubanjo@gmail.com` | Exact match has an additional `FIRST FOUNDATION` Space beyond the five standard JPV Spaces. |
+| `IDENTITY_MISMATCH_REVIEW` | `anita13steve@gmail.com`, `info@yeshua.academy`, `kem.okupa@gmail.com`, `marek_bed@yahoo.com`, `nsgonza2@gmail.com`, `prince.okoroego@gmail.com`, `samuel.roy.edward.hill@gmail.com`, `vimbaimt@gmail.com` | No exact Mighty member returned by the read-only email lookup. No account was created. |
+| `ALREADY_PLAN_CONTROLLED` (additional) | None | The two current Plan-controlled identities are already accounted for above as the Phase D canary and authorized administrator. |
+| `OTHER_PLAN_OVERLAP_REVIEW` | None | No additional Plan membership was found for any exact ordinary match. |
+| `DUPLICATE_IDENTITY_REVIEW` | None observed | Exact lookup returned one identity for each existing match. Provider-masked email prefixes collide in the list response, but differing names/IDs do not prove duplicate email identities. |
+
+The smallest proposed next batch is one identity: `Missaquadri@gmail.com`,
+Mighty member `41567828`. It has a full member record, the five standard
+Spaces, no target or other Plan, and no known privilege exception. It remains
+unmodified. Execution requires fresh owner authorization naming this exact
+identity and approving one Plan `2000039` grant with independent verification.
+
+The two historical unmatched records are no longer unmatched in the current
+authoritative live identity report; the current set is `UNMATCHED: 0` and
+`AMBIGUOUS: 0`. Their old redacted snapshot did not preserve enough identity
+detail to name them retrospectively. The migration algorithm remains
+stop-on-error, checkpointed, idempotent, exact-identity-first, and Plan-only;
+missing Mighty identities, alternate Plans, extra Spaces, and privilege
+exceptions remain manual-review stops.
+
 ## CURRENT MIGHTY RECONCILIATION AND SECURITY GATE — 2026-09-10
 
 The working branch is `feature/mighty-stripe-migration`. It contains the
@@ -17,7 +59,7 @@ were replaced in production Dokploy without printing or committing secrets.
 The replacement Admin API token passed a read-only Mighty members request
 (HTTP 200); the worker secret is freshly generated with 64 hex characters.
 GitHub has no `production-mighty-sync` environment or workflow secret. The
-The previously configured Mighty key and intermediate replacement keys were
+previously configured Mighty key and intermediate replacement keys were
 revoked in Mighty Admin. The final replacement is stored in Dokploy and passed
 the harmless read-only provider check. Production deployment is outside this
 gate; the next authorized deployment must repeat that read-only check before
@@ -25,9 +67,9 @@ any scheduler action.
 
 Automatic Mighty processing remains disabled. There is no
 `MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no
-`production-mighty-sync` environment. Stripe reconciliation remains
-`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; unmatched records are
-excluded from automation. The owner `info@prochat.tools` is present, has Plan
+`production-mighty-sync` environment. The older six-record preparation
+snapshot was `ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; it is
+historical and superseded by the current Phase E0 result above. The owner `info@prochat.tools` is present, has Plan
 `2000039`, has no other Plan overlap, and remains restored/allowed. No real
 student, member population, Stripe object, staging application, or live
 scheduler was modified.
@@ -98,11 +140,9 @@ scheduler mutation occurred. The administrator remains fully restored and
 allowed. The Phase D ordinary-member pilot is complete; the next gate is
 separate authorization for any controlled migration batch.
 
-The six unresolved active Stripe provisioning records were checked read-only
-against production Stripe and the production database. Sanitized result:
-`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`. They remain outside
-Mighty and require separate read-only resolution before an ordinary-member
-pilot.
+The six-record unresolved provisioning snapshot in this historical acceptance
+section is retained for auditability only. The current authoritative
+production identity-dry-run is recorded in the Phase E0 section above.
 
 The production scheduler safety check still finds no
 `MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no visible
@@ -199,12 +239,10 @@ The read-only `pnpm mighty:manual-access-audit` command is available for the
 required pre-revocation review; it reports aggregate overlap/direct-access
 risk and performs no provider mutation. The normalization procedure is in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
-The corrected read-only production audit has now run without mutation: 6 active
-Stripe provisioning records were found, all 6 require manual review because
-their subscription status is missing; Mighty reports 9 members and 0 purchase
-rows, with 8 direct no-Plan members and 1 member in Plan `2000039` (the
-authorized test identity). This is roster evidence, not permission to
-normalize or revoke any real member.
+The earlier corrected read-only production audit recorded six active
+provisioning records with missing subscription status. That local-projection
+snapshot is historical and is not permission to normalize or revoke any real
+member; the authoritative Phase E0 live result is recorded at the top.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

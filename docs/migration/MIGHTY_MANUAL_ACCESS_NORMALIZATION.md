@@ -17,6 +17,36 @@ Stripe remains the billing authority. The canonical access path is:
 The application worker currently reconciles only the configured access Plan. It does not
 remove other Mighty Plans, direct Network membership, or Space membership.
 
+## Current Phase E0 manifest — 2026-09-10
+
+The authoritative deployed identity-dry-run ran in live Stripe mode and found
+17 active subscriptions, all matched to active Payload members:
+`ALLOWED: 17`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 0`. No member, Stripe
+object, scheduler, deployment, or merge was changed.
+
+The read-only Mighty inventory classified the current Stripe-ALLOWED set as:
+
+| Classification | Identities |
+| --- | --- |
+| `PHASE_D_CANARY_COMPLETE` | `westhoek@hotmail.com` / Mighty `41580317` |
+| `OWNER_OR_ADMIN_EXCLUDED` | `steve@yeshua.academy` / Mighty `41580680` |
+| `ELIGIBLE_ORDINARY_BATCH_CANDIDATE` | `Missaquadri@gmail.com` / `41567828`; `adaumoudit@gmail.com` / `41566725`; `amechiclarangozi2022@gmail.com` / `41567964`; `happyalamss@gmail.com` / `41566259`; `ronyaa@live.co.uk` / `41568214`; `Katherinecd7@yahoo.com` / `41585608` |
+| `PRIVILEGED_OR_EXCEPTION_ACCESS_REVIEW` | `tosinotubanjo@gmail.com` / `41582168` — extra `FIRST FOUNDATION` Space |
+| `IDENTITY_MISMATCH_REVIEW` | `anita13steve@gmail.com`, `info@yeshua.academy`, `kem.okupa@gmail.com`, `marek_bed@yahoo.com`, `nsgonza2@gmail.com`, `prince.okoroego@gmail.com`, `samuel.roy.edward.hill@gmail.com`, `vimbaimt@gmail.com` |
+| `OTHER_PLAN_OVERLAP_REVIEW` | None observed |
+| `DUPLICATE_IDENTITY_REVIEW` | None observed; masked email-prefix collisions are not duplicate proof |
+
+The smallest proposed next batch is one identity only:
+`Missaquadri@gmail.com` / Mighty `41567828`. It is a full member with the five
+standard JPV Spaces, zero Plans and purchases, and no known privilege
+exception. It remains unmodified. Fresh owner authorization naming this exact
+identity is required before granting Plan `2000039`.
+
+The older six-record unmatched snapshot is historical. The two records cannot
+be named from that redacted evidence, while the current authoritative live set
+has zero unmatched and zero ambiguous identities. The eight current exact
+Mighty misses remain excluded; no account creation is implied by this report.
+
 ## Current Phase D ordinary-member canary result — 2026-09-10
 
 `PHASE D: PASS` for the explicitly authorized identity
@@ -209,16 +239,16 @@ authorizes a population-wide change.
 
 ## Current status
 
-The pre-acceptance read-only audit ran against the production database and JPV
-Mighty Network without mutation. It found 6 active Stripe provisioning records,
-all 6 requiring manual review because `subscriptionStatus` is missing; Mighty
-reported 9 members, 0 Plan purchases, 8 direct members without a Plan, and the
-authorized owner identity in Plan `2000039`.
-The authorized test identity was subsequently granted Plan `2000039` and is
-kept restored; it is not part of the real member population. The audit now also
-enumerates each member's Plan memberships so a nonpaid Plan grant cannot be
-mistaken for a direct no-Plan member. Because the remaining Stripe records are
-not currently deterministically entitled, no real-member migration or
-revocation is authorized by this canary. Any future migration must separately
-review other Plans, exceptional Space-level membership, and staff/admin
-exceptions; ordinary legacy direct Network membership alone is not a blocker.
+The older pre-acceptance audit found six active provisioning records with
+missing local subscription status; that snapshot is retained as historical
+evidence only. The current authoritative live identity-dry-run resolves all
+17 active Stripe subscriptions with no unmatched or ambiguous identity. The
+Phase D canary remains restored, and no additional real member has been
+migrated. Phase E0 prepared one proposed next batch row,
+`Missaquadri@gmail.com` / Mighty `41567828`, but did not execute it.
+
+Before that row is touched, obtain fresh owner authorization for that exact
+identity, record a run ID and checkpoint, re-read Stripe and Mighty state, and
+then use the existing Plan-only grant/verify path. Stop on any identity,
+Plan, Space, privilege, or provider-state discrepancy. Automated revocation
+and population-wide normalization remain disabled.
