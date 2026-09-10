@@ -104,6 +104,38 @@ must remain a separately reviewed overlap until nondestructive removal is
 proven safe. No routine billing enforcement may use ban, account deletion, or
 “Remove From Everything.”
 
+## Ordinary-member pilot — pending owner authorization
+
+Do not select or mutate a member automatically. The owner must provide exactly
+one existing legitimate JPV member email who is not Host/Admin, has normal
+Mighty access, is contactable, and has explicitly approved this pilot. The
+email is the only member-selection input; it is not permission to test any
+other identity.
+
+For that one member, stop immediately on any unexpected result and preserve the
+read-only evidence:
+
+1. Read current Mighty identity, Network/Space membership, all Plans, and the
+   configured Plan `2000039` state.
+2. Read the matching Stripe customer/subscription entitlement without
+   changing Stripe.
+3. Grant Plan `2000039` and verify it with an independent Mighty read.
+4. Verify that no duplicate Mighty identity was created and that normal access
+   still works.
+5. Remove only Plan `2000039` under the explicit pilot approval, then verify
+   Plan denial and the expected access result.
+6. Re-read Network, Space, and other-Plan access to detect any legacy direct
+   bypass. Do not remove or ban that access during this pilot.
+7. Restore Plan `2000039` and verify access is restored.
+8. Confirm the member's final experience matches the pre-test state, then
+   record a redacted checkpoint and stop.
+
+Interpret the result only after the pilot: (A) Plan removal fully denies
+access, so the target Plan is a viable migration control; (B) direct or other
+access remains, so use the smallest nondestructive per-member normalization
+approved after review; or (C) the provider cannot prove the boundary, so use a
+controlled manual transition. No result authorizes a population-wide change.
+
 ## Current status
 
 The pre-acceptance read-only audit ran against the production database and JPV

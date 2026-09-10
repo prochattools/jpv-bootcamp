@@ -2,6 +2,41 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT MIGHTY RECONCILIATION AND SECURITY GATE — 2026-09-10
+
+The working branch is `feature/mighty-stripe-migration`. It contains the
+production hotfix deployed at
+`5d0f318eb4c4b178364dcdbbb17670d101abb930` through merge commit `6b34c451`;
+the obsolete homepage sentence is absent from source and the Mighty commits
+remain intact. The branch was pushed only after validation and was not merged
+or deployed.
+
+The bounded environment-diagnostic exposure requires rotation of
+`MIGHTY_ADMIN_API_TOKEN` and `MIGHTY_ACCESS_SYNC_WORKER_SECRET`. Both values
+were replaced in production Dokploy without printing or committing secrets.
+The replacement Admin API token passed a read-only Mighty members request
+(HTTP 200); the worker secret is freshly generated with 64 hex characters.
+GitHub has no `production-mighty-sync` environment or workflow secret. The
+old Mighty key remains active until the next explicitly authorized production
+redeploy, which is outside this gate; after that redeploy, revoke the old key
+in Mighty Admin and repeat the harmless read-only check.
+
+Automatic Mighty processing remains disabled. There is no
+`MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no
+`production-mighty-sync` environment. Stripe reconciliation remains
+`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; unmatched records are
+excluded from automation. The owner `info@prochat.tools` is present, has Plan
+`2000039`, has no other Plan overlap, and remains restored/allowed. No real
+student, member population, Stripe object, staging application, or live
+scheduler was modified.
+
+The next canary requires the owner to provide exactly one existing legitimate
+JPV member email who is not Host/Admin, has normal Mighty access, is
+contactable, and has approved the pilot. Do not choose a member automatically.
+The exact read-only/grant/verify/Plan-denial/legacy-bypass/restore/final-
+experience sequence and outcomes A/B/C are documented in
+`docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
+
 ## CURRENT MIGHTY ACCEPTANCE UPDATE — 2026-09-10
 
 The owner explicitly authorized Phase C against `info@prochat.tools`. The

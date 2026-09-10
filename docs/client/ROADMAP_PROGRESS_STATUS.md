@@ -1,5 +1,39 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT BRANCH RECONCILIATION AND SECURITY GATE — 2026-09-10
+
+The feature branch `feature/mighty-stripe-migration` now contains the
+production hotfix deployed at
+`5d0f318eb4c4b178364dcdbbb17670d101abb930`, via merge commit `6b34c451`.
+The obsolete homepage sentence is absent from source, and the Mighty changes
+remain intact. This branch has not been merged or deployed.
+
+The bounded exposure scope is `MIGHTY_ADMIN_API_TOKEN` and
+`MIGHTY_ACCESS_SYNC_WORKER_SECRET`. Both were rotated in the production
+Dokploy environment without printing values. The replacement Mighty token
+passed a harmless read-only members request with HTTP 200. The worker secret
+was regenerated at 64 hex characters. No GitHub `production-mighty-sync`
+environment/workflow secret exists. The prior Mighty key remains active until
+an explicitly authorized production redeploy can activate the replacement;
+the old key must then be revoked in Mighty Admin. Production deployment is
+forbidden in the current gate.
+
+The production scheduler remains disabled: no
+`MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no
+`production-mighty-sync` environment are configured. Stripe remains the sole
+billing authority. Current sanitized reconciliation is
+`ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; unmatched records
+remain excluded from automation. The owner `info@prochat.tools` remains
+restored with Plan `2000039` and no other Plan overlap. No real student or
+member population was modified.
+
+The ordinary-member canary is ready for exactly one owner-authorized existing
+legitimate JPV member email who is not Host/Admin, has normal Mighty access,
+and is contactable. The required read-only-before, grant, duplicate-identity,
+access, Plan-denial, legacy-bypass, restore, final-experience, and stop-on-
+unexpected-change sequence is documented in
+`docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
+
 ## CURRENT MIGHTY OWNER/ADMIN CANARY — 2026-09-10
 
 The JPV Stripe → Mighty integration is in a silent canary phase on

@@ -1,10 +1,46 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
-**Status:** Feature branch pushed; bounded live provider acceptance passed; cutover remains separately unauthorized
-**Date:** 2026-09-09  
+**Status:** Feature branch reconciled with the production hotfix; bounded live provider acceptance passed; cutover remains separately unauthorized
+**Date:** 2026-09-10
 **Branch:** `feature/mighty-stripe-migration`  
 **Implementation commit:** `873c8f82`
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
+
+## Current reconciliation and security status — 2026-09-10
+
+- `origin/main` and the live production deployment are now at
+  `5d0f318eb4c4b178364dcdbbb17670d101abb930`. The feature branch contains
+  that hotfix through merge commit `6b34c451`; the obsolete homepage sentence
+  is absent from the source, and the Mighty implementation commits remain
+  intact. The feature branch was not deployed or merged.
+- The bounded exposure evidence identifies only
+  `MIGHTY_ADMIN_API_TOKEN` and `MIGHTY_ACCESS_SYNC_WORKER_SECRET` as the
+  relevant secret-bearing names requiring rotation. The Dokploy API key was
+  used only as a local request credential and was not present in the returned
+  environment payload; no value is recorded here. The replacement Mighty
+  token is stored in production Dokploy and authenticated a read-only
+  members request with HTTP 200. A fresh 64-character worker secret is stored
+  in production Dokploy. No GitHub `production-mighty-sync` environment or
+  workflow secret exists yet.
+- The old Mighty API key remains active pending the next explicitly authorized
+  production redeploy, because this goal forbids deploying production and the
+  running image still uses the prior environment snapshot. After that deploy,
+  revoke the old key in Mighty Admin → Settings → API Keys and repeat the
+  harmless read-only members check. Do not enable the scheduler as part of
+  that action.
+- Production automatic processing remains disabled: no
+  `MIGHTY_ACCESS_SYNC_ENABLED` repository variable exists and no
+  `production-mighty-sync` environment is configured. The Stripe preparation
+  counts remain `ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; the
+  unmatched records are excluded from automation.
+- The owner read-only check still finds exactly one `info@prochat.tools`
+  identity with Plan `2000039` present and no other Plan overlap. The owner
+  remains restored/allowed. No real student or member population was changed.
+- The ordinary-member pilot is ready only after the owner supplies exactly
+  one existing legitimate JPV member email who is not Host/Admin, has normal
+  Mighty access, is contactable, and has explicitly approved the pilot. The
+  exact sequence and stop conditions are in
+  `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
 
 ## Current acceptance evidence — 2026-09-10
 
