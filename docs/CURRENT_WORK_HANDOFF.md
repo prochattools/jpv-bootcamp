@@ -4,17 +4,16 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ## CURRENT MIGHTY ACCEPTANCE UPDATE — 2026-09-10
 
-Phase C additional-administrator acceptance remains safely unexecuted: the
-configured `ADMIN_EMAIL` is `info@prochat.tools`, the same identity as the
-completed owner canary, and the brief excludes that owner from another
-mutation cycle. A permitted read-only inspection found exactly one matching
-Mighty identity, the target Plan already present, no other Plan or purchase
-overlap, and six direct Space memberships. The provider returned
-`member_type=full` but no definitive network Host/Admin role field. No
-administrator, student, or existing Mighty member population was changed.
-The next operator action is to supply one different, owner-authorized existing
-administrator; do not infer it from the repository, local database, or Mighty
-roster.
+The owner explicitly authorized Phase C against `info@prochat.tools`. The
+pre-canary read-only inspection found exactly one matching Mighty identity,
+`member_type=full`, the target Plan already present, no other Plan or purchase
+overlap, and six direct Space memberships. The provider exposed no definitive
+network Host/Admin role field, so effective Network denial was not tested.
+The bounded Plan canary then passed: existing identity reused, grant verified,
+repeat grant idempotent, Plan removal verified, repeat revoke safe, and Plan
+`2000039` restored and verified. No welcome email, privilege change, Space or
+Network removal, duplicate identity, student, or other member mutation occurred.
+The ordinary-member pilot is now the next gate.
 
 The six unresolved active Stripe provisioning records were checked read-only
 against production Stripe and the production database. Sanitized result:

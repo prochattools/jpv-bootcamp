@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT MIGHTY SILENT BUILD / OWNER CANARY — 2026-09-10
+## CURRENT MIGHTY OWNER/ADMIN CANARY — 2026-09-10
 
 The JPV Stripe → Mighty integration is in a silent canary phase on
 `feature/mighty-stripe-migration`. Plan `2000039` (`JPV Member Access`) is the
@@ -12,14 +12,13 @@ normalized, migrated, revoked, or otherwise modified.
 The rollout order is canonical: Phase A — silent build; Phase B — owner
 acceptance; Phase C — explicitly authorized administrator canaries; Phase D —
 one-at-a-time or controlled-batch existing-member migration; and Phase E —
-automation enablement only after member normalization. The administrator
-procedure is prepared in `docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md`;
-Phase C remains unexecuted for an additional administrator because the new
-`ADMIN_EMAIL` value resolves to the already-tested owner identity. No
-administrator or real member was mutated. A permitted read-only inspection
-found one matching identity, the target Plan already present, no other Plan or
-purchase overlap, and six direct Space memberships; the provider exposed
-`member_type=full` but no definitive network Host/Admin role field.
+automation enablement only after member normalization. The owner explicitly
+authorized Phase C against the existing owner identity. The canary reused one
+Mighty identity, proved target Plan grant/idempotency/removal/restoration, and
+left Plan `2000039` restored. The provider exposed `member_type=full` but no
+definitive network Host/Admin role field; effective Network denial was therefore
+not tested. No privilege, Space, Network, student, or other member state was
+changed. The ordinary-member pilot is the next gate.
 The existing-member algorithm, overlap risks, stop-on-error boundary, and
 resumability requirements are documented in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.

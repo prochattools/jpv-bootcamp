@@ -8,17 +8,24 @@
 
 ## Current acceptance evidence — 2026-09-10
 
-- Phase C's configured `ADMIN_EMAIL` resolves to `info@prochat.tools`, the same
-  identity already used for the completed owner canary. The brief explicitly
-  excludes that owner account from another mutation cycle, so no additional
-  administrator canary was executed. No administrator, student, or existing
-  member population was mutated.
-- The allowed read-only inspection found exactly one matching Mighty identity,
-  the target Plan already present, no other Plan or purchase overlap, and six
-  direct Space memberships. Mighty returned `member_type=full` but did not
-  expose a definitive network Host/Admin role field in the member response;
-  therefore no additional-admin role classification is claimed and no Plan
-  mutation was attempted against the owner identity.
+- The owner explicitly authorized Phase C against `info@prochat.tools`, the
+  existing owner-canary identity. The pre-canary read-only inspection found
+  exactly one matching Mighty identity, `member_type=full`, the target Plan
+  already present, no other Plan or purchase overlap, and six direct Space
+  memberships. The provider response did not expose a definitive network
+  Host/Admin role field, so the role is recorded as
+  `ADMIN_ROLE_UNVERIFIED_BY_PROVIDER_MEMBER_RESPONSE`.
+- The owner-authorized Phase C Plan canary passed in production: the existing
+  identity was reused, the grant was independently verified, repeat grant was
+  idempotent, Plan removal was independently verified, repeat revoke was safe,
+  and Plan `2000039` was restored and independently verified. No welcome email,
+  duplicate identity, privilege change, Network removal, Space removal, or
+  real-member mutation occurred.
+- Effective Network denial was not tested and is classified as
+  `NOT_APPLICABLE_FOR_ADMIN_ROLE_OR_NOT_TESTED` because the account retains six
+  direct Space memberships and the provider did not expose a definitive
+  Host/Admin role classification. The canary proves only the target
+  Plan-controlled lifecycle for this account.
 - The six unresolved active Stripe provisioning records were reconciled
   read-only against the production Stripe account and production database:
   `ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`. These are sanitized
@@ -111,11 +118,10 @@ manual/direct access until the later migration stages are explicitly approved.
   `docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md`.
 - Use only administrator identities explicitly supplied and authorized by the
   owner. Do not infer identities from repository or database data.
-- This phase is prepared but unexecuted for an additional administrator:
-  `ADMIN_EMAIL` currently points to the already-tested owner identity, which
-  the brief excludes from another mutation cycle. The next required operator
-  step is to configure exactly one different, owner-authorized existing
-  administrator identity; no other identity may be selected.
+- This phase passed for the explicitly authorized owner account. It proves the
+  target Plan-controlled lifecycle only; effective Network denial is not a
+  valid administrator result. The next gate is an explicitly authorized
+  ordinary-member pilot, not another owner or administrator mutation.
 
 ### Phase D — Member migration
 
@@ -158,7 +164,7 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | M6 | Read-only entitled-member bridge for controlled manual migration | **Implemented locally** |
 | M7 | Focused regression tests and validation matrix | **Local focused matrix green; provider/live checks remain cutover gates** |
 | M8 | Staging configuration and controlled provider/API verification | **Skipped for this implementation lane; staging remains unchanged** |
-| M9 | Production cutover readiness, rollback, and go/no-go | **Canary-ready; cutover not started / not authorized** |
+| M9 | Production cutover readiness, rollback, and go/no-go | **Owner/admin Plan canary passed; ordinary-member pilot pending; cutover not started / not authorized** |
 
 ## Approved execution sequence
 
@@ -326,9 +332,9 @@ as a separate, explicitly authorized operator action.
 - Dedicated Admin API token owner, rotation policy, and target environment.
 - GitHub `production-mighty-sync` environment and scheduled-execution secret/
   owner, followed by explicit `MIGHTY_ACCESS_SYNC_ENABLED=true` enablement.
-- Explicit authorization for one additional existing administrator for the
-  Phase C canary; the current `ADMIN_EMAIL` value is the already-tested owner
-  identity and is not an additional administrator target.
+- Explicit authorization for one ordinary-member pilot identity, with no
+  Host/Admin privilege bypass, before any real-member migration or effective
+  payment-failure denial claim.
 - Sanitized production Stripe reconciliation is `ALLOWED: 4`, `DENIED: 0`,
   `AMBIGUOUS: 0`, `UNMATCHED: 2`; the two unmatched records require a separate
   read-only operator resolution before any member pilot.
