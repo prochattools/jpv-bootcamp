@@ -8,11 +8,17 @@
 
 ## Current acceptance evidence — 2026-09-10
 
-- Phase C administrator canary was not executed because the current goal brief
-  contains the literal placeholder `<ADMIN_EMAIL>` rather than one exact,
-  owner-authorized administrator email. No administrator, student, or existing
-  member population was mutated. The exact email must be supplied before the
-  controlled administrator procedure can start.
+- Phase C's configured `ADMIN_EMAIL` resolves to `info@prochat.tools`, the same
+  identity already used for the completed owner canary. The brief explicitly
+  excludes that owner account from another mutation cycle, so no additional
+  administrator canary was executed. No administrator, student, or existing
+  member population was mutated.
+- The allowed read-only inspection found exactly one matching Mighty identity,
+  the target Plan already present, no other Plan or purchase overlap, and six
+  direct Space memberships. Mighty returned `member_type=full` but did not
+  expose a definitive network Host/Admin role field in the member response;
+  therefore no additional-admin role classification is claimed and no Plan
+  mutation was attempted against the owner identity.
 - The six unresolved active Stripe provisioning records were reconciled
   read-only against the production Stripe account and production database:
   `ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`. These are sanitized
@@ -105,10 +111,11 @@ manual/direct access until the later migration stages are explicitly approved.
   `docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md`.
 - Use only administrator identities explicitly supplied and authorized by the
   owner. Do not infer identities from repository or database data.
-- This phase is prepared but unexecuted: the authorized identity is still
-  missing because the brief contains `<ADMIN_EMAIL>` literally. The next
-  required operator step is to replace that placeholder with exactly one
-  owner-authorized administrator email; no other identity may be selected.
+- This phase is prepared but unexecuted for an additional administrator:
+  `ADMIN_EMAIL` currently points to the already-tested owner identity, which
+  the brief excludes from another mutation cycle. The next required operator
+  step is to configure exactly one different, owner-authorized existing
+  administrator identity; no other identity may be selected.
 
 ### Phase D — Member migration
 
@@ -319,7 +326,9 @@ as a separate, explicitly authorized operator action.
 - Dedicated Admin API token owner, rotation policy, and target environment.
 - GitHub `production-mighty-sync` environment and scheduled-execution secret/
   owner, followed by explicit `MIGHTY_ACCESS_SYNC_ENABLED=true` enablement.
-- Explicit administrator identity authorization for the Phase C canary.
+- Explicit authorization for one additional existing administrator for the
+  Phase C canary; the current `ADMIN_EMAIL` value is the already-tested owner
+  identity and is not an additional administrator target.
 - Sanitized production Stripe reconciliation is `ALLOWED: 4`, `DENIED: 0`,
   `AMBIGUOUS: 0`, `UNMATCHED: 2`; the two unmatched records require a separate
   read-only operator resolution before any member pilot.
