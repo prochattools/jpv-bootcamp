@@ -9,7 +9,7 @@
 ## Current acceptance evidence — 2026-09-10
 
 - The implementation branch is pushed to `origin` through
-  `2bfa2052d67b527bf83da62e37b70b0a50a94c1e`.
+  `c5883e280650b0a3a466786986d9ec388a8bcaf0`.
 - The annotated baseline tag is pushed to `origin` and resolves to
   `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
 - The owner has manually created the hidden, non-paid, access-only JPV member

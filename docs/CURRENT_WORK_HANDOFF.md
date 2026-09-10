@@ -8,7 +8,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 The approved JPV migration is now being executed on
 `feature/mighty-stripe-migration`, based on synchronized `origin/main`, was
-pushed through `2bfa2052d67b527bf83da62e37b70b0a50a94c1e` and is protected by
+pushed through `c5883e280650b0a3a466786986d9ec388a8bcaf0` and is protected by
 the pushed annotated tag. It is based on synchronized `origin/main` and
 protected by annotated tag `pre-mighty-migration-2026-09-09` at the documented
 live production revision `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
