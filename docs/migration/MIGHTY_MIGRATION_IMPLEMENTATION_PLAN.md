@@ -1,10 +1,24 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
-**Status:** Feature-branch implementation complete locally; merge-ready pending review
+**Status:** Feature branch pushed; provider acceptance pending secure configuration and test execution
 **Date:** 2026-09-09  
 **Branch:** `feature/mighty-stripe-migration`  
 **Implementation commit:** `b40faafeab0987905ed694056bc0faeea844558d`
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
+
+## Current acceptance evidence — 2026-09-10
+
+- The implementation branch is pushed to `origin` through
+  `6b5ddfab63c9050cfab67c3a2f7b2594fb7f51aa`.
+- The annotated baseline tag is pushed to `origin` and resolves to
+  `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
+- The local `.env` and `.env.production` contain no configured Mighty values;
+  only `.env.example` contains placeholders. No secret values are recorded.
+- The guarded real-network command is ready but has not run because the
+  provider configuration is not available to the local execution environment.
+- The read-only roster bridge was attempted and stopped because its local
+  database target at `localhost:5444` was unavailable. No production database
+  was contacted and no records were changed.
 
 ## Guardrails
 

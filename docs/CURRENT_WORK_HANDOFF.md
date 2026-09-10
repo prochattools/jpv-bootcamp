@@ -7,7 +7,9 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 ## CURRENT MIGHTY MIGRATION — 2026-09-09
 
 The approved JPV migration is now being executed on
-`feature/mighty-stripe-migration`, based on synchronized `origin/main` and
+`feature/mighty-stripe-migration`, based on synchronized `origin/main`, was
+pushed through `6b5ddfab63c9050cfab67c3a2f7b2594fb7f51aa` and is protected by
+the pushed annotated tag. It is based on synchronized `origin/main` and
 protected by annotated tag `pre-mighty-migration-2026-09-09` at the documented
 live production revision `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
 
@@ -49,6 +51,9 @@ The real-network acceptance command is `pnpm mighty:production-acceptance`.
 It requires `MIGHTY_PROVIDER_ENV=production`, an explicit production mutation
 guard, and one disposable operator-controlled test email; it has not been run
 because those inputs are not available in the local environment.
+The read-only roster bridge was attempted but could not reach the local
+database at `localhost:5444`; no production database access or mutation was
+performed.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

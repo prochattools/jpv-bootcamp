@@ -2,10 +2,11 @@
 
 ## CURRENT MIGHTY MIGRATION — 2026-09-09
 
-The approved Stripe → Mighty migration has started on
+The approved Stripe → Mighty migration is prepared on
 `feature/mighty-stripe-migration`. Production baseline revision
 `a287800735d465a41ad9e45d2c7914ab9cc34a26` is preserved by the annotated tag
-`pre-mighty-migration-2026-09-09`; no production operation was performed.
+`pre-mighty-migration-2026-09-09`; both the branch and tag are now pushed to
+`origin`. No production operation was performed.
 
 Stripe remains the sole billing authority. Existing Stripe monthly/annual
 Checkout, webhook/application, support, sponsored membership, public sales, and
@@ -30,6 +31,10 @@ The bounded real-network acceptance command is
 disposable test email and an explicit production mutation guard. It is not run
 automatically and leaves the test member account intact while removing all JPV
 access at cleanup.
+
+The acceptance command is currently pending secure provider configuration. The
+read-only roster bridge was also attempted but could not reach its local
+database target at `localhost:5444`; it was not redirected to production.
 
 See `docs/architecture/JPV_MIGHTY_STRIPE_ARCHITECTURE.md` and
 `docs/migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md` for the canonical
