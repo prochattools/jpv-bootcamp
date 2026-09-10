@@ -13,10 +13,11 @@ The bounded exposure scope is `MIGHTY_ADMIN_API_TOKEN` and
 Dokploy environment without printing values. The replacement Mighty token
 passed a harmless read-only members request with HTTP 200. The worker secret
 was regenerated at 64 hex characters. No GitHub `production-mighty-sync`
-environment/workflow secret exists. The prior Mighty key remains active until
-an explicitly authorized production redeploy can activate the replacement;
-the old key must then be revoked in Mighty Admin. Production deployment is
-forbidden in the current gate.
+environment/workflow secret exists. The previously configured Mighty key and
+intermediate replacement keys were revoked in Mighty Admin; the final
+replacement is stored in Dokploy and passed the read-only provider check.
+Production deployment is forbidden in the current gate, so the next authorized
+deployment must repeat the harmless read-only check before any scheduler action.
 
 The production scheduler remains disabled: no
 `MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no

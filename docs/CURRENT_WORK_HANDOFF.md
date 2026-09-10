@@ -17,9 +17,11 @@ were replaced in production Dokploy without printing or committing secrets.
 The replacement Admin API token passed a read-only Mighty members request
 (HTTP 200); the worker secret is freshly generated with 64 hex characters.
 GitHub has no `production-mighty-sync` environment or workflow secret. The
-old Mighty key remains active until the next explicitly authorized production
-redeploy, which is outside this gate; after that redeploy, revoke the old key
-in Mighty Admin and repeat the harmless read-only check.
+The previously configured Mighty key and intermediate replacement keys were
+revoked in Mighty Admin. The final replacement is stored in Dokploy and passed
+the harmless read-only provider check. Production deployment is outside this
+gate; the next authorized deployment must repeat that read-only check before
+any scheduler action.
 
 Automatic Mighty processing remains disabled. There is no
 `MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no

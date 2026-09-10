@@ -22,11 +22,12 @@
   members request with HTTP 200. A fresh 64-character worker secret is stored
   in production Dokploy. No GitHub `production-mighty-sync` environment or
   workflow secret exists yet.
-- The old Mighty API key remains active pending the next explicitly authorized
-  production redeploy, because this goal forbids deploying production and the
-  running image still uses the prior environment snapshot. After that deploy,
-  revoke the old key in Mighty Admin → Settings → API Keys and repeat the
-  harmless read-only members check. Do not enable the scheduler as part of
+- The previously configured Mighty API key and the two intermediate replacement
+  keys were revoked in Mighty Admin → Settings → API Keys. The final
+  replacement is stored in production Dokploy and passed the read-only check.
+  This goal forbids a production deploy, so the running image remains the
+  prior non-Mighty production image; the next authorized deployment must repeat
+  the harmless read-only members check. Do not enable the scheduler as part of
   that action.
 - Production automatic processing remains disabled: no
   `MIGHTY_ACCESS_SYNC_ENABLED` repository variable exists and no

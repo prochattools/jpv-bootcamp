@@ -141,7 +141,8 @@ controlled manual transition. No result authorizes a population-wide change.
 The pre-acceptance read-only audit ran against the production database and JPV
 Mighty Network without mutation. It found 6 active Stripe provisioning records,
 all 6 requiring manual review because `subscriptionStatus` is missing; Mighty
-reported 9 members, 0 Plan purchases, and 9 direct members without a Plan.
+reported 9 members, 0 Plan purchases, 8 direct members without a Plan, and the
+authorized owner identity in Plan `2000039`.
 The authorized test identity was subsequently granted Plan `2000039` and is
 kept restored; it is not part of the real member population. The audit now also
 enumerates each member's Plan memberships so a nonpaid Plan grant cannot be
