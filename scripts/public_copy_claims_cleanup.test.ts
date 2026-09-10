@@ -54,9 +54,10 @@ function testLandingClaimsAreApprovalSafe(): void {
   )
   assert.ok(landing.includes('href="/terms"'), 'landing page must link to canonical terms')
   assert.ok(landing.includes('href="/privacy"'), 'landing page must link to canonical privacy')
-  assert.ok(
-    landing.includes('Final module titles and learning-outcome wording are pending client approval.'),
-    'unapproved programme wording must be reported as pending',
+  assertAbsent(
+    landing,
+    ['Final module titles and learning-outcome wording are pending client approval.'],
+    'landing page',
   )
 }
 

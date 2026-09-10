@@ -493,7 +493,6 @@ export default function HomePage() {
                   Structured teaching, practical application, and ongoing
                   support stay connected throughout your journey.
                 </p>
-                <p className={styles.sectionIntro}>Final module titles and learning-outcome wording are pending client approval.</p>
               </div>
             </div>
 
