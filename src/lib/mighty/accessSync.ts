@@ -434,7 +434,13 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 			try {
 				await api.restoreAccess(memberId, config.accessPlanId)
 			} catch (error) {
-				if (!(error instanceof MightyApiError) || error.status !== 422) throw error
+				if (error instanceof MightyApiError && error.status === 404) {
+					const recoveredMember = await api.createMember({ email: params.row.email })
+					if (String(recoveredMember.id) !== memberId) throw new Error('mighty_member_identity_changed')
+					await api.restoreAccess(memberId, config.accessPlanId)
+				} else if (!(error instanceof MightyApiError) || error.status !== 422) {
+					throw error
+				}
 			}
 			const grantedState = await api.getAccessState(memberId, config.accessPlanId)
 			if (!grantedState.hasAccess) throw new Error('mighty_access_not_found_after_grant')

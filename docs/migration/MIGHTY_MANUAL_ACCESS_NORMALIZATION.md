@@ -19,55 +19,66 @@ remove other Mighty Plans, direct Network membership, or Space membership.
 
 ## Current Phase D ordinary-member canary result — 2026-09-10
 
-The owner-authorized canary for `westhoek@hotmail.com` was executed only for
-that identity and is **BLOCKED**. Live Stripe inspection resolved exactly one
-matching JPV customer with one active monthly JPV subscription, current period
-ending `2026-09-23`, and a paid latest invoice; the effective Stripe
-classification was `ALLOWED`. The existing Mighty identity was found and
-reused as member ID `41580317`, `member_type=full`, with `Network Access:
-Direct`, five direct Spaces (Activity Feed, Chat, Course, Events, and JPV
-Resource Library), no Plan memberships, and no purchase rows. The Mighty admin
-surface showed `Full Member`, not Host/Admin.
+`PHASE D: PASS` for the explicitly authorized identity
+`westhoek@hotmail.com`. Live Stripe inspection resolved one active, paid JPV
+subscription and classified the entitlement as `ALLOWED`. The existing Mighty
+identity was found and reused as member ID `41580317`, `member_type=full`, with
+five Spaces and zero Plans before the test. Plan `2000039` is the hidden,
+non-paid, Network-access-only `JPV Member Access` Plan, so its scope is
+`PLAN_SCOPE_COMPLETE` for the five Spaces.
 
-Plan `2000039` is hidden, non-paid, and configured for Network access only.
-Mighty documents that Network access includes the entire Network and all
-Spaces, so the scope is `PLAN_SCOPE_COMPLETE` for this member's five Spaces.
-The API does not expose a separate per-Space bundle because one is not needed
-for a full-Network Plan. No direct Space membership was removed.
+The corrected business invariant is:
 
-The bounded Plan lifecycle was tested without normalization: grant returned
-HTTP 200 and an independent read showed exactly one target Plan; the repeated
-grant returned HTTP 422 with exact response `User already has access to this
-plan`, and the independent read still showed exactly one target Plan.
-Plan-only revoke returned HTTP 204, and subsequent Plan, Space, and member
-lookups returned HTTP 404 while the admin UI reported that the person was no
-longer a member. This matches Mighty’s documented behavior for removing a
-non-paid Plan that includes Network access: the member loses Network access and
-is removed from the active member list. No legacy/direct bypass was observed,
-but this is not a nondestructive way to remove only the old direct Network
-source.
+`Stripe ALLOWED → Plan 2000039 present → Mighty access`
 
-The original account was restored without creating a duplicate: re-adding the
-same email returned HTTP 201 with the original member ID and
-`send_welcome_email=false`. The five original Space memberships were already
-present after rejoin (direct-add retries returned "already a member"), and
-independent reads plus the admin member list confirmed the same `Full Member`,
-`Direct` access, five Spaces, zero Plans, and zero purchases. No profile,
-content, or history operation was performed. The final state matches the
-pre-canary state.
+`Stripe DENIED → Plan 2000039 absent → no Mighty Network access`
 
-`NORMALIZATION BLOCKED`: the Plan scope is complete, but the member had legacy
-direct Network access and neither available removal operation provides an
-isolated source transition. A targeted probe of Mighty’s documented
-`network_membership` DELETE endpoint with `cancel_plans=false` returned HTTP
-204, but it removed Plan `2000039` and changed the member from `full` to
-`limited`; it did not preserve the Plan as the parameter implies. The
-Plan-member DELETE similarly removes active Network membership for a
-Network-access Plan. Neither operation is a safe direct-source normalization
-operation. Effective denial was observed for the pre-normalization state but
-was not accepted as a post-normalization proof. No other member may be used
-for a follow-up batch until Mighty provides or confirms a nondestructive
-direct-source transition and rollback mechanism.
+`Stripe ALLOWED again → normal application ALLOWED path → same account and Plan access restored`
+
+The production-shaped acceptance reused the existing account, granted Plan
+`2000039`, independently verified access and exactly one target Plan, and
+verified full membership, profile fields, and five Spaces. A repeated grant
+returned the provider's duplicate-assignment HTTP 422 while the independent
+read remained exactly one target Plan. No direct Network membership was
+removed separately.
+
+The same application Plan-removal operation then returned HTTP 204. Plan,
+member, and Space reads became unavailable while denied, which is the expected
+effective lockout for a Network-access Plan. The member's disappearance from
+the active list is therefore accepted behavior, not identity loss. A repeated
+denial remained safe.
+
+Critically, without manually re-adding direct/full membership first, the
+normal application `ALLOWED` reconciliation path recovered the stored member
+after the provider returned 404 for the inactive member. The path used the
+safe create/re-provision fallback with `member_type=full` and
+`send_welcome_email=false`, received the original ID `41580317`, granted the
+Plan, and independently verified access. The recovered account retained full
+membership, its profile fields, exactly five Spaces, exactly one target Plan,
+and zero purchases. The provider does not expose a history mutation/read
+surface in this Admin API response, so no profile/content/history write was
+performed and no regression was visible in the available evidence.
+
+The deny → restore cycle was repeated once through the same application
+abstraction. Both denial and recovery remained safe and idempotent, with the
+same member ID, no duplicate account, one target Plan, full membership, and
+five Spaces at the end. The authorized owner remains restored/allowed.
+
+The previous `NORMALIZATION BLOCKED` result was based on an unnecessary
+requirement: preserving a separate direct Network source while denied. The
+historical `network_membership` probe remains recorded below for auditability;
+its `cancel_plans=false` behavior changed the member to `limited`, but that
+operation is no longer part of the required migration. For an existing
+Stripe-ALLOWED direct member, granting Plan `2000039` is the migration action.
+Other Plan overlaps, exceptional Space grants, and staff/admin access remain
+separate risks that must be audited before automated revocation.
+
+The new-member invariant is covered by the existing first-provisioning tests:
+an absent member is created as a full member without an invitation, receives
+the Plan, and later recovery uses the same no-welcome ALLOWED path. The
+provider behavior discovered here is handled by exact-email lookup first,
+stable stored member IDs, 404-as-inactive access reads, and same-identity
+re-provision fallback.
 
 ## Read-only audit
 
@@ -114,11 +125,13 @@ access route is closed.
    counts and exception categories.
 3. Match records by normalized email, then confirm Stripe customer and
    subscription identity before any change. Stop on an identity conflict.
-4. For Stripe-entitled members, grant Plan `2000039` where absent. Preserve
-   approved staff, sponsor, creator, or other documented exceptions separately.
-5. For overlapping non-target Plans or direct/Space membership, obtain an
-   explicit per-category approval before removing the older access. Do not
-   treat target-Plan removal as sufficient.
+4. For Stripe-entitled members, grant Plan `2000039` where absent and record
+   the member as `PLAN_CONTROLLED`. Preserve approved staff, sponsor, creator,
+   or other documented exceptions separately.
+5. Do not separately delete legacy direct Network membership as part of this
+   migration. Continue to audit overlapping non-target Plans, exceptional
+   Space grants, and staff/admin access; obtain explicit approval before
+   removing any such alternate access path.
 6. For members without an active Stripe entitlement, review and remove stale
    JPV access through the appropriate Mighty Plan/Network/Space control. Do not
    delete accounts as part of this procedure.
@@ -137,8 +150,9 @@ with a run ID and a durable checkpoint for each member. For each row it must:
 2. Find the existing Mighty member by normalized email and stop on conflicts.
 3. Read Network, Plan, and Space access before mutation.
 4. Grant Plan `2000039` and verify it with an independent provider read.
-5. Require explicit per-member or per-batch approval before removing any
-   overlapping direct/other-Plan/Space access.
+5. Do not remove legacy direct Network membership separately. Require explicit
+   per-member or per-batch approval before removing any overlapping other-Plan
+   or exceptional Space access.
 6. Verify expected access after normalization and record a redacted checkpoint.
 
 The runner stops on the first error, resumes from the last confirmed
@@ -151,10 +165,11 @@ silently treated as denied. The final migration invariant is:
 `Stripe DENIED → Plan 2000039 absent → no paid JPV access through the
 Plan-controlled path`
 
-Direct Network/Space membership can still bypass that Plan invariant, so it
-must remain a separately reviewed overlap until nondestructive removal is
-proven safe. No routine billing enforcement may use ban, account deletion, or
-“Remove From Everything.”
+Other Plans and exceptional Space membership can still bypass that Plan
+invariant, so they must remain separately reviewed overlaps. Ordinary legacy
+direct Network membership is intentionally controlled by adding/removing the
+Network-access Plan; no routine billing enforcement may use ban, account
+deletion, or “Remove From Everything.”
 
 ## Ordinary-member pilot — Phase D result and future procedure
 
@@ -162,7 +177,9 @@ The owner provided and authorized exactly one existing legitimate JPV member,
 `westhoek@hotmail.com`. The canary result above is the canonical Phase D
 evidence. Do not select or mutate another member automatically. The email is
 the only member-selection input; it is not permission to test any other
-identity.
+identity. The successful recovery proves that existing direct members can be
+migrated by granting Plan `2000039`; no direct-membership-only transition is
+required.
 
 For that one member, stop immediately on any unexpected result and preserve the
 read-only evidence:
@@ -176,17 +193,19 @@ read-only evidence:
    still works.
 5. Remove only Plan `2000039` under the explicit pilot approval, then verify
    Plan denial and the expected access result.
-6. Re-read Network, Space, and other-Plan access to detect any legacy direct
-   bypass. Do not remove or ban that access during this pilot.
-7. Restore Plan `2000039` and verify access is restored.
+6. Re-read Network, Space, and other-Plan access to detect any overlap. Do not
+   remove direct access during this pilot.
+7. Restore Plan `2000039` through the normal application ALLOWED path and
+   verify access is restored without manually re-adding direct membership.
 8. Confirm the member's final experience matches the pre-test state, then
    record a redacted checkpoint and stop.
 
 Interpret the result only after the pilot: (A) Plan removal fully denies
-access, so the target Plan is a viable migration control; (B) direct or other
-access remains, so use the smallest nondestructive per-member normalization
-approved after review; or (C) the provider cannot prove the boundary, so use a
-controlled manual transition. No result authorizes a population-wide change.
+access and normal ALLOWED recovery restores the same identity, so the target
+Plan is a viable migration control; (B) another Plan or exceptional Space/
+staff access remains, so classify that overlap separately; or (C) the provider
+cannot prove the boundary, so use a controlled manual transition. No result
+authorizes a population-wide change.
 
 ## Current status
 
@@ -198,7 +217,8 @@ authorized owner identity in Plan `2000039`.
 The authorized test identity was subsequently granted Plan `2000039` and is
 kept restored; it is not part of the real member population. The audit now also
 enumerates each member's Plan memberships so a nonpaid Plan grant cannot be
-mistaken for a direct no-Plan member. Because the Stripe records are not
-currently deterministically entitled, no real-member normalization or
-revocation is authorized. Space-level membership remains a separate review
-item.
+mistaken for a direct no-Plan member. Because the remaining Stripe records are
+not currently deterministically entitled, no real-member migration or
+revocation is authorized by this canary. Any future migration must separately
+review other Plans, exceptional Space-level membership, and staff/admin
+exceptions; ordinary legacy direct Network membership alone is not a blocker.

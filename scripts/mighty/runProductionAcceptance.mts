@@ -27,6 +27,20 @@ function purchaseIds(purchases: Array<{ purchase?: { id?: number | string | null
 		.sort()
 }
 
+function assertMemberProfile(
+	member: { id: number | string; email?: string | null; member_type?: string | null; first_name?: string | null; last_name?: string | null } | null,
+	memberId: string,
+	email: string,
+	label: string,
+): void {
+	assert(member, `${label} must resolve the exact Mighty member`)
+	assert.equal(String(member.id), memberId, `${label} must preserve the Mighty member identity`)
+	assert.equal(member.member_type, 'full', `${label} must preserve full Network membership`)
+	assert.equal(typeof member.first_name, 'string', `${label} must return the member profile`)
+	assert.equal(typeof member.last_name, 'string', `${label} must return the member profile`)
+	if (member.email?.trim()) assert.equal(normalizeEmail(member.email), email, `${label} must preserve the normalized member email`)
+}
+
 function testRow(email: string, overrides: Partial<Parameters<typeof reconcileAccess>[0]['row']> = {}) {
 	return {
 		id: 'production-acceptance',
@@ -70,6 +84,9 @@ async function main(): Promise<void> {
 		const afterCreateAndGrant = await api.getAccessState(memberId, config.accessPlanId)
 		assert.equal(afterCreateAndGrant.hasAccess, true, 'grant must be verified by a separate provider read')
 		assert.equal(afterCreateAndGrant.memberPlanAccess, true, 'grant must place the member in the target access Plan')
+		const grantedMember = await api.findMember(email)
+		assertMemberProfile(grantedMember, memberId, email, 'grant')
+		assert.equal((await api.listMemberSpaces(memberId)).length, 5, 'grant must preserve access to the five migrated Spaces')
 		const firstPurchaseIds = purchaseIds(afterCreateAndGrant.purchases)
 		assert.ok(firstPurchaseIds.length >= 0, 'access state must return a purchase collection')
 
@@ -118,6 +135,33 @@ async function main(): Promise<void> {
 		const afterRestore = await api.getAccessState(memberId, config.accessPlanId)
 		assert.equal(afterRestore.hasAccess, true, 'restore must be verified by a separate provider read')
 		assert.equal(afterRestore.memberPlanAccess, true, 'restore must restore target Plan membership')
+		const restoredMember = await api.findMember(email)
+		assertMemberProfile(restoredMember, memberId, email, 'restore')
+		assert.equal((await api.listMemberSpaces(memberId)).length, 5, 'restore must restore access to the five migrated Spaces')
+
+		await reconcileAccess({
+			row: testRow(email, {
+				desiredAccess: 'DENIED',
+				mightyMemberId: memberId,
+				welcomeRequired: false,
+			}),
+			config,
+			api,
+		})
+		const secondDenied = await api.getAccessState(memberId, config.accessPlanId)
+		assert.equal(secondDenied.hasAccess, false, 'second deny must remove effective access')
+
+		await reconcileAccess({
+			row: testRow(email, { mightyMemberId: memberId, welcomeRequired: false }),
+			config,
+			api,
+		})
+		const secondRestored = await api.getAccessState(memberId, config.accessPlanId)
+		assert.equal(secondRestored.hasAccess, true, 'second restore must restore effective access')
+		assert.equal(secondRestored.memberPlanAccess, true, 'second restore must restore target Plan membership')
+		const finalMember = await api.findMember(email)
+		assertMemberProfile(finalMember, memberId, email, 'repeat restore')
+		assert.equal((await api.listMemberSpaces(memberId)).length, 5, 'repeat restore must preserve access to the five migrated Spaces')
 
 		report = {
 			environment: 'production',
@@ -128,12 +172,19 @@ async function main(): Promise<void> {
 			revokeVerifiedBySeparateRead: true,
 			repeatedRevokeWasSafe: true,
 			restoreVerifiedBySeparateRead: true,
+			repeatedDenyRestoreWasSafe: true,
 			finalStateAccessGranted: true,
 		}
 	} finally {
 		if (memberId) {
 			const currentState = await api.getAccessState(memberId, config.accessPlanId)
-			if (!currentState.hasAccess) await api.restoreAccess(memberId, config.accessPlanId)
+			if (!currentState.hasAccess) {
+				await reconcileAccess({
+					row: testRow(email, { mightyMemberId: memberId, welcomeRequired: false }),
+					config,
+					api,
+				})
+			}
 			assert.equal(
 				(await api.getAccessState(memberId, config.accessPlanId)).hasAccess,
 				true,

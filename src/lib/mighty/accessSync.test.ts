@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { reconcileAccess } from './accessSync'
-import type { MightyAdminApi, MightyMember } from './adminApi'
+import { MightyApiError, type MightyAdminApi, type MightyMember } from './adminApi'
 import type { MightyConfig } from './config'
 
 const config: MightyConfig = {
@@ -30,6 +30,7 @@ function fakeApi(state: FakeState): MightyAdminApi {
 			state.findMemberCalls += 1
 			return state.member
 		},
+		findMemberByEmail: async () => state.member,
 		createMember: async ({ email }) => {
 			state.createMemberCalls += 1
 			state.member = { id: 22, email }
@@ -141,6 +142,44 @@ test('allowed reconciliation creates an absent member before granting access', a
 	assert.equal(state.createMemberCalls, 1)
 	assert.equal(state.grantCalls, 1)
 	assert.equal(welcomeCalls, 1)
+	assert.equal(result.mightyMemberId, '22')
+})
+
+test('allowed recovery re-provisions the stored Mighty identity after Plan removal', async () => {
+	let accessStateCalls = 0
+	let createMemberCalls = 0
+	let restoreCalls = 0
+	let welcomeCalls = 0
+	const api = {
+		createMember: async ({ email }: { email: string }) => {
+			createMemberCalls += 1
+			return { id: 22, email }
+		},
+		getAccessState: async () => {
+			accessStateCalls += 1
+			return accessStateCalls === 1
+				? { memberId: '22', planId: '678', purchases: [], memberPlanAccess: false, hasAccess: false }
+				: { memberId: '22', planId: '678', purchases: [], memberPlanAccess: true, hasAccess: true }
+		},
+		restoreAccess: async () => {
+			restoreCalls += 1
+			if (restoreCalls === 1) throw new MightyApiError(404)
+			return { id: 678 }
+		},
+	} as unknown as MightyAdminApi
+
+	const result = await reconcileAccess({
+		row: row({ mightyMemberId: '22', welcomeRequired: false }),
+		config,
+		api,
+		sendWelcome: async () => {
+			welcomeCalls += 1
+		},
+	})
+
+	assert.equal(createMemberCalls, 1)
+	assert.equal(restoreCalls, 2)
+	assert.equal(welcomeCalls, 0)
 	assert.equal(result.mightyMemberId, '22')
 })
 

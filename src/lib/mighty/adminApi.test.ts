@@ -23,6 +23,7 @@ test('findMember follows Mighty pagination and compares normalized email', async
 	const api = new MightyAdminApi(config, async (input) => {
 		const url = String(input)
 		requests.push(url)
+		if (url.includes('/members/by_email')) return response({}, 404)
 		if (url.includes('page=2')) {
 			return response({ items: [{ id: 44, email: 'Student@Example.com' }], links: {} })
 		}
@@ -31,7 +32,33 @@ test('findMember follows Mighty pagination and compares normalized email', async
 
 	const member = await api.findMember(' student@example.com ')
 	assert.equal(member?.id, 44)
-	assert.equal(requests.length, 2)
+	assert.equal(requests.length, 3)
+})
+
+test('findMember prefers the exact-email lookup when the member is absent from the active list', async () => {
+	const api = new MightyAdminApi(config, async (input) => {
+		if (String(input).includes('/members/by_email')) {
+			return response({ id: 44, email: 'student@example.com', member_type: 'full' })
+		}
+		throw new Error('active member list should not be queried after an exact match')
+	})
+
+	assert.deepEqual(await api.findMember(' Student@Example.com '), {
+		id: 44,
+		email: 'student@example.com',
+		member_type: 'full',
+	})
+})
+
+test('findMemberByEmail uses Mighty exact-email lookup and treats absent members as null', async () => {
+	let requestUrl = ''
+	const api = new MightyAdminApi(config, async (input) => {
+		requestUrl = String(input)
+		return response({}, 404)
+	})
+
+	assert.equal(await api.findMemberByEmail(' Student@Example.com '), null)
+	assert.match(requestUrl, /\/members\/by_email\?email=student%40example\.com$/)
 })
 
 test('provider requests include the required User-Agent header', async () => {
@@ -58,6 +85,7 @@ test('createMember disables Mighty welcome email and grant uses the documented q
 	await api.createMember({ email: 'student@example.com' })
 	await api.grantAccess(11)
 
+	assert.match(calls[0].body ?? '', /"member_type":"full"/)
 	assert.match(calls[0].body ?? '', /"send_welcome_email":false/)
 	assert.match(calls[1].url, /\/plans\/678\/members\?user_id=11$/)
 })
@@ -101,6 +129,29 @@ test('getAccessState reports direct nonpaid plan membership as access', async ()
 		memberPlanAccess: true,
 		hasAccess: true,
 	})
+})
+
+test('getAccessState treats an inactive member 404 as no access', async () => {
+	const api = new MightyAdminApi(config, async () => response({}, 404))
+
+	assert.deepEqual(await api.getAccessState(11, 678), {
+		memberId: '11',
+		planId: '678',
+		purchases: [],
+		memberPlanAccess: false,
+		hasAccess: false,
+	})
+})
+
+test('listMemberSpaces returns the member Space memberships and treats inactive members as empty', async () => {
+	let requestUrl = ''
+	const api = new MightyAdminApi(config, async (input) => {
+		requestUrl = String(input)
+		return response({ items: [{ id: 1 }, { id: 2 }], links: {} })
+	})
+
+	assert.deepEqual(await api.listMemberSpaces(11), [{ id: 1 }, { id: 2 }])
+	assert.match(requestUrl, /\/members\/11\/spaces\?per_page=100$/)
 })
 
 test('revokePlanAccess uses the documented plan-member DELETE endpoint', async () => {

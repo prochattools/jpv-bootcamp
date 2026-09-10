@@ -5,9 +5,16 @@ import { getMightyConfig, type MightyConfig } from './config'
 export type MightyMember = {
 	id: number | string
 	email: string
+	member_type?: string | null
+	role?: string | null
 	first_name?: string | null
 	last_name?: string | null
 	permalink?: string | null
+}
+
+export type MightySpace = {
+	id: number | string
+	name?: string | null
 }
 
 export type MightyPlan = {
@@ -142,6 +149,9 @@ export class MightyAdminApi {
 		const normalizedEmail = normalizeEmail(email)
 		if (!normalizedEmail) throw new Error('A valid email is required to find a Mighty member')
 
+		const exactMember = await this.findMemberByEmail(normalizedEmail)
+		if (exactMember) return exactMember
+
 		let page: Paginated<MightyMember> | null = await this.request<Paginated<MightyMember>>(
 			'GET',
 			`networks/${numericId(this.config.networkId)}/members`,
@@ -156,6 +166,19 @@ export class MightyAdminApi {
 			page = await this.getNextPage<MightyMember>(page.links?.next)
 		}
 		return null
+	}
+
+	async findMemberByEmail(email: string): Promise<MightyMember | null> {
+		const normalizedEmail = normalizeEmail(email)
+		if (!normalizedEmail) throw new Error('A valid email is required to find a Mighty member')
+
+		return this.request<MightyMember>(
+			'GET',
+			`networks/${numericId(this.config.networkId)}/members/by_email`,
+			{ email: normalizedEmail },
+			undefined,
+			true,
+		)
 	}
 
 	async createMember(params: {
@@ -174,6 +197,7 @@ export class MightyAdminApi {
 				first_name: params.firstName?.trim() || firstNameFromEmail(email),
 				last_name: params.lastName?.trim() || '',
 				role: 'contributor',
+				member_type: 'full',
 				send_welcome_email: false,
 			},
 		)
@@ -186,6 +210,8 @@ export class MightyAdminApi {
 			'GET',
 			`networks/${numericId(this.config.networkId)}/purchases`,
 			{ member_id: numericId(memberId), plan_id: planId, per_page: 100 },
+			undefined,
+			true,
 		)
 		return result?.items ?? []
 	}
@@ -195,6 +221,19 @@ export class MightyAdminApi {
 			'GET',
 			`networks/${numericId(this.config.networkId)}/members/${numericId(memberId)}/plans`,
 			{ per_page: 100 },
+			undefined,
+			true,
+		)
+		return firstPage ? this.collectPages(firstPage) : []
+	}
+
+	async listMemberSpaces(memberId: number | string): Promise<MightySpace[]> {
+		const firstPage = await this.request<Paginated<MightySpace>>(
+			'GET',
+			`networks/${numericId(this.config.networkId)}/members/${numericId(memberId)}/spaces`,
+			{ per_page: 100 },
+			undefined,
+			true,
 		)
 		return firstPage ? this.collectPages(firstPage) : []
 	}

@@ -28,13 +28,12 @@ remain excluded from automation. The owner `info@prochat.tools` remains
 restored with Plan `2000039` and no other Plan overlap. No real student or
 member population was modified.
 
-The Phase D ordinary-member canary was attempted only for the owner-authorized
-`westhoek@hotmail.com` identity and is blocked. Do not run another member or a
-batch. The required read-only-before, grant, duplicate-identity, access,
-Plan-denial, legacy-bypass, restore, final-experience, and stop-on-unexpected-
-change procedure is documented in
-`docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`; the documented
-Network-plan removal semantics and rollback blocker must be resolved first.
+The Phase D ordinary-member canary passed for the owner-authorized
+`westhoek@hotmail.com` identity. The corrected acceptance proves that Plan
+removal is the desired Network lockout and that the normal ALLOWED application
+path restores the same member identity after that lockout. No other member or
+batch was touched. The remaining controlled-batch procedure and overlap audit
+are documented in `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
 
 ## CURRENT MIGHTY OWNER/ADMIN CANARY — 2026-09-10
 
@@ -48,7 +47,7 @@ normalized, migrated, revoked, or otherwise modified.
 The rollout order is canonical: Phase A — silent build; Phase B — owner
 acceptance; Phase C — explicitly authorized administrator canaries; Phase D —
 one-at-a-time or controlled-batch existing-member migration; and Phase E —
-automation enablement only after member normalization. The owner explicitly
+automation enablement only after member overlap review. The owner explicitly
 authorized Phase C against the existing owner identity and a second
 administrator identity. Both existing Mighty identities were reused, target
 Plan grant/idempotency/removal/restoration was verified, and Plan `2000039`
@@ -76,43 +75,35 @@ resumability requirements are documented in
 ## CURRENT MIGHTY ORDINARY-MEMBER CANARY — 2026-09-10
 
 The owner-authorized Phase D identity `westhoek@hotmail.com` resolved to one
-live Stripe JPV customer with one active monthly subscription, a paid latest
-invoice, and current period through `2026-09-23`; Stripe classification was
-`ALLOWED`. Mighty exact-email lookup reused existing member ID `41580317`, a
-`Full Member` with `Network Access: Direct`, five direct Spaces, no Plans, and
-no purchases. The admin member list did not classify this identity as a
-Network Host or Admin.
+live Stripe JPV customer with an active paid subscription; Stripe
+classification was `ALLOWED`. Mighty exact-email lookup reused member ID
+`41580317`, a `Full Member` with five Spaces and zero Plans before the test.
+Plan `2000039` is hidden, non-paid, and Network-access-only, so its scope is
+`PLAN_SCOPE_COMPLETE`.
 
-Plan `2000039` is hidden and non-paid, and its settings show Network access
-only. Mighty documents that Network access includes the entire Network and all
-Spaces, so the result is `PLAN_SCOPE_COMPLETE` for this member. Legacy direct
-Network/Space state was not normalized.
+The normal application acceptance granted Plan `2000039` and independently
+verified one target Plan, full membership, profile fields, and five Spaces.
+Repeat grant was safely idempotent: Mighty returned duplicate HTTP 422 and the
+independent read remained exactly one Plan. Plan-only revoke returned HTTP 204,
+removed active Network/member/Space access, and made those reads unavailable;
+this is the desired effective denial for Stripe `DENIED`, not identity loss.
+Repeated denial was safe.
 
-Grant returned HTTP 200 and independently showed exactly one target Plan.
-Repeat grant returned HTTP 422 with the exact duplicate message `User already
-has access to this plan`, while the independent read remained exactly one
-membership. Plan-only revoke returned HTTP 204, but subsequent member, Plan,
-and Space reads returned HTTP 404 and the admin UI reported that the person was
-no longer a member. This matches Mighty’s documented behavior for removing a
-non-paid Plan with Network access. No legacy/direct bypass was observed, but
-the operation does not safely remove only the old direct Network source.
-Effective access denial was observed before normalization, not accepted as a
-post-normalization proof.
+Without manually re-adding direct/full membership, the normal application
+`ALLOWED` path recovered the inactive member, re-provisioned it with
+`send_welcome_email=false`, received the original ID `41580317`, granted the
+Plan, and independently verified the same full account, five Spaces, one Plan,
+and zero purchases. A second deny → restore cycle passed with the same ID and
+no duplicate. The provider masks the owner email field in the member payload;
+exact-email lookup, stable ID, member type, profile fields, Plan, and Space
+evidence remained available.
 
-The same account was restored with HTTP 201 and `send_welcome_email=false`; the
-original member ID was returned. A targeted probe of Mighty’s documented
-`network_membership` DELETE endpoint with `cancel_plans=false` returned HTTP
-204 but removed Plan `2000039` and changed the member from `full` to
-`limited`, so it is not a safe direct-Network-only transition. Explicitly
-re-adding the same account as `full` restored the five direct Spaces; final
-API/UI checks confirmed the exact pre-canary state: same account, Full Member,
-Direct access, five Spaces, zero Plans, and zero purchases. No duplicate
-account, profile/content/history operation, other-member change, Stripe
-mutation, deployment, merge, or scheduler enablement occurred.
-
-Phase D is therefore blocked pending a nondestructive way to remove the legacy
-direct Network source and restore the account under Plan control. The next
-action is remediation, not another member canary or small migration batch.
+The former direct-membership-only normalization blocker is superseded as an
+unnecessary requirement. Existing Stripe-ALLOWED direct members are migrated
+by granting Plan `2000039`; direct Network membership is not separately
+deleted. Other Plan overlaps, exceptional Space grants, and staff/admin
+exceptions remain separate audit risks. No other member, Stripe object,
+deployment, merge, or scheduler was modified.
 
 Production configuration was freshly verified through Dokploy: all six
 required Mighty values are present, the API base and student login URL match
