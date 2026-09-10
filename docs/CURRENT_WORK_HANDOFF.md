@@ -19,16 +19,14 @@ purchase row. The client now reads `/members/{member_id}/plans` and revokes
 with the documented plan-member DELETE endpoint. Local provider/sync tests and
 the migration contract suite pass.
 
-The production Dokploy application still returns the legacy endpoint values
-when inspected: `MIGHTY_API_BASE_URL` is a `/networks/.../me` URL and
-`MIGHTY_STUDENT_LOGIN_URL` is a `/landing?...` URL. The acceptance used the
-canonical values in memory and did not rewrite Dokploy. Before deployment or
-worker enablement, set the API URL to `https://api.mn.co/admin/v1` and the
-student URL to the canonical `/sign_in` URL for `jpv-community.mn.co`.
+The production Dokploy application now returns the canonical endpoint values:
+`MIGHTY_API_BASE_URL=https://api.mn.co/admin/v1` and the canonical
+`jpv-community.mn.co/sign_in` URL. All six required Mighty keys are present;
+secrets were not printed or committed.
 
 ---
 
-## CURRENT MIGHTY MIGRATION — 2026-09-09
+## HISTORICAL MIGHTY MIGRATION PRE-CANARY — 2026-09-09
 
 The approved JPV migration is now being executed on
 `feature/mighty-stripe-migration`, based on synchronized `origin/main`, was
@@ -69,9 +67,9 @@ also completed read-only.
 Subsequent read-only verification through the masked production Dokploy
 configuration authenticated successfully against the JPV Mighty Network and
 confirmed the configured Plan as `JPV Member Access`, hidden, and non-paid. The
-Dokploy values still require correction before cutover: `MIGHTY_API_BASE_URL`
-must be the Admin API base (not a `/networks/.../me` endpoint), and
-`MIGHTY_STUDENT_LOGIN_URL` must be the canonical `/sign_in` URL.
+fresh production inspection confirms the canonical Admin API base and `/sign_in`
+URL, with all six required Mighty values present. Secret values were not
+printed or committed.
 
 Staging is intentionally unchanged and is not a prerequisite for this
 production feature-branch lane. Its provider verification blockers remain
@@ -86,13 +84,9 @@ confirmation input.
 The real-network acceptance command is `pnpm mighty:production-acceptance`.
 It requires `MIGHTY_PROVIDER_ENV=production`, an explicit production mutation
 guard, the configured Plan ID, and one disposable operator-controlled test
-email. The guarded entry point was tested but stopped before the provider call
-because the local shell does not inherit Dokploy's production environment; the
-successful run securely loaded the remote secrets in memory and used canonical
-endpoint overrides without writing Dokploy.
-The read-only roster bridge was attempted but could not reach the local
-database at `localhost:5444`; no production database access or mutation was
-performed.
+email. It passed and left the authorized test identity restored. The read-only
+production roster bridge and manual-access audit also completed without
+mutation.
 The read-only `pnpm mighty:config-check` command can validate environment
 presence and URL/number shapes before a Mighty access Plan exists; it never
 prints secret values or contacts the provider.

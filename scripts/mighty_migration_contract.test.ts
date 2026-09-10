@@ -16,6 +16,10 @@ const stagingAcceptance = readFileSync('scripts/mighty/runStagingAcceptance.mts'
 const productionAcceptance = readFileSync('scripts/mighty/runProductionAcceptance.mts', 'utf8')
 const configurationCheck = readFileSync('scripts/mighty/checkConfiguration.mts', 'utf8')
 const manualAccessAudit = readFileSync('scripts/mighty/auditManualAccess.mts', 'utf8')
+const adminCanaryProcedure = readFileSync('docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md', 'utf8')
+const migrationPlan = readFileSync('docs/migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md', 'utf8')
+const roadmapStatus = readFileSync('docs/client/ROADMAP_PROGRESS_STATUS.md', 'utf8')
+const currentHandoff = readFileSync('docs/CURRENT_WORK_HANDOFF.md', 'utf8')
 const stagingScheduler = readFileSync('.github/workflows/staging-mighty-access-sync.yml', 'utf8')
 const productionScheduler = readFileSync('.github/workflows/mighty-access-sync.yml', 'utf8')
 const stagingEvidence = readFileSync('docs/migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md', 'utf8')
@@ -174,6 +178,23 @@ test('manual access audit is read-only and identifies direct or overlapping acce
 	assert.match(manualAccessAudit, /stripeSummary\.ambiguousOrUnmatchedRecordCount|\.\.\.stripeSummary/)
 	assert.match(manualAccessAudit, /mutationPerformed: false/)
 	assert.doesNotMatch(manualAccessAudit, /createMember|grantAccess|restoreAccess|revokeAccess/)
+})
+
+test('silent-build rollout and administrator canary procedure are canonical and unexecuted', () => {
+	for (const document of [migrationPlan, roadmapStatus, currentHandoff]) {
+		assert.match(document, /Phase A|silent build/i)
+		assert.match(document, /Phase B|owner acceptance/i)
+		assert.match(document, /Phase C|administrator canary/i)
+		assert.match(document, /Phase D|member migration/i)
+		assert.match(document, /Phase E|automation enablement/i)
+	}
+	assert.match(adminCanaryProcedure, /Phase C|administrator canary/i)
+	assert.match(adminCanaryProcedure, /prepared and remains unexecuted/)
+	assert.match(adminCanaryProcedure, /supplies exactly one administrator identity/)
+	assert.match(adminCanaryProcedure, /explicitly\s+authorizes that identity/)
+	assert.match(adminCanaryProcedure, /does not create or modify a second test identity/)
+	assert.match(migrationPlan, /stop-on-error/)
+	assert.match(migrationPlan, /resumable checkpoints/)
 })
 
 test('public Sign In targets the canonical Mighty URL', () => {

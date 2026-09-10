@@ -30,24 +30,24 @@
   authenticated successfully and confirmed Plan `2000039` as `JPV Member
   Access`, hidden, and non-paid. No credential or Network ID is recorded in
   Git.
-- The production Dokploy inspection still returns legacy endpoint values:
-  `MIGHTY_API_BASE_URL` points at a `/networks/.../me` resource rather than the
-  Admin API base, and `MIGHTY_STUDENT_LOGIN_URL` points at a landing URL rather
-  than the canonical `/sign_in` URL. The live acceptance used the canonical
-  values in memory and did not rewrite Dokploy. Correct these two values before
-  deployment or worker enablement.
+- Fresh production Dokploy inspection confirms all six required Mighty values
+  are present. The safe public values are the Admin API base
+  `https://api.mn.co/admin/v1`, Network ID `24903412`, Plan ID `2000039`, and
+  the canonical `jpv-community.mn.co/sign_in` URL. Secret values were not
+  printed or committed.
 - The corrected read-only production roster audit completed without mutation:
   6 active Stripe provisioning records were found and all 6 require manual
   review because `subscriptionStatus` is missing; Mighty reports 9 members,
-  0 Plan purchases, and 9 direct members without a Plan. No normalization was
-  performed.
+  0 purchase rows, 8 direct no-Plan members, and 1 member in Plan `2000039`
+  (the authorized test identity). No real-member normalization was performed.
 - The local `.env` and `.env.production` contain no configured Mighty values;
   only `.env.example` contains placeholders. No secret values are recorded.
 - The guarded real-network command passed with the production mutation guard
   and left the authorized test identity restored. No real student was touched.
-- The read-only roster bridge was attempted and stopped because its local
-  database target at `localhost:5444` was unavailable. No production database
-  was contacted and no records were changed.
+- The read-only production roster bridge completed without mutation: 6 active
+  candidate records were found, all 6 require manual review because their
+  subscription status is missing, and 0 were classified as deterministically
+  entitled. No roster was exported or migrated.
 - The read-only configuration check is available as `pnpm mighty:config-check`.
   It reports only PRESENT/MISSING/INVALID states, never secret values, and
   identifies a configured Plan ID as requiring provider lookup rather than
@@ -66,6 +66,49 @@
 - Mighty API requests include the required identifying `User-Agent` header for
   the provider’s bot-protection boundary.
 
+## Canonical silent-build rollout model
+
+This is a canary build phase. Plan `2000039` is the controlled access
+abstraction, but existing real Mighty members remain on their current
+manual/direct access until the later migration stages are explicitly approved.
+
+### Phase A — Silent build
+
+- Keep Plan `2000039` limited to controlled canary identities.
+- Leave the existing real-member experience unchanged.
+- Do not normalize, revoke, or otherwise modify the real member population.
+
+### Phase B — Owner acceptance
+
+- `info@prochat.tools` is the first canary.
+- Verify the application-level ALLOWED → DENIED → ALLOWED lifecycle and final
+  restored Plan access. This phase is complete.
+
+### Phase C — Administrator canary
+
+- Use the controlled procedure in
+  `docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md`.
+- Use only administrator identities explicitly supplied and authorized by the
+  owner. Do not infer identities from repository or database data.
+- This phase is prepared but intentionally unexecuted.
+
+### Phase D — Member migration
+
+- After administrator acceptance, migrate existing Stripe-entitled members
+  one at a time or in small controlled batches.
+- Resolve Stripe entitlement, detect Network/Plan/Space access, grant and
+  verify Plan `2000039`, then normalize overlapping access only after explicit
+  approval and a successful verification.
+- Use stop-on-error, resumable checkpoints, idempotent retries, and aggregate
+  audit evidence. The procedure is documented but not executed.
+
+### Phase E — Automation enablement
+
+- Keep production automation disabled until the real paid membership is
+  Plan-controlled and alternate access routes have been reviewed.
+- Only after Phases A–D, website/cutover verification, and production
+  configuration approval may `MIGHTY_ACCESS_SYNC_ENABLED=true` be introduced.
+
 ## Guardrails
 
 This plan preserves the current production Stripe billing system and makes no
@@ -82,7 +125,7 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | Phase | Scope | Status |
 | --- | --- | --- |
 | M0 | Preserve production baseline, tag it, branch from synchronized `main`, record decisions | **Complete** |
-| M1 | Typed environment/config boundary and canonical student-login target | **Implemented locally; live config missing** |
+| M1 | Typed environment/config boundary and canonical student-login target | **Implemented; production values verified** |
 | M2 | Bounded Mighty Admin API client and documented member/access operations | **Implemented and focused-tested** |
 | M3 | Website Sign In cutover support, Join preservation, safe legacy redirects | **Implemented locally** |
 | M4 | Stripe event → durable Mighty desired-state projection | **Implemented locally; event ordering and terminal-state guards included** |
@@ -90,7 +133,7 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | M6 | Read-only entitled-member bridge for controlled manual migration | **Implemented locally** |
 | M7 | Focused regression tests and validation matrix | **Local focused matrix green; provider/live checks remain cutover gates** |
 | M8 | Staging configuration and controlled provider/API verification | **Skipped for this implementation lane; staging remains unchanged** |
-| M9 | Production cutover readiness, rollback, and go/no-go | **Not started / not authorized** |
+| M9 | Production cutover readiness, rollback, and go/no-go | **Canary-ready; cutover not started / not authorized** |
 
 ## Approved execution sequence
 
@@ -111,8 +154,8 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
    `pnpm mighty:production-acceptance`; it requires
    `MIGHTY_PROVIDER_ENV=production`, `MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS=true`,
    and one disposable `MIGHTY_PRODUCTION_TEST_EMAIL`.
-   Run `pnpm mighty:config-check` first when the Plan is not yet configured;
-   the rest of the worker and configuration checks do not require a live Plan.
+   Run `pnpm mighty:config-check` after any configuration change; it reports
+   shape/presence only and never replaces provider Plan verification.
 5. Configure a scheduled worker call to
    `POST /api/admin/process-mighty-access-sync` with the dedicated worker
    secret. The Stripe webhook itself must never call Mighty synchronously.
@@ -131,7 +174,9 @@ targets only `https://jpvbootcamp.com`, uses the GitHub environment
 `MIGHTY_ACCESS_SYNC_WORKER_SECRET` environment secret. It is inert until the
 feature branch is merged, the worker secret is configured, and the GitHub
 environment variable `MIGHTY_ACCESS_SYNC_ENABLED` is explicitly set to the
-exact value `true`. Manual dispatch additionally requires selecting
+exact value `true`. The GitHub Actions environment/enablement gate is not
+currently configured, so scheduled processing is inert. Manual dispatch
+additionally requires selecting
 `run_production_sync=yes`; the default is `no`.
 
 The fixed staging scheduler is
@@ -190,6 +235,30 @@ production feature-branch cutover.
 7. Do not change Stripe subscriptions, Stripe products/prices, or local billing
    state as part of this bridge.
 
+## Existing-member migration procedure — prepared, unexecuted
+
+For each Stripe-entitled existing member, the later Phase D operator run must:
+
+1. Resolve the authoritative Stripe customer/subscription entitlement and
+   stop on missing, ambiguous, or conflicting identity/state.
+2. Find the existing Mighty identity by normalized email and confirm the
+   stable member ID. Never create a duplicate member during migration.
+3. Read Network membership, all member Plans, target Plan `2000039`, and
+   relevant Space membership before changing access.
+4. Grant Plan `2000039` and verify it with a separate member-Plan read.
+5. Normalize overlapping access only with explicit approval for that member or
+   batch. Do not use bans, account deletion, “Remove From Everything,” or
+   destructive Space/Network actions as routine billing enforcement.
+6. Verify the member retains the expected access, record a redacted success
+   checkpoint, and continue only when the batch remains within its approval.
+
+The runner must support one-member and small-batch modes, a stable run ID,
+stop-on-error, resumable checkpoints, idempotent retries, and aggregate audit
+evidence. A retry resumes from the last confirmed member and re-reads provider
+state before acting. Any alternate Plan or direct Network/Space access remains
+an explicit overlap risk until its nondestructive removal is proven safe. This
+procedure is documentation-only in the current silent-build phase.
+
 ## Production cutover checklist
 
 Complete these items only under the separate production deployment and go/no-go
@@ -229,15 +298,12 @@ as a separate, explicitly authorized operator action.
 
 ## Missing before controlled cutover
 
-- Secure execution access to the existing Mighty Network ID and Admin API token;
-  the owner-confirmed non-paid JPV access Plan is `2000039`.
 - Dedicated Admin API token owner, rotation policy, and target environment.
-- Production application worker secret and GitHub `production-mighty-sync`
-  scheduled-execution secret/owner.
-- Correct the two legacy endpoint values still returned by the production
-  Dokploy application: `MIGHTY_API_BASE_URL=https://api.mn.co/admin/v1` and
-  `MIGHTY_STUDENT_LOGIN_URL=https://jpv-community.mn.co/sign_in?from=https%3A%2F%2Fjpv-community.mn.co%2F`.
-- Secure manual roster execution and aggregate reconciliation evidence.
+- GitHub `production-mighty-sync` environment and scheduled-execution secret/
+  owner, followed by explicit `MIGHTY_ACCESS_SYNC_ENABLED=true` enablement.
+- Explicit administrator identity authorization for the Phase C canary.
+- Secure manual roster execution and aggregate reconciliation sign-off before
+  any Phase D member migration.
 - Production verification for billing, support, sponsored membership,
   operator/admin, and the cutover/rollback routes.
 - Separate production deployment, migration, data, and go/no-go authorization.

@@ -6,6 +6,10 @@ This procedure is required before enabling automated Stripe-derived Mighty
 revocation. It is read-only until a separate operator approval authorizes a
 bounded normalization batch.
 
+During the current silent-build phase, existing real members are intentionally
+left unchanged. Direct/no-Plan members are expected legacy state, not an error,
+and this procedure must not be used to normalize them yet.
+
 Stripe remains the billing authority. The canonical access path is:
 
 `Stripe entitlement → JPV Member Access Plan (${MIGHTY_ACCESS_PLAN_ID}) → Mighty access`
@@ -70,6 +74,35 @@ access route is closed.
    Plan `2000039` and no unapproved alternate access route.
 8. Only after the aggregate result and exceptions are signed off may automated
    revocation be enabled.
+
+## Controlled migration algorithm
+
+The later member migration must accept one member or a small approved batch,
+with a run ID and a durable checkpoint for each member. For each row it must:
+
+1. Resolve a deterministic Stripe entitlement and stable customer/subscription
+   identity.
+2. Find the existing Mighty member by normalized email and stop on conflicts.
+3. Read Network, Plan, and Space access before mutation.
+4. Grant Plan `2000039` and verify it with an independent provider read.
+5. Require explicit per-member or per-batch approval before removing any
+   overlapping direct/other-Plan/Space access.
+6. Verify expected access after normalization and record a redacted checkpoint.
+
+The runner stops on the first error, resumes from the last confirmed
+checkpoint, re-reads provider state before retries, and never creates duplicate
+members. A failed or ambiguous row remains pending manual review; it is not
+silently treated as denied. The final migration invariant is:
+
+`Stripe ALLOWED → Plan 2000039 present → expected Mighty access`
+
+`Stripe DENIED → Plan 2000039 absent → no paid JPV access through the
+Plan-controlled path`
+
+Direct Network/Space membership can still bypass that Plan invariant, so it
+must remain a separately reviewed overlap until nondestructive removal is
+proven safe. No routine billing enforcement may use ban, account deletion, or
+“Remove From Everything.”
 
 ## Current status
 

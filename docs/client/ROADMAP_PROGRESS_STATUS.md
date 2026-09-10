@@ -1,6 +1,32 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT MIGHTY MIGRATION — 2026-09-09
+## CURRENT MIGHTY SILENT BUILD / OWNER CANARY — 2026-09-10
+
+The JPV Stripe → Mighty integration is in a silent canary phase on
+`feature/mighty-stripe-migration`. Plan `2000039` (`JPV Member Access`) is the
+controlled access abstraction. The owner canary passed the complete
+ALLOWED → DENIED → RESTORE lifecycle and remains restored. Existing real Mighty
+members remain on their current manual/direct access and have not been
+normalized, migrated, revoked, or otherwise modified.
+
+The rollout order is canonical: Phase A — silent build; Phase B — owner
+acceptance; Phase C — explicitly authorized administrator canaries; Phase D —
+one-at-a-time or controlled-batch existing-member migration; and Phase E —
+automation enablement only after member normalization. The administrator procedure is prepared in
+`docs/migration/MIGHTY_ADMIN_CANARY_PROCEDURE.md`; it has not been executed.
+The existing-member algorithm, overlap risks, stop-on-error boundary, and
+resumability requirements are documented in
+`docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
+
+Production configuration was freshly verified through Dokploy: all six
+required Mighty values are present, the API base and student login URL match
+the canonical public values, and Plan `2000039` is configured. Secrets were
+not printed or committed. GitHub has no `MIGHTY_ACCESS_SYNC_ENABLED`
+repository variable and no `production-mighty-sync` environment is visible;
+the production scheduler therefore remains inert. No deploy, merge, Stripe
+mutation, or production database mutation is part of this phase.
+
+## HISTORICAL MIGHTY MIGRATION PRE-CANARY — 2026-09-09
 
 The approved Stripe → Mighty migration is prepared on
 `feature/mighty-stripe-migration`. Production baseline revision
