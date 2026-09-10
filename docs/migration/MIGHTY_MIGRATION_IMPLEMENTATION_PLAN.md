@@ -199,14 +199,14 @@ as a separate, explicitly authorized operator action.
 
 ## Missing before controlled cutover
 
-- Existing Mighty Network ID and provider verification of the manually created
-  non-paid JPV access Plan.
+- Secure execution access to the existing Mighty Network ID and Admin API token;
+  the owner-confirmed non-paid JPV access Plan is `2000039`.
 - Dedicated Admin API token owner, rotation policy, and target environment.
 - Production application worker secret and GitHub `production-mighty-sync`
   scheduled-execution secret/owner.
-- Non-production or otherwise approved Mighty API verification evidence.
-- One disposable/operator-controlled production test identity for the bounded
-  acceptance command, if the provider values are available to the operator.
+- Bounded real-network Mighty API acceptance evidence using the authorized
+  `info@prochat.tools` identity; the local guarded attempt stopped before any
+  provider request because Dokploy values are not inherited by the local shell.
 - Secure manual roster execution and aggregate reconciliation evidence.
 - Production verification for billing, support, sponsored membership,
   operator/admin, and the cutover/rollback routes.

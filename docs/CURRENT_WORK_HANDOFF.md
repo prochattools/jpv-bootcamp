@@ -37,8 +37,11 @@ confirmed the baseline image remains deployed; the production Mighty values
 were not revealed or used. The old portal remains in the repository for
 controlled rollback and operator continuity.
 The owner has since manually created the hidden, non-paid, access-only JPV
-member Plan. Its ID is supplied through environment configuration only; provider
-acceptance and the manual-access overlap audit remain pending.
+member Plan `2000039`. The Plan ID is supplied through environment configuration
+only. The guarded acceptance entry point was invoked with the authorized test
+identity and stopped before any API request because the local shell lacked
+`MIGHTY_API_BASE_URL`; the provider acceptance and manual-access overlap audit
+therefore remain pending.
 
 Staging is intentionally unchanged and is not a prerequisite for this
 production feature-branch lane. Its provider verification blockers remain
@@ -52,8 +55,9 @@ confirmation input.
 
 The real-network acceptance command is `pnpm mighty:production-acceptance`.
 It requires `MIGHTY_PROVIDER_ENV=production`, an explicit production mutation
-guard, and one disposable operator-controlled test email; it has not been run
-because those inputs are not available in the local environment.
+guard, the configured Plan ID, and one disposable operator-controlled test
+email. The guarded entry point was tested but stopped before the provider call
+because the local shell does not inherit Dokploy's production environment.
 The read-only roster bridge was attempted but could not reach the local
 database at `localhost:5444`; no production database access or mutation was
 performed.
