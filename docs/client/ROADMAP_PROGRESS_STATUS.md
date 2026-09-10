@@ -19,10 +19,11 @@ Mighty access state locally, reconciles it through a retrying authenticated
 worker, reuses or creates members by email, grants the existing non-paid Plan,
 removes access immediately on payment failure or actual subscription end, and
 restores it on `invoice.paid`. Welcome/login email is deferred until the Mighty
-grant succeeds. The fixed staging scheduler and guarded disposable acceptance
-harness are now defined. No Mighty API was live-exercised and no provider
-production objects were created because the non-production configuration is
-missing.
+grant succeeds. Event ordering and worker lease/finalization guards are covered
+by local tests. The production scheduler is explicitly disabled until
+`MIGHTY_ACCESS_SYNC_ENABLED=true` is set in the production GitHub environment;
+manual dispatch separately requires an explicit confirmation input. No Mighty
+API was live-exercised and no provider production objects were created.
 
 See `docs/architecture/JPV_MIGHTY_STRIPE_ARCHITECTURE.md` and
 `docs/migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md` for the canonical

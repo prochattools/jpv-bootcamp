@@ -34,6 +34,12 @@ function fakeApi(state: FakeState): MightyAdminApi {
 			return state.member
 		},
 		findPurchases: async () => state.purchases,
+		getAccessState: async () => ({
+			memberId: '22',
+			planId: '678',
+			purchases: state.purchases,
+			hasAccess: state.purchases.length > 0,
+		}),
 		grantAccess: async () => {
 			state.grantCalls += 1
 			state.purchases = [{ purchase: { id: 'purchase-1' } }]

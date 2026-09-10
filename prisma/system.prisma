@@ -91,6 +91,8 @@ model MightyAccessSync {
   stripeCustomerId  String?   @unique @map("stripe_customer_id")
   stripeSubscriptionId String? @unique @map("stripe_subscription_id")
   lastStripeEventId String?   @map("last_stripe_event_id")
+  lastStripeEventCreatedAt DateTime? @map("last_stripe_event_created_at") @db.Timestamptz(3)
+  lastStripeEventType String? @map("last_stripe_event_type")
   plan              String?   @map("plan")
   desiredAccess     String    @default("DENIED") @map("desired_access")
   syncStatus        String    @default("pending") @map("sync_status")

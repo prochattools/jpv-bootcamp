@@ -18,23 +18,32 @@ The existing Stripe Checkout, webhook, support, sponsored membership, public
 sales, and operator/admin paths remain in scope and are preserved.
 
 Implemented locally: typed fail-closed Mighty configuration, documented Admin
-API client, durable Stripe-derived desired access state, authenticated retrying
-worker endpoint, delayed welcome ordering, canonical Mighty Sign In target,
-legacy `/sign-in` and `/login` redirects, and a read-only entitled-member
-bridge roster tool. The staging scheduler and disposable acceptance harness are
-now defined, but no live Mighty API call or provider-object creation has been
-performed because all six non-production Mighty variables are absent from the
-local and canonical staging environments. No
-production deployment, production database mutation, or Stripe mutation was
-performed. The old portal remains in the repository for controlled rollback and
-operator continuity.
+API client, durable Stripe-derived desired access state with event ordering,
+authenticated retrying worker endpoint with lease/finalization guards, delayed
+welcome ordering, canonical Mighty Sign In target, legacy `/sign-in` and
+`/login` redirects, and a read-only entitled-member bridge roster tool. The
+production scheduler workflow and disposable staging acceptance harness are
+defined. The canonical staging application now contains all six Mighty
+variable names, but its configured API base redirects to the public Network
+landing page, its access Plan value is a placeholder, and the running image
+`8b1f459fed358776fda791553ef225cc9f03b2ae` predates the Mighty implementation.
+Read-only requests against the official Mighty API base authenticate and show
+zero Plans. The GitHub `staging-mighty-sync` environment is also not yet
+configured. No production deployment, production database mutation, or Stripe
+mutation was performed. A read-only production health/configuration check
+confirmed the baseline image remains deployed; the production Mighty values
+were not revealed or used. The old portal remains in the repository for
+controlled rollback and operator continuity.
 
-Current staging blockers: Mighty Network/access Plan configuration and
-credential ownership, disposable test identities, real API verification, live
-Stripe test-mode lifecycle evidence, manual existing-member bridge evidence,
-and aggregate operator evidence. The fixed staging scheduler is defined in
-`.github/workflows/staging-mighty-access-sync.yml`; the canonical verification
-report is `migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md`.
+Staging is intentionally unchanged and is not a prerequisite for this
+production feature-branch lane. Its provider verification blockers remain
+recorded for reference in `migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md`.
+The fixed staging scheduler remains defined in
+`.github/workflows/staging-mighty-access-sync.yml`; the production scheduler is
+`.github/workflows/mighty-access-sync.yml` and remains inactive until merge,
+worker-secret configuration, and the explicit GitHub environment variable
+`MIGHTY_ACCESS_SYNC_ENABLED=true`; manual dispatch also requires an explicit
+confirmation input.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

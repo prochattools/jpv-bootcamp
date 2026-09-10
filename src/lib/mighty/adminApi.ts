@@ -24,6 +24,13 @@ export type MightyPurchase = {
 	purchase?: { id?: number | string | null } | null
 }
 
+export type MightyAccessState = {
+	memberId: string
+	planId: string
+	purchases: MightyPurchase[]
+	hasAccess: boolean
+}
+
 type Paginated<T> = {
 	items: T[]
 	links?: { next?: string | null }
@@ -147,13 +154,25 @@ export class MightyAdminApi {
 		return result
 	}
 
-	async findPurchases(memberId: number | string, planId = this.config.accessPlanId): Promise<MightyPurchase[]> {
+	async findPurchases(memberId: number | string, planId: number | string = this.config.accessPlanId): Promise<MightyPurchase[]> {
 		const result = await this.request<Paginated<MightyPurchase>>(
 			'GET',
 			`networks/${numericId(this.config.networkId)}/purchases`,
 			{ member_id: numericId(memberId), plan_id: planId, per_page: 100 },
 		)
 		return result?.items ?? []
+	}
+
+	async getAccessState(memberId: number | string, planId: number | string = this.config.accessPlanId): Promise<MightyAccessState> {
+		const normalizedMemberId = numericId(memberId)
+		const normalizedPlanId = numericId(planId)
+		const purchases = await this.findPurchases(normalizedMemberId, normalizedPlanId)
+		return {
+			memberId: normalizedMemberId,
+			planId: normalizedPlanId,
+			purchases,
+			hasAccess: purchases.some((purchase) => String(purchase.purchase?.id ?? '').trim().length > 0),
+		}
 	}
 
 	async grantAccess(memberId: number | string, planId = this.config.accessPlanId): Promise<MightyPlan> {
@@ -223,4 +242,12 @@ export async function revokeAccess(
 	api = createMightyAdminApi(),
 ): Promise<MightyPurchase | null> {
 	return api.revokeAccess(purchaseId, { immediate: true })
+}
+
+export async function getAccessState(
+	memberId: number | string,
+	planId: number | string,
+	api = createMightyAdminApi(),
+): Promise<MightyAccessState> {
+	return api.getAccessState(memberId, planId)
 }

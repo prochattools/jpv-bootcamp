@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const api = readFileSync('src/lib/mighty/adminApi.ts', 'utf8')
 const sync = readFileSync('src/lib/mighty/accessSync.ts', 'utf8')
+const provider = readFileSync('src/lib/mighty/adminApi.ts', 'utf8')
 const config = readFileSync('src/lib/mighty/config.ts', 'utf8')
 const webhook = readFileSync('src/lib/stripe-webhook-handler.ts', 'utf8')
 const home = readFileSync('src/app/(frontend)/page.tsx', 'utf8')
@@ -13,9 +14,11 @@ const upgrade = readFileSync('src/app/(frontend)/upgrade/page.tsx', 'utf8')
 const bridge = readFileSync('scripts/mighty/buildEntitledMemberBridge.mts', 'utf8')
 const stagingAcceptance = readFileSync('scripts/mighty/runStagingAcceptance.mts', 'utf8')
 const stagingScheduler = readFileSync('.github/workflows/staging-mighty-access-sync.yml', 'utf8')
+const productionScheduler = readFileSync('.github/workflows/mighty-access-sync.yml', 'utf8')
 const stagingEvidence = readFileSync('docs/migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md', 'utf8')
 const systemSchema = readFileSync('prisma/system.prisma', 'utf8')
 const migration = readFileSync('prisma/migrations/20260909090000_add_mighty_access_sync/migration.sql', 'utf8')
+const eventOrderingMigration = readFileSync('prisma/migrations/20260909093000_add_mighty_event_ordering/migration.sql', 'utf8')
 
 test('typed Mighty config is fail-closed and environment-only', () => {
 	assert.match(config, /MIGHTY_API_BASE_URL/)
@@ -47,10 +50,11 @@ test('revoke uses immediate purchase removal and tolerates 404', () => {
 	assert.match(api, /response\.status === 404 && allowNotFound/)
 })
 
-test('durable schema stores provider IDs, desired access, retries, and reconciliation timestamps', () => {
-	for (const field of ['desiredAccess', 'mightyMemberId', 'mightyPurchaseId', 'attemptCount', 'lastError', 'nextAttemptAt', 'lastSucceededAt', 'lastReconciledAt']) {
+test('durable schema stores provider IDs, event ordering, desired access, retries, and reconciliation timestamps', () => {
+	for (const field of ['desiredAccess', 'mightyMemberId', 'mightyPurchaseId', 'attemptCount', 'lastError', 'nextAttemptAt', 'lastSucceededAt', 'lastReconciledAt', 'lastStripeEventCreatedAt', 'lastStripeEventType']) {
 		assert.match(systemSchema, new RegExp(field))
-		assert.match(migration, new RegExp(field.replace(/[A-Z]/g, (value) => `_${value.toLowerCase()}`)))
+		const snakeCase = field.replace(/[A-Z]/g, (value) => `_${value.toLowerCase()}`)
+		assert.match(`${migration}\n${eventOrderingMigration}`, new RegExp(snakeCase))
 	}
 })
 
@@ -60,6 +64,13 @@ test('Stripe events queue local desired state without provider calls in the webh
 	assert.match(sync, /findExistingSyncRow/)
 	assert.match(sync, /mightyAccessSync\.create/)
 	assert.match(sync, /mightyAccessSync\.update/)
+	assert.match(sync, /lastStripeEventCreatedAt/)
+	assert.match(sync, /shouldApplyMightyStripeEvent/)
+})
+
+test('provider exposes an explicit current-access query', () => {
+	assert.match(provider, /async getAccessState\(/)
+	assert.match(provider, /hasAccess:/)
 })
 
 test('Stripe identity remains primary when the billing email changes', () => {
@@ -93,6 +104,8 @@ test('worker has a dedicated authenticated route and no synchronous webhook depe
 	const route = readFileSync('src/app/api/admin/process-mighty-access-sync/route.ts', 'utf8')
 	assert.match(route, /MIGHTY_ACCESS_SYNC_WORKER_SECRET/)
 	assert.match(route, /processMightyAccessSync\(limit\)/)
+	assert.match(sync, /leaseUntil: candidate\.leaseUntil/)
+	assert.match(sync, /lastStripeEventId: row\.lastStripeEventId/)
 })
 
 test('staging worker scheduling is fixed to non-production and secret-scoped', () => {
@@ -102,6 +115,17 @@ test('staging worker scheduling is fixed to non-production and secret-scoped', (
 	assert.match(stagingScheduler, /MIGHTY_ACCESS_SYNC_WORKER_SECRET/)
 	assert.doesNotMatch(stagingScheduler, /https:\/\/jpvbootcamp\.com(?:\/|['"\s])/)
 	assert.match(stagingEvidence, /no matching Mighty\/JPV schedule found|no matching Mighty\/JPV schedule/i)
+})
+
+test('production worker scheduling is fixed to the production origin and secret-scoped', () => {
+	assert.match(productionScheduler, /cron: ['"]\*\/5 \* \* \* \*['"]?/)
+	assert.match(productionScheduler, /environment: production-mighty-sync/)
+	assert.match(productionScheduler, /PRODUCTION_ORIGIN: https:\/\/jpvbootcamp\.com/)
+	assert.match(productionScheduler, /MIGHTY_ACCESS_SYNC_WORKER_SECRET/)
+	assert.match(productionScheduler, /MIGHTY_ACCESS_SYNC_ENABLED == 'true'/)
+	assert.match(productionScheduler, /run_production_sync/)
+	assert.match(productionScheduler, /inputs\.run_production_sync == 'yes'/)
+	assert.doesNotMatch(productionScheduler, /staging\.jpvbootcamp\.com/)
 })
 
 test('staging acceptance harness requires explicit non-production guards', () => {

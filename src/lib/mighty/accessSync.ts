@@ -23,6 +23,8 @@ type AccessSyncRow = {
 	stripeCustomerId: string | null
 	stripeSubscriptionId: string | null
 	lastStripeEventId: string | null
+	lastStripeEventCreatedAt: Date | null
+	lastStripeEventType: string | null
 	plan: string | null
 	desiredAccess: string
 	mightyMemberId: string | null
@@ -37,6 +39,8 @@ type QueueParams = {
 	stripeCustomerId?: string | null
 	stripeSubscriptionId?: string | null
 	stripeEventId: string
+	stripeEventCreatedAt?: Date | null
+	stripeEventType?: string | null
 	plan?: string | null
 	desiredAccess: MightyDesiredAccess
 	welcomeRequired?: boolean
@@ -49,6 +53,8 @@ const accessSyncSelect = {
 	stripeCustomerId: true,
 	stripeSubscriptionId: true,
 	lastStripeEventId: true,
+	lastStripeEventCreatedAt: true,
+	lastStripeEventType: true,
 	plan: true,
 	desiredAccess: true,
 	mightyMemberId: true,
@@ -96,6 +102,153 @@ function relationshipId(value: unknown): string | null {
 	return null
 }
 
+export type MightyStripeAccessProjection = {
+	email: string | null
+	stripeCustomerId: string | null
+	stripeSubscriptionId: string | null
+	plan: string | null
+	desiredAccess: MightyDesiredAccess | null
+	stripeEventId: string
+	stripeEventCreatedAt: Date
+	stripeEventType: string
+}
+
+const EVENT_PRECEDENCE: Record<string, number> = {
+	'checkout.session.completed': 10,
+	'checkout.session.async_payment_succeeded': 10,
+	'customer.subscription.created': 20,
+	'invoice.paid': 30,
+	'customer.subscription.updated': 40,
+	'invoice.payment_failed': 80,
+	'customer.subscription.deleted': 90,
+}
+
+function eventPrecedence(eventType: string | null | undefined): number {
+	return EVENT_PRECEDENCE[eventType ?? ''] ?? 0
+}
+
+export function projectMightyAccessFromStripeEvent(event: Stripe.Event): MightyStripeAccessProjection | null {
+	const object = event.data.object as unknown as Record<string, unknown>
+	let email: string | null = null
+	let stripeCustomerId: string | null = null
+	let stripeSubscriptionId: string | null = null
+	let desiredAccess: MightyDesiredAccess | null = null
+	let plan: string | null = null
+
+	switch (event.type) {
+		case 'checkout.session.completed':
+		case 'checkout.session.async_payment_succeeded': {
+			if (object.mode !== 'subscription' || !['paid', 'no_payment_required'].includes(String(object.payment_status))) {
+				return null
+			}
+			email = typeof object.customer_email === 'string' ? object.customer_email : null
+			stripeCustomerId = relationshipId(object.customer)
+			stripeSubscriptionId = relationshipId(object.subscription)
+			plan = typeof (object.metadata as Record<string, unknown> | undefined)?.membership === 'string'
+				? (object.metadata as Record<string, string>).membership
+				: null
+			desiredAccess = 'ALLOWED'
+			break
+		}
+		case 'customer.subscription.created':
+		case 'customer.subscription.updated':
+		case 'customer.subscription.deleted': {
+			stripeCustomerId = relationshipId(object.customer)
+			stripeSubscriptionId = typeof object.id === 'string' ? object.id : null
+			plan = typeof (object.metadata as Record<string, unknown> | undefined)?.membership === 'string'
+				? (object.metadata as Record<string, string>).membership
+				: null
+			desiredAccess = event.type === 'customer.subscription.deleted'
+				? 'DENIED'
+				: isActiveStripeSubscription(object as unknown as Stripe.Subscription)
+					? 'ALLOWED'
+					: 'DENIED'
+			break
+		}
+		case 'invoice.paid': {
+			email = typeof object.customer_email === 'string' ? object.customer_email : null
+			stripeCustomerId = relationshipId(object.customer)
+			stripeSubscriptionId = relationshipId(object.subscription)
+			desiredAccess = 'ALLOWED'
+			break
+		}
+		case 'invoice.payment_failed': {
+			email = typeof object.customer_email === 'string' ? object.customer_email : null
+			stripeCustomerId = relationshipId(object.customer)
+			stripeSubscriptionId = relationshipId(object.subscription)
+			desiredAccess = 'DENIED'
+			break
+		}
+		default:
+			return null
+	}
+
+	return {
+		email,
+		stripeCustomerId,
+		stripeSubscriptionId,
+		plan,
+		desiredAccess,
+		stripeEventId: event.id,
+		stripeEventCreatedAt: new Date(event.created * 1000),
+		stripeEventType: event.type,
+	}
+}
+
+export type MightyStoredEventState = {
+	lastStripeEventId: string | null
+	lastStripeEventCreatedAt: Date | null
+	lastStripeEventType: string | null
+	stripeSubscriptionId: string | null
+}
+
+export function shouldApplyMightyStripeEvent(
+	existing: MightyStoredEventState | null,
+	incoming: {
+		stripeEventId: string
+		stripeEventCreatedAt: Date | null
+		stripeEventType: string | null
+		desiredAccess: MightyDesiredAccess
+		stripeSubscriptionId: string | null
+	},
+): { apply: boolean; reason?: string } {
+	if (!existing) return { apply: true }
+	if (existing.lastStripeEventId === incoming.stripeEventId) return { apply: false, reason: 'duplicate_stripe_event' }
+
+	const currentTime = existing.lastStripeEventCreatedAt?.getTime()
+	const incomingTime = incoming.stripeEventCreatedAt?.getTime()
+	if (currentTime !== undefined && incomingTime !== undefined) {
+		if (incomingTime < currentTime) return { apply: false, reason: 'stale_stripe_event' }
+		if (incomingTime === currentTime) {
+			const precedenceDelta = eventPrecedence(incoming.stripeEventType) - eventPrecedence(existing.lastStripeEventType)
+			if (precedenceDelta < 0) return { apply: false, reason: 'stale_stripe_event' }
+			if (precedenceDelta === 0 && incoming.stripeEventId < (existing.lastStripeEventId ?? '')) {
+				return { apply: false, reason: 'stale_stripe_event' }
+			}
+		}
+	}
+
+	const sameSubscription = Boolean(
+		incoming.stripeSubscriptionId &&
+		existing.stripeSubscriptionId &&
+		incoming.stripeSubscriptionId === existing.stripeSubscriptionId,
+	)
+	if (sameSubscription && incoming.desiredAccess === 'ALLOWED') {
+		if (existing.lastStripeEventType === 'customer.subscription.deleted') {
+			return { apply: false, reason: 'ended_subscription_cannot_restore' }
+		}
+		if (
+			existing.lastStripeEventType === 'invoice.payment_failed' &&
+			incoming.stripeEventType !== 'invoice.paid' &&
+			!(incoming.stripeEventType ?? '').startsWith('checkout.session.')
+		) {
+			return { apply: false, reason: 'payment_confirmation_required' }
+		}
+	}
+
+	return { apply: true }
+}
+
 function errorCode(error: unknown): string {
 	if (error instanceof MightyApiError) return error.message
 	if (error instanceof Error) {
@@ -103,6 +256,15 @@ function errorCode(error: unknown): string {
 		return normalized.startsWith('mighty_') ? normalized : error.name.toLowerCase()
 	}
 	return 'unknown_error'
+}
+
+function isPrismaUniqueError(error: unknown): boolean {
+	return Boolean(
+		error &&
+		typeof error === 'object' &&
+		'code' in error &&
+		(error as { code?: unknown }).code === 'P2002',
+	)
 }
 
 function isActiveStripeSubscription(subscription: Stripe.Subscription): boolean {
@@ -145,6 +307,16 @@ export async function queueMightyAccessSync(params: QueueParams): Promise<{
 	if (!email) return { queued: false, reason: 'missing_member_email' }
 
 	existing ??= await findExistingSyncRow(email, params)
+	const eventDecision = shouldApplyMightyStripeEvent(existing, {
+		stripeEventId: params.stripeEventId,
+		stripeEventCreatedAt: params.stripeEventCreatedAt ?? null,
+		stripeEventType: params.stripeEventType ?? null,
+		desiredAccess: params.desiredAccess,
+		stripeSubscriptionId: params.stripeSubscriptionId?.trim() || null,
+	})
+	if (!eventDecision.apply) {
+		return { queued: false, reason: eventDecision.reason, rowId: existing?.id }
+	}
 	const welcomeRequired = existing
 		? existing.welcomeRequired
 		: params.welcomeRequired === true
@@ -155,6 +327,8 @@ export async function queueMightyAccessSync(params: QueueParams): Promise<{
 		stripeCustomerId: params.stripeCustomerId?.trim() || undefined,
 		stripeSubscriptionId: params.stripeSubscriptionId?.trim() || undefined,
 		lastStripeEventId: params.stripeEventId,
+		lastStripeEventCreatedAt: params.stripeEventCreatedAt ?? undefined,
+		lastStripeEventType: params.stripeEventType ?? undefined,
 		plan: params.plan ?? undefined,
 		desiredAccess: params.desiredAccess,
 		syncStatus: 'pending',
@@ -164,88 +338,57 @@ export async function queueMightyAccessSync(params: QueueParams): Promise<{
 		welcomeRequired,
 	} as const
 
-	const row = existing
-		? await prisma.mightyAccessSync.update({ where: { id: existing.id }, data, select: { id: true } })
-		: await prisma.mightyAccessSync.create({
-			data: {
-				...data,
-				stripeCustomerId: params.stripeCustomerId?.trim() ?? null,
-				stripeSubscriptionId: params.stripeSubscriptionId?.trim() ?? null,
-			},
-			select: { id: true },
-		})
+	if (!existing) {
+		try {
+			const row = await prisma.mightyAccessSync.create({
+				data: {
+					...data,
+					lastStripeEventCreatedAt: params.stripeEventCreatedAt ?? null,
+					lastStripeEventType: params.stripeEventType ?? null,
+					stripeCustomerId: params.stripeCustomerId?.trim() ?? null,
+					stripeSubscriptionId: params.stripeSubscriptionId?.trim() ?? null,
+				},
+				select: { id: true },
+			})
+			return { queued: true, rowId: row.id }
+		} catch (error) {
+			if (!isPrismaUniqueError(error)) throw error
+			return queueMightyAccessSync(params)
+		}
+	}
 
-	return { queued: true, rowId: row.id }
+	const updateResult = await prisma.mightyAccessSync.updateMany({
+		where: {
+			id: existing.id,
+			lastStripeEventId: existing.lastStripeEventId,
+			lastStripeEventCreatedAt: existing.lastStripeEventCreatedAt,
+		},
+		data,
+	})
+	if (updateResult.count !== 1) {
+		return { queued: false, reason: 'stale_stripe_event', rowId: existing.id }
+	}
+
+	return { queued: true, rowId: existing.id }
 }
 
 export async function queueMightyAccessFromStripeEvent(event: Stripe.Event): Promise<{
 	queued: boolean
 	reason?: string
 }> {
-	const object = event.data.object as unknown as Record<string, unknown>
-	let email: string | null = null
-	let stripeCustomerId: string | null = null
-	let stripeSubscriptionId: string | null = null
-	let desiredAccess: MightyDesiredAccess | null = null
-	let plan: string | null = null
-
-	switch (event.type) {
-		case 'checkout.session.completed':
-		case 'checkout.session.async_payment_succeeded': {
-			if (object.mode !== 'subscription' || !['paid', 'no_payment_required'].includes(String(object.payment_status))) {
-				return { queued: false, reason: 'checkout_payment_not_confirmed' }
-			}
-			email = typeof object.customer_email === 'string' ? object.customer_email : null
-			stripeCustomerId = relationshipId(object.customer)
-			stripeSubscriptionId = relationshipId(object.subscription)
-			plan = typeof (object.metadata as Record<string, unknown> | undefined)?.membership === 'string'
-				? (object.metadata as Record<string, string>).membership
-				: null
-			desiredAccess = 'ALLOWED'
-			break
-		}
-		case 'customer.subscription.created':
-		case 'customer.subscription.updated':
-		case 'customer.subscription.deleted': {
-			stripeCustomerId = relationshipId(object.customer)
-			stripeSubscriptionId = typeof object.id === 'string' ? object.id : null
-			plan = typeof (object.metadata as Record<string, unknown> | undefined)?.membership === 'string'
-				? (object.metadata as Record<string, string>).membership
-				: null
-			desiredAccess = event.type === 'customer.subscription.deleted'
-				? 'DENIED'
-				: isActiveStripeSubscription(object as unknown as Stripe.Subscription)
-					? 'ALLOWED'
-					: null
-			break
-		}
-		case 'invoice.paid': {
-			email = typeof object.customer_email === 'string' ? object.customer_email : null
-			stripeCustomerId = relationshipId(object.customer)
-			stripeSubscriptionId = relationshipId(object.subscription)
-			desiredAccess = 'ALLOWED'
-			break
-		}
-		case 'invoice.payment_failed': {
-			email = typeof object.customer_email === 'string' ? object.customer_email : null
-			stripeCustomerId = relationshipId(object.customer)
-			stripeSubscriptionId = relationshipId(object.subscription)
-			desiredAccess = 'DENIED'
-			break
-		}
-		default:
-			return { queued: false, reason: 'event_not_mighty_access_event' }
-	}
-
-	if (!desiredAccess) return { queued: false, reason: 'subscription_not_access_active' }
+	const projection = projectMightyAccessFromStripeEvent(event)
+	if (!projection) return { queued: false, reason: 'event_not_mighty_access_event' }
+	if (!projection.desiredAccess) return { queued: false, reason: 'subscription_not_access_active' }
 	const result = await queueMightyAccessSync({
-		email,
-		stripeCustomerId,
-		stripeSubscriptionId,
-		stripeEventId: event.id,
-		plan,
-		desiredAccess,
-		welcomeRequired: desiredAccess === 'ALLOWED',
+		email: projection.email,
+		stripeCustomerId: projection.stripeCustomerId,
+		stripeSubscriptionId: projection.stripeSubscriptionId,
+		stripeEventId: projection.stripeEventId,
+		stripeEventCreatedAt: projection.stripeEventCreatedAt,
+		stripeEventType: projection.stripeEventType,
+		plan: projection.plan,
+		desiredAccess: projection.desiredAccess,
+		welcomeRequired: projection.desiredAccess === 'ALLOWED',
 	})
 	return { queued: result.queued, reason: result.reason }
 }
@@ -287,7 +430,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 
 		const existingPurchases = purchaseId
 			? []
-			: await api.findPurchases(memberId, config.accessPlanId)
+			: (await api.getAccessState(memberId, config.accessPlanId)).purchases
 		purchaseId = purchaseId ?? (String(existingPurchases[0]?.purchase?.id ?? '') || null)
 		if (!purchaseId) {
 			try {
@@ -295,7 +438,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 			} catch (error) {
 				if (!(error instanceof MightyApiError) || error.status !== 422) throw error
 			}
-			const grantedPurchases = await api.findPurchases(memberId, config.accessPlanId)
+			const grantedPurchases = (await api.getAccessState(memberId, config.accessPlanId)).purchases
 			purchaseId = String(grantedPurchases[0]?.purchase?.id ?? '') || null
 		}
 		if (!purchaseId) throw new Error('mighty_purchase_not_found_after_grant')
@@ -315,7 +458,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 
 	const purchaseIds = purchaseId
 		? [purchaseId]
-		: (await api.findPurchases(memberId as string, config.accessPlanId))
+		: (await api.getAccessState(memberId as string, config.accessPlanId)).purchases
 			.map((purchase) => String(purchase.purchase?.id ?? ''))
 			.filter(Boolean)
 	for (const matchingPurchaseId of purchaseIds) {
@@ -348,8 +491,12 @@ async function sendMightyWelcome(row: AccessSyncRow): Promise<void> {
 	})
 }
 
+export function mightyRetryDelayMs(attempt: number): number {
+	return Math.min(60 * 60 * 1000, 60 * 1000 * 2 ** Math.min(Math.max(attempt, 0), 6))
+}
+
 function nextAttempt(attempt: number): Date {
-	const delayMs = Math.min(60 * 60 * 1000, 60 * 1000 * 2 ** Math.min(attempt, 6))
+	const delayMs = mightyRetryDelayMs(attempt)
 	return new Date(Date.now() + delayMs)
 }
 
@@ -370,7 +517,11 @@ async function claimRows(limit: number): Promise<AccessSyncRow[]> {
 	const claimed: AccessSyncRow[] = []
 	for (const candidate of candidates) {
 		const result = await prisma.mightyAccessSync.updateMany({
-			where: { id: candidate.id, syncStatus: candidate.syncStatus },
+			where: {
+				id: candidate.id,
+				syncStatus: candidate.syncStatus,
+				leaseUntil: candidate.leaseUntil,
+			},
 			data: {
 				syncStatus: 'processing',
 				leaseUntil: new Date(Date.now() + 5 * 60 * 1000),
@@ -389,6 +540,7 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 	failed: number
 	allowed: number
 	denied: number
+	superseded: number
 }> {
 	const config = getMightyConfig()
 	const api = createMightyAdminApi(config)
@@ -397,12 +549,17 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 	let failed = 0
 	let allowed = 0
 	let denied = 0
+	let superseded = 0
 
 	for (const row of rows) {
 		try {
 			const result = await reconcileAccess({ row, config, api })
-			await prisma.mightyAccessSync.update({
-				where: { id: row.id },
+			const finalized = await prisma.mightyAccessSync.updateMany({
+				where: {
+					id: row.id,
+					syncStatus: 'processing',
+					lastStripeEventId: row.lastStripeEventId,
+				},
 				data: {
 					syncStatus: 'succeeded',
 					mightyMemberId: result.mightyMemberId,
@@ -415,13 +572,21 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 					leaseUntil: null,
 				},
 			})
+			if (finalized.count !== 1) {
+				superseded += 1
+				continue
+			}
 			succeeded += 1
 			if (row.desiredAccess === 'ALLOWED') allowed += 1
 			else denied += 1
 		} catch (error) {
 			const attemptCount = row.attemptCount + 1
-			await prisma.mightyAccessSync.update({
-				where: { id: row.id },
+			const failedUpdate = await prisma.mightyAccessSync.updateMany({
+				where: {
+					id: row.id,
+					syncStatus: 'processing',
+					lastStripeEventId: row.lastStripeEventId,
+				},
 				data: {
 					syncStatus: 'failed',
 					attemptCount,
@@ -431,9 +596,13 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 					leaseUntil: null,
 				},
 			})
+			if (failedUpdate.count !== 1) {
+				superseded += 1
+				continue
+			}
 			failed += 1
 		}
 	}
 
-	return { processed: rows.length, succeeded, failed, allowed, denied }
+	return { processed: rows.length, succeeded, failed, allowed, denied, superseded }
 }

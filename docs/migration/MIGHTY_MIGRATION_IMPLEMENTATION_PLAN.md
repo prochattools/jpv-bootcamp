@@ -1,6 +1,6 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
-**Status:** Approved plan; implementation in progress  
+**Status:** Feature-branch implementation complete locally; merge-ready pending review
 **Date:** 2026-09-09  
 **Branch:** `feature/mighty-stripe-migration`  
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
@@ -24,11 +24,11 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | M1 | Typed environment/config boundary and canonical student-login target | **Implemented locally; live config missing** |
 | M2 | Bounded Mighty Admin API client and documented member/access operations | **Implemented and focused-tested** |
 | M3 | Website Sign In cutover support, Join preservation, safe legacy redirects | **Implemented locally** |
-| M4 | Stripe event → durable Mighty desired-state projection | **Implemented locally** |
-| M5 | Durable worker, retries, stable IDs, access reconciliation, welcome ordering | **Implemented locally; staging scheduler defined; worker not live-exercised** |
+| M4 | Stripe event → durable Mighty desired-state projection | **Implemented locally; event ordering and terminal-state guards included** |
+| M5 | Durable worker, retries, stable IDs, access reconciliation, welcome ordering | **Implemented locally; production scheduler workflow defined; worker not live-exercised** |
 | M6 | Read-only entitled-member bridge for controlled manual migration | **Implemented locally** |
-| M7 | Focused regression tests and validation matrix | **Initial tests green; full matrix pending** |
-| M8 | Staging configuration and controlled provider/API verification | **Blocked on operator-owned Mighty configuration** |
+| M7 | Focused regression tests and validation matrix | **Local focused matrix green; provider/live checks remain cutover gates** |
+| M8 | Staging configuration and controlled provider/API verification | **Skipped for this implementation lane; staging remains unchanged** |
 | M9 | Production cutover readiness, rollback, and go/no-go | **Not started / not authorized** |
 
 ## Approved execution sequence
@@ -40,19 +40,30 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 3. Run the read-only entitled roster bridge and manually add existing members
    under an operator-owned procedure.
 4. Validate the worker against a non-production Mighty Network or an approved
-   controlled test account. Confirm create/reuse, grant, restore, immediate
-   revoke, retry, and welcome ordering.
+   controlled test account when one is available. Confirm create/reuse, grant,
+   restore, immediate revoke, retry, and welcome ordering.
 5. Configure a scheduled worker call to
    `POST /api/admin/process-mighty-access-sync` with the dedicated worker
    secret. The Stripe webhook itself must never call Mighty synchronously.
-6. Complete the focused validation matrix, exact-SHA staging verification,
-   support/admin regression, rollback rehearsal, and go/no-go review.
+6. Complete the focused validation matrix, production configuration review,
+   support/admin regression, rollback rehearsal, and go/no-go review. A
+   separate staging deployment is not required for this feature-branch lane.
 7. Only after a separate authorization may the controlled cutover be deployed.
 
 ## Worker execution and scheduling
 
 The worker is an authenticated `POST /api/admin/process-mighty-access-sync`
-route. The fixed staging scheduler is
+route. The production scheduler workflow is
+`.github/workflows/mighty-access-sync.yml`; it runs every five minutes,
+targets only `https://jpvbootcamp.com`, uses the GitHub environment
+`production-mighty-sync`, and reads only the
+`MIGHTY_ACCESS_SYNC_WORKER_SECRET` environment secret. It is inert until the
+feature branch is merged, the worker secret is configured, and the GitHub
+environment variable `MIGHTY_ACCESS_SYNC_ENABLED` is explicitly set to the
+exact value `true`. Manual dispatch additionally requires selecting
+`run_production_sync=yes`; the default is `no`.
+
+The fixed staging scheduler is
 `.github/workflows/staging-mighty-access-sync.yml`, which runs every five
 minutes, targets only `https://staging.jpvbootcamp.com`, uses the GitHub
 environment `staging-mighty-sync`, and reads only the
@@ -65,8 +76,9 @@ record provider IDs, success, and reconciliation timestamps. Failures record a
 safe error code, increment the attempt count, clear the lease, and retry with
 exponential backoff capped at one hour. Reconciliation always reuses the stored
 Mighty member ID when present, discovers existing Plan purchases before granting,
-and treats an absent purchase on revoke as idempotent. A production scheduler is
-not configured by this branch and requires a separate cutover authorization.
+and treats an absent purchase on revoke as idempotent. The staging scheduler is
+retained as-is for the existing staging lane; it is not a prerequisite for the
+production feature-branch cutover.
 
 ## Focused validation matrix
 
@@ -94,7 +106,7 @@ not configured by this branch and requires a separate cutover authorization.
 
 ## Manual bridge procedure
 
-1. Verify the intended staging/non-production environment and read-only database boundary.
+1. Verify the intended operator-owned environment and read-only database boundary.
 2. Run `pnpm mighty:bridge-roster` and record the aggregate expected-member count without exporting data.
 3. Have a second authorized reviewer compare the count and the active-subscription/payment-state criteria.
 4. If a transfer roster is required, run the command with `--format=csv` only
@@ -107,13 +119,52 @@ not configured by this branch and requires a separate cutover authorization.
 7. Do not change Stripe subscriptions, Stripe products/prices, or local billing
    state as part of this bridge.
 
+## Production cutover checklist
+
+Complete these items only under the separate production deployment and go/no-go
+authorization:
+
+1. Configure the production application `clients-jpv-bootcamp-app-tp9xrk` with
+   the six required Mighty-related values: exact Admin API base URL
+   (`https://api.mn.co/admin/v1`), Network ID, the real existing non-paid JPV
+   access Plan ID, Admin API token, canonical student login URL, and the worker
+   secret. Keep values out of Git, logs, and documentation.
+2. Configure the same worker secret in the GitHub environment
+   `production-mighty-sync` used by
+   `.github/workflows/mighty-access-sync.yml`.
+3. Leave `MIGHTY_ACCESS_SYNC_ENABLED` unset until the cutover is authorized;
+   the single scheduler-enabling action is setting that production environment
+   variable to the exact value `true`.
+4. Apply the committed Prisma migrations through the normal controlled
+   production deployment path; do not run ad-hoc destructive SQL.
+5. Deploy the reviewed feature branch and verify `/api/health`, webhook
+   delivery, queue creation, authenticated worker processing, retry behavior,
+   and the exact Sign In/Join behavior.
+6. Run the read-only roster bridge, reconcile aggregate counts, and manually
+   provision existing paid members before relying on automatic new-member
+   provisioning.
+7. Monitor Stripe delivery failures, queue failures, Mighty API errors, and
+   access-denial/grant aggregates. Record the go/no-go decision and operator.
+
+## Rollback procedure
+
+If the cutover is unhealthy, disable the production scheduler workflow first,
+then roll the application back to `pre-mighty-migration-2026-09-09` through the
+normal deployment controls. Stripe remains the billing authority and existing
+Stripe subscriptions are not changed. Keep the legacy portal path available
+for support and recovery. Do not automatically mutate Mighty memberships or
+delete queue history during rollback; review any provider access corrections
+as a separate, explicitly authorized operator action.
+
 ## Missing before controlled cutover
 
-- Existing Mighty Network ID and non-paid JPV access Plan ID.
+- Existing Mighty Network ID and real non-paid JPV access Plan ID (the current
+  Plan ID is only a placeholder until the Plan exists).
 - Dedicated Admin API token owner, rotation policy, and target environment.
-- Worker secret and scheduled execution owner.
+- Production application worker secret and GitHub `production-mighty-sync`
+  scheduled-execution secret/owner.
 - Non-production or otherwise approved Mighty API verification evidence.
 - Secure manual roster execution and aggregate reconciliation evidence.
-- Exact-SHA staging acceptance for billing, support, sponsored membership,
+- Production verification for billing, support, sponsored membership,
   operator/admin, and the cutover/rollback routes.
-- Separate production deployment, data, and go/no-go authorization.
+- Separate production deployment, migration, data, and go/no-go authorization.

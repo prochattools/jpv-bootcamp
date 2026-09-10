@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-09  
 **Scope:** Non-production Mighty API and Stripe-to-Mighty verification only  
-**Status:** BLOCKED — non-production Mighty configuration is not present
+**Status:** BLOCKED — staging configuration is present, but the API base, deployed image, and access Plan are not ready
 
 ## Safety boundary
 
@@ -17,9 +17,29 @@ was mutated.
 | --- | --- |
 | Local process environment | All six `MIGHTY_*` variables not configured |
 | Repository `.env*` files | No configured Mighty values; `.env.example` contains empty placeholders only |
-| Canonical staging Dokploy application | Read-only `application.one` returned HTTP 200; all six Mighty variables missing |
+| Canonical staging Dokploy application | Read-only `application.one` returned HTTP 200; all six Mighty variable names are present; values are operator-managed and not recorded here |
 | GitHub staging scheduler environment | Read-only secret metadata lookup returned HTTP 404; `staging-mighty-sync` is not configured |
-| Canonical production application | Not queried or modified |
+| Canonical production application | Read-only health/configuration inspection; baseline image remains deployed; no values recorded |
+
+The configured staging `MIGHTY_API_BASE_URL` is a branded Network URL that
+redirects to the public landing page. A read-only check against the official
+Admin API base `https://api.mn.co/admin/v1`, using the configured Network and
+token, returned HTTP 200. That Network currently returns zero Plans. The
+configured access Plan value is therefore still a placeholder and cannot be
+used for acceptance.
+
+The staging health endpoint is live, but reports image/commit
+`8b1f459fed358776fda791553ef225cc9f03b2ae`. That image predates this migration
+branch and does not contain the Mighty worker route, access-sync implementation,
+or acceptance harness. Environment configuration alone has not deployed the
+Mighty integration code.
+
+The production health endpoint was also queried read-only and reports the
+baseline image/commit `a287800735d465a41ad9e45d2c7914ab9cc34a26` with
+`deploymentEnv=production`. The production Dokploy environment contains the
+Mighty variable names, but this verification did not reveal or use their
+values, call the Mighty API, mutate production data, or deploy the feature
+branch.
 
 Required non-production values are `MIGHTY_API_BASE_URL`,
 `MIGHTY_NETWORK_ID`, `MIGHTY_ACCESS_PLAN_ID`, `MIGHTY_ADMIN_API_TOKEN`,
@@ -93,9 +113,10 @@ non-production operator path.
 ## Current blocker and exit criteria
 
 The provider test cannot be truthfully marked successful until the operator
-supplies non-production Network/Plan IDs, Admin API permissions/token, worker
-secret, disposable identities, and a staging application containing the new
-branch. Exit requires successful real API results for all six Mighty checks,
+sets the official Admin API base, creates the non-paid JPV access Plan and
+supplies its ID, creates the `staging-mighty-sync` GitHub environment, provides
+disposable identities, and deploys this migration branch to staging. Exit
+requires successful real API results for all six Mighty checks,
 Stripe test-mode lifecycle evidence, scheduled worker evidence, and this report
 updated with aggregate results only.
 

@@ -60,3 +60,18 @@ test('revokeAccess is immediate and treats an already absent purchase as idempot
 	const result = await api.revokeAccess(99, { immediate: true })
 	assert.equal(result, null)
 })
+
+test('getAccessState reports the current plan purchase state', async () => {
+	const api = new MightyAdminApi(config, async () => response({
+		items: [{ member_id: 11, purchase: { id: 'purchase-1' } }],
+		links: {},
+	}))
+
+	const state = await api.getAccessState(11, 678)
+	assert.deepEqual(state, {
+		memberId: '11',
+		planId: '678',
+		purchases: [{ member_id: 11, purchase: { id: 'purchase-1' } }],
+		hasAccess: true,
+	})
+})
