@@ -168,6 +168,8 @@ test('manual access audit is read-only and identifies direct or overlapping acce
 	assert.match(manualAccessAudit, /findAllPurchases\(\)/)
 	assert.match(manualAccessAudit, /directMemberWithoutAnyPlan/)
 	assert.match(manualAccessAudit, /stripeEntitledWithOtherPlanOverlap/)
+	assert.match(manualAccessAudit, /stripeSummary\.recordsRequiringManualReview|\.\.\.stripeSummary/)
+	assert.match(manualAccessAudit, /stripeSummary\.ambiguousOrUnmatchedRecordCount|\.\.\.stripeSummary/)
 	assert.match(manualAccessAudit, /mutationPerformed: false/)
 	assert.doesNotMatch(manualAccessAudit, /createMember|grantAccess|restoreAccess|revokeAccess/)
 })

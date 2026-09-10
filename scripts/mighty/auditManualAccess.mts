@@ -2,6 +2,7 @@ import prisma from '../../src/libs/prisma'
 import { normalizeEmail } from '../../src/lib/normalize-email'
 import { createMightyAdminApi } from '../../src/lib/mighty/adminApi'
 import { getMightyConfig } from '../../src/lib/mighty/config'
+import { isStripeEntitled, summarizeStripeRoster, type StripeRosterRow } from '../../src/lib/mighty/stripeEntitlementSummary'
 
 type StripeEntitled = {
 	email: string
@@ -28,22 +29,17 @@ async function main(): Promise<void> {
 	const api = createMightyAdminApi(config)
 	const [stripeRows, mightyMembers, mightyPurchases] = await Promise.all([
 		prisma.customerProvisioning.findMany({
-			where: {
-				status: 'active',
-				subscriptionStatus: { in: ['active', 'trialing'] },
-				OR: [
-					{ paymentStatus: null },
-					{ paymentStatus: { notIn: ['failed', 'action_required', 'disputed', 'refunded', 'dispute_lost'] } },
-				],
-			},
-			select: { email: true, stripeCustomerId: true, stripeSubscriptionId: true },
+			where: { status: 'active' },
+			select: { email: true, stripeCustomerId: true, stripeSubscriptionId: true, status: true, subscriptionStatus: true, paymentStatus: true },
 		}),
 		api.listMembers(),
 		api.findAllPurchases(),
 	])
 
+	const stripeSummary = summarizeStripeRoster(stripeRows as StripeRosterRow[])
 	const entitledByEmail = new Map<string, StripeEntitled>()
 	for (const row of stripeRows) {
+		if (!isStripeEntitled(row as StripeRosterRow)) continue
 		const email = normalizeEmail(row.email)
 		if (email) entitledByEmail.set(email, { email, stripeCustomerId: row.stripeCustomerId, stripeSubscriptionId: row.stripeSubscriptionId })
 	}
@@ -79,6 +75,7 @@ async function main(): Promise<void> {
 	console.log(JSON.stringify({
 		readOnly: true,
 		accessPlanId: String(config.accessPlanId),
+		...stripeSummary,
 		stripeEntitledSubscriberCount: entitledByEmail.size,
 		mightyMemberCount: mightyMembers.length,
 		mightyPurchaseCount: mightyPurchases.length,

@@ -23,9 +23,11 @@ MIGHTY_PROVIDER_ENV=production pnpm mighty:manual-access-audit
 
 The command lists Mighty members and network purchases, compares normalized
 emails with currently entitled Stripe records, and prints aggregate counts
-only. It performs no create, grant, revoke, delete, or update operation. It
-requires the normal Mighty API configuration and the real Plan ID, but does
-not require the worker secret or the production mutation guard.
+only. It also reports active Stripe provisioning records whose subscription
+status or identity fields are incomplete, rather than silently treating them
+as non-entitled. It performs no create, grant, revoke, delete, or update
+operation. It requires the normal Mighty API configuration and the real Plan
+ID, but does not require the worker secret or the production mutation guard.
 
 ## Risk categories
 
@@ -40,6 +42,9 @@ not require the worker secret or the production mutation guard.
   revoke automatically until identity and exception status are reviewed.
 - **Non-entitled member with another Plan:** outside the Stripe-derived JPV
   entitlement boundary and requires manual classification.
+- **Active Stripe record with missing/unsupported subscription state:** cannot
+  be safely mapped to Mighty access and must be reconciled against Stripe
+  before any roster action.
 
 An existing Mighty member record is not proof of a valid Stripe entitlement,
 and removing only the configured access Plan is not proof that every other
@@ -68,6 +73,11 @@ access route is closed.
 
 ## Current status
 
-No real member population has been migrated or modified. The audit is
-implemented but has not been run because the remaining production API values
-are not available to this local execution environment.
+The corrected read-only audit has run against the production database and JPV
+Mighty Network without mutation. It found 6 active Stripe provisioning records,
+all 6 requiring manual review because `subscriptionStatus` is missing; Mighty
+reported 9 members, 0 Plan purchases, and 9 direct members without a Plan.
+No real member population has been migrated or modified. Because the Stripe
+records are not currently deterministically entitled, no normalization or
+revocation is authorized. Space-level membership was not enumerated by this
+audit and remains a separate review item.

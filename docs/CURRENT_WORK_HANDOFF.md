@@ -74,6 +74,11 @@ The read-only `pnpm mighty:manual-access-audit` command is available for the
 required pre-revocation review; it reports aggregate overlap/direct-access
 risk and performs no provider mutation. The normalization procedure is in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
+The corrected read-only production audit has now run without mutation: 6 active
+Stripe provisioning records were found, all 6 require manual review because
+their subscription status is missing; Mighty reports 9 members and 0 Plan
+purchases, with all 9 currently classified as direct members without a Plan.
+This is roster evidence, not permission to normalize or revoke any member.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

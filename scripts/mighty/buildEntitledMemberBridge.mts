@@ -1,4 +1,5 @@
 import prisma from '../../src/libs/prisma'
+import { isStripeEntitled, summarizeStripeRoster, type StripeRosterRow } from '../../src/lib/mighty/stripeEntitlementSummary'
 
 type BridgeRow = {
 	email: string
@@ -24,24 +25,22 @@ async function main(): Promise<void> {
 	}
 
 	const rows = await prisma.customerProvisioning.findMany({
-		where: {
-			status: 'active',
-			subscriptionStatus: { in: ['active', 'trialing'] },
-			OR: [
-				{ paymentStatus: null },
-				{ paymentStatus: { notIn: ['failed', 'action_required', 'disputed', 'refunded', 'dispute_lost'] } },
-			],
-		},
+		where: { status: 'active' },
 		select: {
 			email: true,
 			stripeCustomerId: true,
 			stripeSubscriptionId: true,
 			plan: true,
+			status: true,
+			subscriptionStatus: true,
+			paymentStatus: true,
 		},
 		orderBy: { normalizedEmail: 'asc' },
 	})
+	const stripeSummary = summarizeStripeRoster(rows)
+	const entitledRows = rows.filter((row) => isStripeEntitled(row as StripeRosterRow))
 
-	const bridgeRows: BridgeRow[] = rows.map((row) => ({
+	const bridgeRows: BridgeRow[] = entitledRows.map((row) => ({
 		email: row.email,
 		stripeCustomerId: row.stripeCustomerId,
 		stripeSubscriptionId: row.stripeSubscriptionId,
@@ -63,7 +62,12 @@ async function main(): Promise<void> {
 
 	console.log(JSON.stringify({
 		readOnly: true,
+		totalCandidateStripeSubscriptions: stripeSummary.totalCandidateStripeSubscriptions,
 		entitledSubscriberCount: bridgeRows.length,
+		ambiguousOrUnmatchedRecordCount: stripeSummary.ambiguousOrUnmatchedRecordCount,
+		recordsRequiringManualReview: stripeSummary.recordsRequiringManualReview,
+		missingStripeSubscriptionIdCount: stripeSummary.missingStripeSubscriptionIdCount,
+		missingSubscriptionStatusCount: stripeSummary.missingSubscriptionStatusCount,
 		output: 'Use --format=csv only when an operator explicitly needs a local, secure bridge roster. Do not commit or upload the output.',
 	}, null, 2))
 }

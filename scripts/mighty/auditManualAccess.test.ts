@@ -14,4 +14,6 @@ test('manual access audit is production-scoped, read-only, and aggregate-only', 
 	assert.match(source, /stripeEntitledWithOtherPlanOverlap/)
 	assert.match(source, /directMemberWithoutAnyPlan/)
 	assert.doesNotMatch(source, /createMember|grantAccess|restoreAccess|revokeAccess|\.create\(|\.update\(|\.delete\(/)
+	assert.match(source, /stripeSummary\.recordsRequiringManualReview|\.\.\.stripeSummary/)
+	assert.match(source, /stripeSummary\.ambiguousOrUnmatchedRecordCount|\.\.\.stripeSummary/)
 })

@@ -22,6 +22,11 @@
   `MIGHTY_API_BASE_URL` currently points at a `/networks/.../me` resource rather
   than the Admin API base, and `MIGHTY_STUDENT_LOGIN_URL` currently points at a
   landing URL rather than the canonical `/sign_in` URL.
+- The corrected read-only production roster audit completed without mutation:
+  6 active Stripe provisioning records were found and all 6 require manual
+  review because `subscriptionStatus` is missing; Mighty reports 9 members,
+  0 Plan purchases, and 9 direct members without a Plan. No normalization was
+  performed.
 - The local `.env` and `.env.production` contain no configured Mighty values;
   only `.env.example` contains placeholders. No secret values are recorded.
 - The guarded real-network command is ready but has not run because the
