@@ -32,6 +32,11 @@ disposable test email and an explicit production mutation guard. It is not run
 automatically and leaves the test member account intact with JPV access granted
 at final state.
 
+The read-only `pnpm mighty:config-check` command now validates the environment
+shape without contacting Mighty or printing secret values. A Plan ID, when
+present, is reported as requiring provider lookup; no Plan is created by the
+application.
+
 The acceptance command is currently pending secure provider configuration. The
 read-only roster bridge was also attempted but could not reach its local
 database target at `localhost:5444`; it was not redirected to production.

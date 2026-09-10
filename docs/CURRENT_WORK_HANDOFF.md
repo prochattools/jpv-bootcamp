@@ -8,7 +8,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 The approved JPV migration is now being executed on
 `feature/mighty-stripe-migration`, based on synchronized `origin/main`, was
-pushed through `6b5ddfab63c9050cfab67c3a2f7b2594fb7f51aa` and is protected by
+pushed through `2bfa2052d67b527bf83da62e37b70b0a50a94c1e` and is protected by
 the pushed annotated tag. It is based on synchronized `origin/main` and
 protected by annotated tag `pre-mighty-migration-2026-09-09` at the documented
 live production revision `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
@@ -54,6 +54,9 @@ because those inputs are not available in the local environment.
 The read-only roster bridge was attempted but could not reach the local
 database at `localhost:5444`; no production database access or mutation was
 performed.
+The read-only `pnpm mighty:config-check` command can validate environment
+presence and URL/number shapes before a Mighty access Plan exists; it never
+prints secret values or contacts the provider.
 
 ## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 

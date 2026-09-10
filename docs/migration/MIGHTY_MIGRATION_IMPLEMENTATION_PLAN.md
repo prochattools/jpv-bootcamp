@@ -9,7 +9,7 @@
 ## Current acceptance evidence — 2026-09-10
 
 - The implementation branch is pushed to `origin` through
-  `6b5ddfab63c9050cfab67c3a2f7b2594fb7f51aa`.
+  `2bfa2052d67b527bf83da62e37b70b0a50a94c1e`.
 - The annotated baseline tag is pushed to `origin` and resolves to
   `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
 - The local `.env` and `.env.production` contain no configured Mighty values;
@@ -19,6 +19,13 @@
 - The read-only roster bridge was attempted and stopped because its local
   database target at `localhost:5444` was unavailable. No production database
   was contacted and no records were changed.
+- The read-only configuration check is available as `pnpm mighty:config-check`.
+  It reports only PRESENT/MISSING/INVALID states, never secret values, and
+  identifies a configured Plan ID as requiring provider lookup rather than
+  treating it as proof that a real access Plan exists.
+- The worker route has local runtime coverage for missing-secret,
+  unauthorized-token, and malformed-request fail-closed behavior. No worker
+  request was sent to a deployed application.
 
 ## Guardrails
 
@@ -61,6 +68,8 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
    `pnpm mighty:production-acceptance`; it requires
    `MIGHTY_PROVIDER_ENV=production`, `MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS=true`,
    and one disposable `MIGHTY_PRODUCTION_TEST_EMAIL`.
+   Run `pnpm mighty:config-check` first when the Plan is not yet configured;
+   the rest of the worker and configuration checks do not require a live Plan.
 5. Configure a scheduled worker call to
    `POST /api/admin/process-mighty-access-sync` with the dedicated worker
    secret. The Stripe webhook itself must never call Mighty synchronously.

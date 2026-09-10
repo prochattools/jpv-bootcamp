@@ -14,6 +14,7 @@ const upgrade = readFileSync('src/app/(frontend)/upgrade/page.tsx', 'utf8')
 const bridge = readFileSync('scripts/mighty/buildEntitledMemberBridge.mts', 'utf8')
 const stagingAcceptance = readFileSync('scripts/mighty/runStagingAcceptance.mts', 'utf8')
 const productionAcceptance = readFileSync('scripts/mighty/runProductionAcceptance.mts', 'utf8')
+const configurationCheck = readFileSync('scripts/mighty/checkConfiguration.mts', 'utf8')
 const stagingScheduler = readFileSync('.github/workflows/staging-mighty-access-sync.yml', 'utf8')
 const productionScheduler = readFileSync('.github/workflows/mighty-access-sync.yml', 'utf8')
 const stagingEvidence = readFileSync('docs/migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md', 'utf8')
@@ -146,6 +147,13 @@ test('production acceptance harness requires explicit production guards and pres
 	assert.match(productionAcceptance, /acceptance cleanup must leave disposable test access granted/)
 	assert.match(productionAcceptance, /finalStateAccessGranted: true/)
 	assert.doesNotMatch(productionAcceptance, /MIGHTY_STAGING|staging\.jpvbootcamp\.com/)
+})
+
+test('configuration check is read-only and reports Plan verification separately', () => {
+	assert.match(configurationCheck, /readOnly: true/)
+	assert.match(configurationCheck, /MIGHTY_ACCESS_PLAN_ID/)
+	assert.match(configurationCheck, /planIdVerification/)
+	assert.match(configurationCheck, /provider_lookup_required/)
 })
 
 test('public Sign In targets the canonical Mighty URL', () => {
