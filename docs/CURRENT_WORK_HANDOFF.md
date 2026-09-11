@@ -2,16 +2,25 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION DEPLOYED / SYSTEM-LEVEL INERT ACCEPTANCE — 2026-09-11
+## CURRENT PHASE: PRODUCTION FROZEN / SYNTHETIC HARDENING — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
 `PRODUCTION AUTOMATION: DISABLED`
 `PRODUCTION DEPLOYMENT: COMPLETE — f430398048ecda70bbeeef6aa8cd41bd4befc870`
 `PRODUCTION MERGE: COMPLETE — PR #42`
+
+The live platform is now frozen. No live Mighty read or mutation, live Stripe
+operation, population inspection, production test data, worker execution,
+scheduler enablement, configuration change, or deployment is authorized in
+the current goal. The controlling synthetic-hardening evidence is
+`docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
+The post-hardening release suite passes `196/196`; the only dirty pre-existing
+artifact remains `newrelic_agent.log` and is excluded from all changes.
 
 Only these live identities are authorized: `westhoek@hotmail.com`,
 `steve@yeshua.academy`, and `info@prochat.tools`. Every other real identity is
@@ -49,7 +58,8 @@ reports the same image tag. Public homepage and legal routes returned HTTP 200.
 
 The GitHub repository has no `MIGHTY_ACCESS_SYNC_ENABLED` variable, and no
 Mighty Access Sync workflow run was present after deployment. Release/build
-validation passed before merge, including `RELEASE TESTS PASSED: 195/195`.
+validation passed before merge, including `RELEASE TESTS PASSED: 195/195`;
+the post-deployment synthetic hardening suite now passes `196/196`.
 The deployment is live and deliberately inert. System-level acceptance is PASS;
 the live provider member smoke is explicitly waived by the owner and is not a
 deployment defect or a migration authorization.

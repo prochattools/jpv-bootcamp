@@ -4,7 +4,15 @@
 
 `INERT PRODUCTION DEPLOYMENT: ACCEPTED`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
+
+The live platform is frozen for the current engineering goal. The controlling
+freeze and synthetic evidence record is
+`docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
+No live provider read, provider mutation, Stripe operation, population
+inspection, production test data, worker execution, scheduler enablement,
+configuration change, or deployment is authorized here.
 
 The Stripe → Mighty integration is deployed to production as an inert
 application revision and is accepted using system-level evidence. Population
