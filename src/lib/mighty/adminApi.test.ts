@@ -173,3 +173,27 @@ test('422 duplicate Plan assignment is recognized only with duplicate provider e
 	const unrelated = new MightyApiError(422, { code: 'validation_error', message: 'invalid member state' })
 	assert.equal(isDuplicatePlanAssignmentError(unrelated), false)
 })
+
+test('provider failure statuses remain typed and do not expose raw response bodies', async () => {
+	for (const status of [400, 401, 403, 429, 500]) {
+		const api = new MightyAdminApi(config, async () => response({ error: { code: `provider_${status}`, message: 'provider failure' } }, status))
+		await assert.rejects(() => api.findMemberByEmail('student@example.com'), (error: unknown) => {
+			assert.ok(error instanceof MightyApiError)
+			assert.equal(error.status, status)
+			assert.equal(error.providerCode, `provider_${status}`)
+			assert.equal(error.providerMessage, 'provider failure')
+			assert.doesNotMatch(error.message, /provider failure/)
+			return true
+		})
+	}
+
+	const malformedApi = new MightyAdminApi(config, async () => new Response('{not-json', { status: 500 }))
+	await assert.rejects(() => malformedApi.findMemberByEmail('student@example.com'), (error: unknown) => {
+		assert.ok(error instanceof MightyApiError)
+		assert.equal(error.status, 500)
+		assert.equal(error.providerCode, null)
+		assert.equal(error.providerMessage, null)
+		assert.equal(error.message, 'mighty_api_error_500')
+		return true
+	})
+})
