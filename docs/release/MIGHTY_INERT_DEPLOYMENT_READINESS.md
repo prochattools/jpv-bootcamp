@@ -2,12 +2,25 @@
 
 ## Current release gate — 2026-09-11
 
-`INERT-DEPLOYMENT READINESS GATE: PASS`
+`INERT PRODUCTION DEPLOYMENT: ACCEPTED`
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 
-This branch contains the Stripe → Mighty integration, but the current target is
-an inert application deployment only. No production merge, deployment,
-population inspection, migration, scheduler enablement, or live Stripe mutation
-is authorized.
+The live platform is frozen for the current engineering goal. The controlling
+freeze and synthetic evidence record is
+`docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
+No live provider read, provider mutation, Stripe operation, population
+inspection, production test data, worker execution, scheduler enablement,
+configuration change, or deployment is authorized here.
+
+The Stripe → Mighty integration is deployed to production as an inert
+application revision and is accepted using system-level evidence. Population
+inspection, migration, scheduler enablement, and live Stripe mutation remain
+unauthorized. The owner explicitly waived live post-deployment Mighty member
+reads because two non-mutating provider/UI scope incidents showed that even
+apparently member-scoped views can expose unrelated identities. No further
+provider/account read is part of this acceptance.
 
 The only real identities permitted for this engineering gate are:
 

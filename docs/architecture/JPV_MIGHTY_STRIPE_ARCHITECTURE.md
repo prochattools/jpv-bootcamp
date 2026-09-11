@@ -6,13 +6,16 @@
 **Production billing authority:** Existing Stripe integration  
 **Student platform target:** Mighty Networks
 
-## Current implementation gate — inert-deployment readiness — 2026-09-11
+## Current implementation gate — production-freeze synthetic hardening — 2026-09-11
 
-Phase D and E0 evidence are complete. The current branch work is integration
-hardening and inert-deployment validation only. The three-account integration
-gate and inert-deployment readiness gate pass. No real member population is
-being migrated, no Stripe object is being changed, the production scheduler
-remains disabled, and this work is not being deployed or merged.
+Phase D and E0 evidence are complete. The inert application revision is already
+deployed and accepted at system level; the current work is production-freeze
+synthetic hardening only. No real member population is being migrated, no
+Stripe object is being changed, the production scheduler remains disabled, and
+this goal does not deploy or merge anything.
+
+The controlling freeze record is
+`docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 
 The only live mutation identities permitted by the bounded acceptance are
 `westhoek@hotmail.com` (ordinary), `steve@yeshua.academy` (administrator), and

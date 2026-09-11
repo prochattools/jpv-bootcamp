@@ -2,14 +2,24 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
+## CURRENT PHASE: PRODUCTION FROZEN / SYNTHETIC HARDENING — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
-`INERT-DEPLOYMENT READINESS GATE: PASS`
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
-`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
-`PRODUCTION MERGE: NOT YET AUTHORIZED`
+`PRODUCTION DEPLOYMENT: COMPLETE — f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`PRODUCTION MERGE: COMPLETE — PR #42`
+
+The live platform is now frozen. No live Mighty read or mutation, live Stripe
+operation, population inspection, production test data, worker execution,
+scheduler enablement, configuration change, or deployment is authorized in
+the current goal. The controlling synthetic-hardening evidence is
+`docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
+The post-hardening release suite passes `196/196`; the only dirty pre-existing
+artifact remains `newrelic_agent.log` and is excluded from all changes.
 
 Only these live identities are authorized: `westhoek@hotmail.com`,
 `steve@yeshua.academy`, and `info@prochat.tools`. Every other real identity is
@@ -27,9 +37,44 @@ they are not a current roster and must not be refreshed or executed. Future
 population normalization requires new explicit owner authorization naming the
 exact accounts and scope.
 
-The bounded ordinary lifecycle passed for `westhoek@hotmail.com` with final
-access restored. Exact read-only checks for `steve@yeshua.academy` and
-`info@prochat.tools` show Plan `2000039` present. No fourth identity was read.
+The ordinary lifecycle and Host protections were completed before deployment
+using only the three authorized accounts; that provider evidence remains the
+functional proof. The owner has waived all live post-deployment Mighty member
+reads because the provider/UI response surface cannot guarantee the strict
+account-isolation boundary. No live Mighty account read is authorized in this
+acceptance goal.
+
+## CURRENT PRODUCTION DEPLOYMENT EVIDENCE — 2026-09-11
+
+The exact approved feature revision `80edb73cfabbe6d569b4869495ff85ea1ac48d28`
+was merged by PR #42 as merge revision
+`f430398048ecda70bbeeef6aa8cd41bd4befc870`. Publish workflow `34584712903`
+completed successfully and converged the Dokploy root application to the same
+immutable image tag. Live `/api/health` reports `status=live`,
+`deploymentEnv=production`, and the exact merge revision; `/api/health/deployment`
+reports the same image tag. Public homepage and legal routes returned HTTP 200.
+
+The GitHub repository has no `MIGHTY_ACCESS_SYNC_ENABLED` variable, and no
+Mighty Access Sync workflow run was present after deployment. Release/build
+validation passed before merge, including `RELEASE TESTS PASSED: 195/195`;
+the post-deployment synthetic hardening suite now passes `196/196`.
+The deployment is live and deliberately inert. System-level acceptance is PASS;
+the live provider member smoke is explicitly waived by the owner and is not a
+deployment defect or a migration authorization.
+
+## ACCEPTANCE DECISION AND INCIDENT CLOSURE — 2026-09-11
+
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
+
+The two prior attempts are preserved as non-mutating acceptance-procedure
+incidents: the first exposed an all-members page and the second exposed an
+unrelated referrals list from an exact-looking member-details page. Both were
+stopped immediately; no unrelated names or identifiers are recorded here, and
+neither incident caused a Mighty mutation, Stripe mutation, production sync,
+worker run, or migration. The owner replaced the unsafe live provider smoke
+with system-level inert acceptance. No further provider/account read is part
+of this goal.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 

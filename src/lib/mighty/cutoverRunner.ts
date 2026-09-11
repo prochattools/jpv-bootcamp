@@ -8,7 +8,7 @@ import {
 	type MightyMutationScope,
 } from './mutationPolicy'
 
-export type CutoverCheckpointStatus = 'PENDING' | 'IN_PROGRESS' | 'VERIFIED' | 'REVIEW_REQUIRED' | 'FAILED_RESTORED' | 'COMPLETE'
+export type CutoverCheckpointStatus = 'PENDING' | 'IN_PROGRESS' | 'VERIFIED' | 'REVIEW_REQUIRED' | 'COMPLETE'
 
 export type CutoverCheckpoint = {
 	email: string
@@ -27,7 +27,6 @@ export type CutoverMutationAdapter = {
 	createMember(email: string): Promise<{ id: string }>
 	grantPlan(memberId: string, planId: string): Promise<void>
 	verifyPlan(memberId: string, planId: string): Promise<boolean>
-	rollbackPlan(memberId: string, planId: string): Promise<void>
 }
 
 export type CutoverRunResult = {
@@ -117,24 +116,22 @@ export async function runCutoverBatch(params: {
 				memberId = (await adapter.createMember(row.email)).id
 				mutationPerformed = true
 			}
-			await adapter.grantPlan(memberId, params.planId)
 			mutationPerformed = true
+			// Treat an attempted provider write as an uncertain mutation until a
+			// later read proves otherwise; the adapter may throw after the provider
+			// has accepted the request.
+			await adapter.grantPlan(memberId, params.planId)
 			if (!await adapter.verifyPlan(memberId, params.planId)) throw new Error('cutover_verification_failed')
 			const complete = checkpoint(row.email, 'COMPLETE', memberId, null)
 			params.store.put(complete)
 			processed.push(complete)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'cutover_provider_error'
-			let finalStatus: CutoverCheckpointStatus = 'REVIEW_REQUIRED'
-			try {
-				if (row.mightyMemberId && memberId) {
-					await adapter.rollbackPlan(memberId, params.planId)
-					finalStatus = 'FAILED_RESTORED'
-				}
-			} catch {
-				finalStatus = 'REVIEW_REQUIRED'
-			}
-			const failed = checkpoint(row.email, finalStatus, memberId, message)
+			// A grant or verification failure may be an uncertain provider outcome.
+			// Never remove a Plan as a generic rollback: a successful grant can be
+			// the only positive access state for an entitled member. Preserve the
+			// identity and stop for a read/reconcile decision before retrying.
+			const failed = checkpoint(row.email, 'REVIEW_REQUIRED', memberId, message)
 			params.store.put(failed)
 			processed.push(failed)
 			return { dryRun: false, processed, stoppedOnError: true, mutationPerformed }
