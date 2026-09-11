@@ -27,6 +27,11 @@ export const AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS = new Set([
 	'info@prochat.tools',
 ])
 
+export const AUTHORIZED_MIGHTY_HOST_TEST_EMAILS = new Set([
+	'steve@yeshua.academy',
+	'info@prochat.tools',
+])
+
 function listValues(value: string | undefined): string[] {
 	return (value ?? '')
 		.split(',')
@@ -127,6 +132,7 @@ export function classifyMightyIdentity(params: {
 	const email = normalizeEmail(params.email)
 	const override = params.scope.roleOverrides.get(email)
 	if (override) return override
+	if (params.scope.liveTestOnly && AUTHORIZED_MIGHTY_HOST_TEST_EMAILS.has(email)) return 'host'
 
 	const providerRole = params.member?.role?.trim().toLowerCase() ?? ''
 	if (providerRole === 'host' || providerRole === 'owner') return 'host'

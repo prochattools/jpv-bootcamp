@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assertMightyMutationAllowed, AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS, classifyMightyIdentity, getMightyMutationScope } from './mutationPolicy'
+import { assertMightyMutationAllowed, AUTHORIZED_MIGHTY_HOST_TEST_EMAILS, AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS, classifyMightyIdentity, getMightyMutationScope } from './mutationPolicy'
 
 test('production scope fails closed without an explicit allowlist', () => {
 	const scope = getMightyMutationScope({ MIGHTY_PROVIDER_ENV: 'production' })
@@ -34,6 +34,17 @@ test('production engineering scope can be explicitly lifted only for a future au
 	})
 	assert.equal(scope.liveTestOnly, false)
 	assert.doesNotThrow(() => assertMightyMutationAllowed(scope, 'student@example.com', 'grant_plan'))
+})
+
+test('owner-provided Host classifications are explicit for both authorized Host test accounts', () => {
+	const scope = getMightyMutationScope({
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
+		MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST: [...AUTHORIZED_MIGHTY_HOST_TEST_EMAILS].join(','),
+	})
+	for (const email of AUTHORIZED_MIGHTY_HOST_TEST_EMAILS) {
+		assert.equal(classifyMightyIdentity({ email, member: { id: email, email, role: null }, spaces: [], plans: [], scope }), 'host')
+	}
 })
 
 test('provider role and explicit operator override classify privileged identities', () => {

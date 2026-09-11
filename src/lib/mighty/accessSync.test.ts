@@ -305,24 +305,24 @@ test('production mutation scope rejects an identity outside the explicit test al
 	assert.equal(state.grantCalls, 0)
 })
 
-test('production host override is protected from ordinary billing mutation', async () => {
-	const scope = getMightyMutationScope({
-		MIGHTY_PROVIDER_ENV: 'production',
-		MIGHTY_PRODUCTION_ENGINEERING_ONLY: 'false',
-		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
-		MIGHTY_PRODUCTION_TEST_EMAIL: 'host@example.com',
-		MIGHTY_IDENTITY_ROLE_OVERRIDES: 'host@example.com:host',
-	})
-	const state: FakeState = {
-		member: { id: 22, email: 'host@example.com', role: null },
-		purchases: [],
-		memberPlanAccess: false,
-		findMemberCalls: 0,
-		createMemberCalls: 0,
-		grantCalls: 0,
-		revokeCalls: [],
-		revokePlanCalls: [],
+test('both authorized Host test accounts are protected from ordinary billing mutation', async () => {
+	for (const email of ['steve@yeshua.academy', 'info@prochat.tools']) {
+		const scope = getMightyMutationScope({
+			MIGHTY_PROVIDER_ENV: 'production',
+			MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
+			MIGHTY_PRODUCTION_TEST_EMAIL: email,
+		})
+		const state: FakeState = {
+			member: { id: 22, email, role: null },
+			purchases: [],
+			memberPlanAccess: true,
+			findMemberCalls: 0,
+			createMemberCalls: 0,
+			grantCalls: 0,
+			revokeCalls: [],
+			revokePlanCalls: [],
+		}
+		await assert.rejects(() => reconcileAccess({ row: row({ email, normalizedEmail: email, desiredAccess: 'DENIED', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }), /mighty_host_mutation_protected/)
+		assert.equal(state.revokePlanCalls.length, 0)
 	}
-	await assert.rejects(() => reconcileAccess({ row: row({ email: 'host@example.com', normalizedEmail: 'host@example.com', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }), /mighty_host_mutation_protected/)
-	assert.equal(state.grantCalls, 0)
 })
