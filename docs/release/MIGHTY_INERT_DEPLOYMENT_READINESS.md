@@ -133,6 +133,11 @@ historical for this release record; post-deployment exact-account verification
 was stopped after the boundary incident. Do not claim provider connectivity,
 Host protection, or post-deployment account state from this incomplete smoke.
 
+`UNEXPECTED SCOPE LEAK OCCURRED` — during the clean run, the exact
+member-details UI rendered an unrelated production-member referrals list. The
+acceptance run stopped immediately. No unrelated names or identifiers are
+recorded in this documentation, and no Mighty or Stripe mutation occurred.
+
 ## Current boundary and next gate
 
 The three-account integration gate passed before deployment, and the exact

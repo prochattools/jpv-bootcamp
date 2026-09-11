@@ -54,6 +54,15 @@ The deployment is therefore live and deliberately inert, but the final
 acceptance result is HOLD rather than PASS because the post-deployment account
 boundary was not preserved by the operator read.
 
+## CLEAN ACCEPTANCE ATTEMPT — 2026-09-11
+
+`CLEAN THREE-ACCOUNT ACCEPTANCE: NOT CERTIFIED`
+
+`UNEXPECTED SCOPE LEAK OCCURRED` — the exact member-details UI rendered an
+unrelated production-member referrals list. The acceptance run stopped
+immediately as required. No unrelated names or identifiers are recorded here;
+no Mighty mutation, Stripe mutation, worker run, or migration occurred.
+
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
 The implementation is being validated with synthetic lifecycle, ordering,

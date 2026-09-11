@@ -4,7 +4,7 @@
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `INERT PRODUCTION DEPLOYMENT: COMPLETE`
-`THREE-ACCOUNT POST-DEPLOY SMOKE: NOT CERTIFIED`
+`THREE-ACCOUNT POST-DEPLOY SMOKE: NOT CERTIFIED — SCOPE LEAK`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
 `PRODUCTION AUTOMATION: DISABLED`
@@ -37,6 +37,10 @@ merged as `f430398048ecda70bbeeef6aa8cd41bd4befc870`; publish workflow
 The scheduler remains disabled, no production sync run occurred, and the
 application is deliberately inert. The next action is owner disposition of the
 acceptance incident, not population migration or automation.
+
+`UNEXPECTED SCOPE LEAK OCCURRED` during the clean acceptance: the exact
+member-details UI rendered an unrelated production-member referrals list. The
+run stopped immediately; no Mighty or Stripe mutation occurred.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
