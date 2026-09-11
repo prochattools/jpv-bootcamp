@@ -1,110 +1,69 @@
 import prisma from '../../src/libs/prisma'
-import { normalizeEmail } from '../../src/lib/normalize-email'
 import { createMightyAdminApi } from '../../src/lib/mighty/adminApi'
 import { getMightyConfig } from '../../src/lib/mighty/config'
-import { isStripeEntitled, summarizeStripeRoster, type StripeRosterRow } from '../../src/lib/mighty/stripeEntitlementSummary'
-
-type StripeEntitled = {
-	email: string
-	stripeCustomerId: string
-	stripeSubscriptionId: string | null
-}
+import { isStripeEntitled } from '../../src/lib/mighty/stripeEntitlementSummary'
+import { AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS } from '../../src/lib/mighty/mutationPolicy'
 
 function assertProductionReadOnlyBoundary(): void {
-	if (process.env.MIGHTY_PROVIDER_ENV?.trim() !== 'production') {
-		throw new Error('mighty_manual_access_audit_requires_production_provider_env')
-	}
-}
-
-function isPurchaseForMember(
-	purchase: { member_id: number | string; member_email?: string | null },
-	member: { id: number | string; email: string },
-): boolean {
-	return String(purchase.member_id) === String(member.id) || normalizeEmail(purchase.member_email) === normalizeEmail(member.email)
+	if (process.env.MIGHTY_PROVIDER_ENV?.trim() !== 'production') throw new Error('mighty_manual_access_audit_requires_production_provider_env')
 }
 
 async function main(): Promise<void> {
 	assertProductionReadOnlyBoundary()
 	const config = getMightyConfig()
 	const api = createMightyAdminApi(config)
-	const [stripeRows, mightyMembers, mightyPurchases] = await Promise.all([
-		prisma.customerProvisioning.findMany({
-			where: { status: 'active' },
-			select: { email: true, stripeCustomerId: true, stripeSubscriptionId: true, status: true, subscriptionStatus: true, paymentStatus: true },
-		}),
-		api.listMembers(),
-		api.findAllPurchases(),
-	])
-	const memberPlans = new Map<string, Awaited<ReturnType<typeof api.listMemberPlans>>>()
-	await Promise.all(mightyMembers.map(async (member) => {
-		memberPlans.set(String(member.id), await api.listMemberPlans(member.id))
-	}))
+	const stripeRows = await prisma.customerProvisioning.findMany({
+		where: { email: { in: [...AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS] } },
+		select: { email: true, stripeCustomerId: true, stripeSubscriptionId: true, status: true, subscriptionStatus: true, paymentStatus: true },
+	})
+	const stripeByEmail = new Map(stripeRows.map((row) => [row.email.trim().toLowerCase(), row]))
+	const accounts = []
+	let stripeEntitledCount = 0
+	let targetPlanOverlapCount = 0
+	let otherPlanOverlapCount = 0
+	let directAccessWithoutTargetPlanCount = 0
 
-	const stripeSummary = summarizeStripeRoster(stripeRows as StripeRosterRow[])
-	const entitledByEmail = new Map<string, StripeEntitled>()
-	for (const row of stripeRows) {
-		if (!isStripeEntitled(row as StripeRosterRow)) continue
-		const email = normalizeEmail(row.email)
-		if (email) entitledByEmail.set(email, { email, stripeCustomerId: row.stripeCustomerId, stripeSubscriptionId: row.stripeSubscriptionId })
-	}
-
-	let matchedEntitledMembers = 0
-	let entitledMissingTargetPlan = 0
-	let entitledWithOtherPlanOverlap = 0
-	let directMemberWithoutPlan = 0
-	let nonEntitledMemberWithTargetPlan = 0
-	let nonEntitledMemberWithOtherPlan = 0
-
-	for (const member of mightyMembers) {
-		const email = normalizeEmail(member.email)
-		const entitled = email ? entitledByEmail.get(email) : undefined
-		const purchases = mightyPurchases.filter((purchase) => isPurchaseForMember(purchase, member))
-		const plans = memberPlans.get(String(member.id)) ?? []
-		const targetPlanMembership = plans.some((plan) => String(plan.id) === String(config.accessPlanId))
-		const otherPlanMemberships = plans.filter((plan) => String(plan.id) !== String(config.accessPlanId))
-		const targetPlanPurchases = purchases.filter((purchase) => String(purchase.plan?.id ?? '') === String(config.accessPlanId))
-		const otherPlanPurchases = purchases.filter((purchase) => {
+	for (const email of AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS) {
+		const stripe = stripeByEmail.get(email)
+		const stripeEntitled = stripe ? isStripeEntitled(stripe) : false
+		if (stripeEntitled) stripeEntitledCount += 1
+		const member = await api.findMemberByEmail(email)
+		if (!member) {
+			accounts.push({ email, stripeEntitled, mightyMember: null })
+			continue
+		}
+		const [state, spaces] = await Promise.all([api.getAccessState(member.id, config.accessPlanId), api.listMemberSpaces(member.id)])
+		const otherPlans = state.plans.filter((plan) => String(plan.id) !== String(config.accessPlanId))
+		const otherPurchases = state.purchases.filter((purchase) => {
 			const planId = String(purchase.plan?.id ?? '')
 			return Boolean(planId) && planId !== String(config.accessPlanId)
 		})
-
-		if (entitled) {
-			matchedEntitledMembers += 1
-			if (targetPlanPurchases.length === 0 && !targetPlanMembership) entitledMissingTargetPlan += 1
-			if (otherPlanPurchases.length > 0 || otherPlanMemberships.length > 0) entitledWithOtherPlanOverlap += 1
-		} else {
-			if (targetPlanPurchases.length > 0 || targetPlanMembership) nonEntitledMemberWithTargetPlan += 1
-			if (otherPlanPurchases.length > 0 || otherPlanMemberships.length > 0) nonEntitledMemberWithOtherPlan += 1
-			if (purchases.length === 0 && plans.length === 0) directMemberWithoutPlan += 1
-		}
+		const targetPlanPresent = state.memberPlanAccess || state.purchases.some((purchase) => String(purchase.plan?.id ?? '') === String(config.accessPlanId))
+		if (targetPlanPresent) targetPlanOverlapCount += 1
+		if (otherPlans.length > 0 || otherPurchases.length > 0) otherPlanOverlapCount += 1
+		if (!targetPlanPresent && state.hasAccess) directAccessWithoutTargetPlanCount += 1
+		accounts.push({
+			email,
+			stripeEntitled,
+			mightyMember: { id: String(member.id), role: member.role ?? null, planIds: state.plans.map((plan) => String(plan.id)), targetPlanPresent, purchaseCount: state.purchases.length, spaceCount: spaces.length },
+		})
 	}
 
 	console.log(JSON.stringify({
 		readOnly: true,
+		engineeringScope: 'exactly three authorized live test identities; no population audit',
 		accessPlanId: String(config.accessPlanId),
-		...stripeSummary,
-		stripeEntitledSubscriberCount: entitledByEmail.size,
-		mightyMemberCount: mightyMembers.length,
-		mightyPurchaseCount: mightyPurchases.length,
-		mightyMemberPlanLookupCount: memberPlans.size,
-		matchedEntitledMembers,
-		overlapRisk: {
-			stripeEntitledMissingTargetPlan: entitledMissingTargetPlan,
-			stripeEntitledWithOtherPlanOverlap: entitledWithOtherPlanOverlap,
-			directMemberWithoutAnyPlan: directMemberWithoutPlan,
-			nonEntitledMemberWithTargetPlan,
-			nonEntitledMemberWithOtherPlan,
-		},
+		accounts,
+		stripeEntitledCount,
+		overlapRisk: { targetPlanPresentCount: targetPlanOverlapCount, otherPlanOverlapCount, directAccessWithoutTargetPlanCount },
 		mutationPerformed: false,
-		interpretation: 'Any non-target Plan or direct membership must be reviewed before automated revocation is enabled.',
+		interpretation: 'Only the three authorized engineering accounts were read. Existing real-member normalization remains unexecuted and requires future owner authorization.',
 	}, null, 2))
 }
 
-main()
-	.catch((error) => {
-		console.error(error instanceof Error ? error.message : 'mighty_manual_access_audit_failed')
-		process.exitCode = 1
-	})
-	.finally(async () => {
-		await prisma.$disconnect()
-	})
+main().catch((error) => {
+	console.error(error instanceof Error ? error.message : 'mighty_manual_access_audit_failed')
+	process.exitCode = 1
+}).finally(async () => {
+	await prisma.$disconnect()
+})

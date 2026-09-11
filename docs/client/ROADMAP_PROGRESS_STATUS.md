@@ -1,32 +1,33 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT FINAL PRE-CUTOVER MANIFEST + READ-ONLY REHEARSAL — 2026-09-11
+## CURRENT PHASE: ENGINEERING / INTEGRATION VALIDATION — 2026-09-11
 
-`INTEGRATION LOGIC: READY`
-`REAL MEMBER MIGRATION: NOT STARTED`
-`CURRENT GATE: FINAL ROLE / IDENTITY / OVERLAP MANIFEST + READ-ONLY CUTOVER REHEARSAL`
+`THREE-ACCOUNT INTEGRATION GATE: PASS`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`PRODUCTION SCHEDULER: DISABLED`
 
-The complete production-shaped rehearsal found 17 active Stripe subscriptions,
-15 Mighty members, zero Mighty purchases, and 17/17 complete manifest rows:
-17 allowed, 0 denied, 0 ambiguous, 0 unmatched, with no mutation. The exact
-per-record result is in
-`docs/migration/MIGHTY_FINAL_PRE_CUTOVER_MANIFEST_2026-09-11.md`. Unknown
-provider roles remain review-only. Scheduler disabled; real-member migration,
-merge, deployment, and Stripe mutation remain not performed. Next gate is the
-owner's explicit go/no-go for a future bounded batch.
+Only `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`
+are authorized for exact live checks. Every other real identity is off limits
+for inspection, querying, classification, reconciliation, dry-run, or
+mutation. Use synthetic fixtures for all other cases. No population
+reconciliation, production migration manifest, member migration, live Stripe
+mutation, scheduler enablement, merge, or deploy is authorized.
+
+The former population rehearsal and manifest are historical and superseded;
+they are not a current production roster and must not be refreshed or
+executed. Future normalization requires new explicit owner authorization.
+
+The bounded ordinary lifecycle passed for `westhoek@hotmail.com` with final
+access restored. Exact read-only checks for `steve@yeshua.academy` and
+`info@prochat.tools` show Plan `2000039` present. No fourth identity was read.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
-Phase D and E0 are complete; the current roadmap phase is implementation
-hardening and synthetic/test-account validation. Only the bounded identities
-`westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools` are
-authorized for live Mighty checks, and the ordinary test identity is restored.
-No real member migration or normalization is authorized, including the former
-`Missaquadri@gmail.com` proposal; no Stripe mutation, scheduler enablement,
-deployment, or merge occurred. Unknown role, Host/Admin, unexpected Space, and
-alternate-Plan cases remain review-only.
+The roadmap phase is implementation hardening and synthetic/test-account
+validation. The ordinary test identity ends restored/allowed; Host/owner live
+checks remain read-only and synthetic privileged cases remain review-only.
 
-## CURRENT PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10
+## HISTORICAL / SUPERSEDED — PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10
 
 Phase E0 is complete as a read-only production reconciliation and controlled
 migration preparation gate. The feature branch is
@@ -35,33 +36,12 @@ matching `origin`; only unrelated `newrelic_agent.log` is dirty. No member
 migration, Stripe mutation, scheduler enablement, merge, or production deploy
 was performed.
 
-The authoritative deployed identity-dry-run ran in live Stripe mode and found
-17 active subscriptions, all matched to active Payload members:
-`ALLOWED: 17`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 0`. The exact current
-Mighty candidate manifest is:
+Historical population evidence is retained only in repository history and is
+superseded. It is not a current roster, was not refreshed in this phase, and
+must not be used to inspect or classify additional identities. Current live
+evidence is limited to the three authorized accounts named above.
 
-| Classification | Identities |
-| --- | --- |
-| `PHASE_D_CANARY_COMPLETE` | `westhoek@hotmail.com` (Mighty `41580317`) |
-| `OWNER_OR_ADMIN_EXCLUDED` | `steve@yeshua.academy` (Mighty `41580680`) |
-| `ELIGIBLE_ORDINARY_BATCH_CANDIDATE` | `Missaquadri@gmail.com` (`41567828`), `adaumoudit@gmail.com` (`41566725`), `amechiclarangozi2022@gmail.com` (`41567964`), `happyalamss@gmail.com` (`41566259`), `ronyaa@live.co.uk` (`41568214`), `Katherinecd7@yahoo.com` (`41585608`) |
-| `PRIVILEGED_OR_EXCEPTION_ACCESS_REVIEW` | `tosinotubanjo@gmail.com` (`41582168`), because of extra `FIRST FOUNDATION` Space |
-| `IDENTITY_MISMATCH_REVIEW` | `anita13steve@gmail.com`, `info@yeshua.academy`, `kem.okupa@gmail.com`, `marek_bed@yahoo.com`, `nsgonza2@gmail.com`, `prince.okoroego@gmail.com`, `samuel.roy.edward.hill@gmail.com`, `vimbaimt@gmail.com` |
-| `ALREADY_PLAN_CONTROLLED` (additional) | None; the two current Plan-controlled identities are classified above as canaries/exceptions |
-| `OTHER_PLAN_OVERLAP_REVIEW` | None observed |
-| `DUPLICATE_IDENTITY_REVIEW` | None observed; provider-masked prefix collisions are not duplicate proof |
-
-The historical proposed next batch was exactly one unmodified identity:
-`Missaquadri@gmail.com` / Mighty `41567828`. It is explicitly NOT AUTHORIZED
-and NOT EXECUTED in the current hardening phase. Any future execution requires
-fresh owner authorization naming that exact identity and approving a single
-Plan `2000039` grant plus independent reads.
-The two old redacted unmatched records cannot be named retrospectively, but
-the current authoritative report resolves the live set with zero unmatched and
-zero ambiguous records. Missing Mighty identities, alternate Plans, extra
-Spaces, and privilege exceptions remain manual-review stops.
-
-## CURRENT BRANCH RECONCILIATION AND SECURITY GATE — 2026-09-10
+## HISTORICAL / SUPERSEDED — BRANCH RECONCILIATION AND SECURITY GATE — 2026-09-10
 
 The feature branch `feature/mighty-stripe-migration` now contains the
 production hotfix deployed at
@@ -96,7 +76,7 @@ path restores the same member identity after that lockout. No other member or
 batch was touched. The remaining controlled-batch procedure and overlap audit
 are documented in `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
 
-## CURRENT MIGHTY OWNER/ADMIN CANARY — 2026-09-10
+## HISTORICAL / SUPERSEDED — MIGHTY OWNER/ADMIN CANARY — 2026-09-10
 
 The JPV Stripe → Mighty integration is in a silent canary phase on
 `feature/mighty-stripe-migration`. Plan `2000039` (`JPV Member Access`) is the
@@ -135,7 +115,7 @@ The existing-member algorithm, overlap risks, stop-on-error boundary, and
 resumability requirements are documented in
 `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
 
-## CURRENT MIGHTY ORDINARY-MEMBER CANARY — 2026-09-10
+## HISTORICAL / SUPERSEDED — MIGHTY ORDINARY-MEMBER CANARY — 2026-09-10
 
 The owner-authorized Phase D identity `westhoek@hotmail.com` resolved to one
 live Stripe JPV customer with an active paid subscription; Stripe
@@ -233,7 +213,7 @@ architecture, M0–M9 phase status, missing configuration, manual bridge, and
 cutover gates. See `docs/migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md`
 for the sanitized staging evidence and exact blocker.
 
-## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
+## HISTORICAL / SUPERSEDED — CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 PR #31 and PR #32 established the production-hygiene release and image build
 fix. PR #36 added the guarded read-only production migration verifier, PR #35
@@ -283,7 +263,7 @@ justify a migration apply or deployment. Full evidence is recorded in
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
-`pnpm test:release` passed `195/195`; the release manifest contains 196 entries including one
+`pnpm test:release` passed `194/194`; the release manifest contains 195 entries including one
 conditional browser gate. Lint, root TypeScript, the controlled production
 build, both Prisma validations, and the production high-severity audit gate
 also passed.

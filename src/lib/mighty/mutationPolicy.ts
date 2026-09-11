@@ -7,6 +7,7 @@ export type MightyRoleOverride = Exclude<MightyIdentityClass, 'review' | 'except
 
 export type MightyMutationScope = {
 	enforce: boolean
+	liveTestOnly: boolean
 	allowedEmails: ReadonlySet<string>
 	allowNewMemberCreation: boolean
 	roleOverrides: ReadonlyMap<string, MightyRoleOverride>
@@ -18,6 +19,12 @@ export const STANDARD_JPV_SPACE_NAMES = new Set([
 	'course',
 	'events',
 	'jpv resource library',
+])
+
+export const AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS = new Set([
+	'westhoek@hotmail.com',
+	'steve@yeshua.academy',
+	'info@prochat.tools',
 ])
 
 function listValues(value: string | undefined): string[] {
@@ -35,6 +42,7 @@ function roleOverride(value: string): MightyRoleOverride | null {
 export function getMightyMutationScope(env: Record<string, string | undefined> = process.env): MightyMutationScope {
 	const providerEnv = env.MIGHTY_PROVIDER_ENV?.trim().toLowerCase() ?? ''
 	const enforce = providerEnv === 'production' || providerEnv === 'staging'
+	const liveTestOnly = providerEnv === 'production' && env.MIGHTY_PRODUCTION_ENGINEERING_ONLY?.trim().toLowerCase() !== 'false'
 	const guardEnabled = providerEnv === 'production'
 		? env.MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS?.trim() === 'true'
 		: providerEnv === 'staging'
@@ -47,6 +55,11 @@ export function getMightyMutationScope(env: Record<string, string | undefined> =
 		)
 		if (testEmail) allowedEmails.add(testEmail)
 	}
+	if (liveTestOnly) {
+		for (const email of allowedEmails) {
+			if (!AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS.has(email)) allowedEmails.delete(email)
+		}
+	}
 
 	const roleOverrides = new Map<string, MightyRoleOverride>()
 	for (const entry of (env.MIGHTY_IDENTITY_ROLE_OVERRIDES ?? '').split(',')) {
@@ -58,6 +71,7 @@ export function getMightyMutationScope(env: Record<string, string | undefined> =
 
 	return {
 		enforce,
+		liveTestOnly,
 		allowedEmails,
 		allowNewMemberCreation: env.MIGHTY_ALLOW_NEW_MEMBER_CREATION?.trim() === 'true',
 		roleOverrides,
@@ -73,6 +87,9 @@ export function assertMightyMutationAllowed(
 	const normalized = normalizeEmail(email)
 	if (!normalized || !scope.allowedEmails.has(normalized)) {
 		throw new MightySafetyError('mighty_mutation_scope_denied', `${action}:${normalized || 'missing_email'}`)
+	}
+	if (scope.liveTestOnly && !AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS.has(normalized)) {
+		throw new MightySafetyError('mighty_live_test_scope_denied', `${action}:${normalized}`)
 	}
 }
 

@@ -308,6 +308,7 @@ test('production mutation scope rejects an identity outside the explicit test al
 test('production host override is protected from ordinary billing mutation', async () => {
 	const scope = getMightyMutationScope({
 		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_PRODUCTION_ENGINEERING_ONLY: 'false',
 		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
 		MIGHTY_PRODUCTION_TEST_EMAIL: 'host@example.com',
 		MIGHTY_IDENTITY_ROLE_OVERRIDES: 'host@example.com:host',

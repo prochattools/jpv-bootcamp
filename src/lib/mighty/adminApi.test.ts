@@ -18,21 +18,18 @@ function response(body: unknown, status = 200): Response {
 	})
 }
 
-test('findMember follows Mighty pagination and compares normalized email', async () => {
+test('findMember uses exact email lookup and never falls back to a network-wide scan', async () => {
 	const requests: string[] = []
 	const api = new MightyAdminApi(config, async (input) => {
 		const url = String(input)
 		requests.push(url)
 		if (url.includes('/members/by_email')) return response({}, 404)
-		if (url.includes('page=2')) {
-			return response({ items: [{ id: 44, email: 'Student@Example.com' }], links: {} })
-		}
-		return response({ items: [], links: { next: 'https://api.mn.co/admin/v1/networks/12345/members?page=2' } })
+		throw new Error('network-wide member lookup must not be called')
 	})
 
 	const member = await api.findMember(' student@example.com ')
-	assert.equal(member?.id, 44)
-	assert.equal(requests.length, 3)
+	assert.equal(member, null)
+	assert.equal(requests.length, 1)
 })
 
 test('findMember prefers the exact-email lookup when the member is absent from the active list', async () => {
@@ -65,7 +62,7 @@ test('provider requests include the required User-Agent header', async () => {
 	let headers: HeadersInit | undefined
 	const api = new MightyAdminApi(config, async (_input, init) => {
 		headers = init?.headers
-		return response({ items: [], links: {} })
+		return response({}, 404)
 	})
 
 	await api.findMember('student@example.com')
@@ -175,24 +172,4 @@ test('422 duplicate Plan assignment is recognized only with duplicate provider e
 	assert.equal(isDuplicatePlanAssignmentError(new MightyApiError(422)), false)
 	const unrelated = new MightyApiError(422, { code: 'validation_error', message: 'invalid member state' })
 	assert.equal(isDuplicatePlanAssignmentError(unrelated), false)
-})
-
-test('listMembers and findAllPurchases paginate the whole network for read-only audits', async () => {
-	const requests: string[] = []
-	const api = new MightyAdminApi(config, async (input) => {
-		const url = String(input)
-		requests.push(url)
-		if (url.includes('members?page=2')) return response({ items: [{ id: 12, email: 'second@example.com' }], links: {} })
-		if (url.includes('/members')) {
-			return response({ items: [{ id: 11, email: 'member@example.com' }], links: { next: 'https://api.mn.co/admin/v1/networks/12345/members?page=2' } })
-		}
-		if (url.includes('purchases?page=2')) return response({ items: [], links: {} })
-		return response({ items: [{ member_id: 11, plan: { id: 678 }, purchase: { id: 'purchase-1' } }], links: { next: 'https://api.mn.co/admin/v1/networks/12345/purchases?page=2' } })
-	})
-
-	const members = await api.listMembers()
-	const purchases = await api.findAllPurchases()
-	assert.deepEqual(members.map((member) => member.id), [11, 12])
-	assert.deepEqual(purchases.map((purchase) => purchase.purchase?.id), ['purchase-1'])
-	assert.equal(requests.length, 4)
 })

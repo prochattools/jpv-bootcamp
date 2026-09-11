@@ -44,9 +44,10 @@ test('typed Mighty config is fail-closed and environment-only', () => {
 })
 
 test('member discovery uses the documented paginated members endpoint', () => {
-	assert.match(api, /networks\/\$\{numericId\(this\.config\.networkId\)\}\/members/)
-	assert.match(api, /page\.links\?\.next/)
-	assert.match(api, /normalizeEmail\(member\.email\)/)
+	assert.match(api, /members\/by_email/)
+	assert.match(api, /findMemberByEmail\(email\)/)
+	assert.doesNotMatch(api, /async listMembers\(/)
+	assert.doesNotMatch(api, /async findAllPurchases\(/)
 	assert.match(api, /'User-Agent': MIGHTY_USER_AGENT/)
 })
 
@@ -115,6 +116,8 @@ test('one canonical entitlement function drives Stripe projection and access rec
 
 test('production mutations are explicitly scoped and fail closed for unresolved identity roles', () => {
 	assert.match(mutationPolicy, /MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST/)
+	assert.match(mutationPolicy, /AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS/)
+	assert.match(mutationPolicy, /MIGHTY_PRODUCTION_ENGINEERING_ONLY/)
 	assert.match(mutationPolicy, /MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS/)
 	assert.match(mutationPolicy, /mighty_identity_review_required/)
 	assert.match(mutationPolicy, /mighty_host_mutation_protected/)
@@ -133,6 +136,8 @@ test('reconciliation and dry-run remain read-only and classify overlap/privilege
 	assert.equal(JSON.parse(packageJson).scripts['mighty:cutover-rehearsal'], 'tsx scripts/mighty/rehearseCutover.mts')
 	assert.match(cutoverRehearsal, /STRIPE_ENV !== 'live'/)
 	assert.match(cutoverRehearsal, /MIGHTY_PROVIDER_ENV\?\.trim\(\) !== 'production'/)
+	assert.match(cutoverRehearsal, /exactly three authorized live test identities/)
+	assert.doesNotMatch(cutoverRehearsal, /api\.listMembers|api\.findAllPurchases|listActiveSubscriptions/)
 	assert.match(cutoverRehearsal, /mutationPerformed: false/)
 })
 
@@ -211,12 +216,11 @@ test('configuration check is read-only and reports Plan verification separately'
 
 test('manual access audit is read-only and identifies direct or overlapping access risk', () => {
 	assert.match(manualAccessAudit, /config\.accessPlanId/)
-	assert.match(manualAccessAudit, /listMembers\(\)/)
-	assert.match(manualAccessAudit, /findAllPurchases\(\)/)
-	assert.match(manualAccessAudit, /directMemberWithoutAnyPlan/)
-	assert.match(manualAccessAudit, /stripeEntitledWithOtherPlanOverlap/)
-	assert.match(manualAccessAudit, /stripeSummary\.recordsRequiringManualReview|\.\.\.stripeSummary/)
-	assert.match(manualAccessAudit, /stripeSummary\.ambiguousOrUnmatchedRecordCount|\.\.\.stripeSummary/)
+	assert.match(manualAccessAudit, /AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS/)
+	assert.match(manualAccessAudit, /findMemberByEmail\(email\)/)
+	assert.doesNotMatch(manualAccessAudit, /listMembers\(\)|findAllPurchases\(\)/)
+	assert.match(manualAccessAudit, /directAccessWithoutTargetPlanCount/)
+	assert.match(manualAccessAudit, /otherPlanOverlapCount/)
 	assert.match(manualAccessAudit, /mutationPerformed: false/)
 	assert.doesNotMatch(manualAccessAudit, /createMember|grantAccess|restoreAccess|revokeAccess/)
 })

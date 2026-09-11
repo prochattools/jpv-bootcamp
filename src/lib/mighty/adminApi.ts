@@ -155,36 +155,8 @@ export class MightyAdminApi {
 		return items
 	}
 
-	async listMembers(): Promise<MightyMember[]> {
-		const firstPage = await this.request<Paginated<MightyMember>>(
-			'GET',
-			`networks/${numericId(this.config.networkId)}/members`,
-			{ per_page: 100 },
-		)
-		return firstPage ? this.collectPages(firstPage) : []
-	}
-
 	async findMember(email: string): Promise<MightyMember | null> {
-		const normalizedEmail = normalizeEmail(email)
-		if (!normalizedEmail) throw new Error('A valid email is required to find a Mighty member')
-
-		const exactMember = await this.findMemberByEmail(normalizedEmail)
-		if (exactMember) return exactMember
-
-		let page: Paginated<MightyMember> | null = await this.request<Paginated<MightyMember>>(
-			'GET',
-			`networks/${numericId(this.config.networkId)}/members`,
-			{ per_page: 100 },
-		)
-		let pageCount = 0
-		while (page) {
-			const match = page.items.find((member) => normalizeEmail(member.email) === normalizedEmail)
-			if (match) return match
-			pageCount += 1
-			if (pageCount >= 100) throw new Error('Mighty member pagination limit exceeded')
-			page = await this.getNextPage<MightyMember>(page.links?.next)
-		}
-		return null
+		return this.findMemberByEmail(email)
 	}
 
 	async findMemberByEmail(email: string): Promise<MightyMember | null> {
@@ -253,15 +225,6 @@ export class MightyAdminApi {
 			{ per_page: 100 },
 			undefined,
 			true,
-		)
-		return firstPage ? this.collectPages(firstPage) : []
-	}
-
-	async findAllPurchases(): Promise<MightyPurchase[]> {
-		const firstPage = await this.request<Paginated<MightyPurchase>>(
-			'GET',
-			`networks/${numericId(this.config.networkId)}/purchases`,
-			{ per_page: 100 },
 		)
 		return firstPage ? this.collectPages(firstPage) : []
 	}

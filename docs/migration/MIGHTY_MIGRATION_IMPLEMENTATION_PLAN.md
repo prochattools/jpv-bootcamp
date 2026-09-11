@@ -1,34 +1,36 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
-## CURRENT FINAL PRE-CUTOVER MANIFEST + READ-ONLY REHEARSAL — 2026-09-11
+## CURRENT PHASE: ENGINEERING / INTEGRATION VALIDATION — 2026-09-11
 
-`INTEGRATION LOGIC: READY`
-`REAL MEMBER MIGRATION: NOT STARTED`
-`CURRENT GATE: FINAL ROLE / IDENTITY / OVERLAP MANIFEST + READ-ONLY CUTOVER REHEARSAL`
+`THREE-ACCOUNT INTEGRATION GATE: PASS`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`PRODUCTION SCHEDULER: DISABLED`
 
-The complete live rehearsal now reads the 17 active Stripe subscriptions and
-the complete 15-member Mighty inventory, producing 17 deterministic rows:
-17 allowed, 0 denied, 0 ambiguous, 0 unmatched, zero purchases, and
-`mutationPerformed=false`. It supersedes the old local `customerProvisioning`
-partial audit as the cutover population source. See
-`docs/migration/MIGHTY_FINAL_PRE_CUTOVER_MANIFEST_2026-09-11.md` for the exact
-manifest and future normalization procedure. Unknown roles, privileged
-identities, extra Spaces, alternate Plans, ambiguous identities, and provider
-uncertainty fail closed. The scheduler remains disabled and no real member has
-been migrated.
+Only `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`
+may be read or mutated live, with Host/owner checks remaining read-only. Every
+other real identity is off limits. Do not run population reconciliation, a
+population dry run, or any member migration; do not build or refresh a
+production migration manifest. Use synthetic fixtures for all other scenarios.
+Live Stripe mutation, scheduler enablement, merge, and deploy remain disabled.
+The former population rehearsal is historical/superseded and is not a current
+roster. Future normalization requires fresh explicit owner authorization.
+
+The bounded ordinary lifecycle passed for `westhoek@hotmail.com`; exact
+read-only checks for `steve@yeshua.academy` and `info@prochat.tools` show Plan
+`2000039` present. No fourth identity was read and no Host/owner mutation was
+performed.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
-Phase D and E0 are complete. This branch is now limited to hardening the
+Phase D and E0 are historical. This branch is now limited to hardening the
 Stripe → Mighty implementation and proving synthetic lifecycle, ordering,
 identity, privilege, overlap, and reconciliation behavior. Live mutations are
 limited to the explicitly authorized test identities
 `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`; the
 ordinary identity remains restored/allowed.
 
-No real member population is being migrated or normalized. The historical
-`Missaquadri@gmail.com` proposal is NOT AUTHORIZED and NOT EXECUTED. Stripe,
-the production scheduler, deployment, and merge remain untouched. Unknown
+No real member population is being migrated or normalized. Stripe, the
+production scheduler, deployment, and merge remain untouched. Unknown
 provider roles, Host/Admin identities, unexpected Spaces, and alternate Plans
 fail closed to review.
 
@@ -38,7 +40,7 @@ fail closed to review.
 **Current branch HEAD:** pushed validation tip (see repository log)
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
 
-## Current Phase E0 read-only reconciliation — 2026-09-10
+## HISTORICAL / SUPERSEDED — PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10
 
 Phase E0 is complete as a read-only production reconciliation and controlled
 migration preparation gate. The feature branch is
@@ -47,31 +49,12 @@ matching `origin`; only unrelated `newrelic_agent.log` is dirty. No member
 migration, Stripe mutation, scheduler enablement, merge, or production deploy
 was performed.
 
-The authoritative deployed identity-dry-run ran in live Stripe mode and found
-17 active subscriptions, all matched to active Payload members:
-`ALLOWED: 17`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 0`. The current
-Mighty candidate manifest is:
+Historical population evidence is retained only in repository history and is
+superseded. It is not a current roster, was not refreshed in this phase, and
+must not be used to inspect or classify additional identities. Current live
+evidence is limited to the three authorized accounts in the engineering
+boundary above. Use synthetic fixtures for all other classifications.
 
-| Classification | Identities |
-| --- | --- |
-| `PHASE_D_CANARY_COMPLETE` | `westhoek@hotmail.com` (Mighty `41580317`) |
-| `OWNER_OR_ADMIN_EXCLUDED` | `steve@yeshua.academy` (Mighty `41580680`) |
-| `ELIGIBLE_ORDINARY_BATCH_CANDIDATE` | `Missaquadri@gmail.com` (`41567828`), `adaumoudit@gmail.com` (`41566725`), `amechiclarangozi2022@gmail.com` (`41567964`), `happyalamss@gmail.com` (`41566259`), `ronyaa@live.co.uk` (`41568214`), `Katherinecd7@yahoo.com` (`41585608`) |
-| `PRIVILEGED_OR_EXCEPTION_ACCESS_REVIEW` | `tosinotubanjo@gmail.com` (`41582168`), because of extra `FIRST FOUNDATION` Space |
-| `IDENTITY_MISMATCH_REVIEW` | `anita13steve@gmail.com`, `info@yeshua.academy`, `kem.okupa@gmail.com`, `marek_bed@yahoo.com`, `nsgonza2@gmail.com`, `prince.okoroego@gmail.com`, `samuel.roy.edward.hill@gmail.com`, `vimbaimt@gmail.com` |
-| `ALREADY_PLAN_CONTROLLED` (additional) | None; the two current Plan-controlled identities are classified above as canaries/exceptions |
-| `OTHER_PLAN_OVERLAP_REVIEW` | None observed |
-| `DUPLICATE_IDENTITY_REVIEW` | None observed; provider-masked prefix collisions are not duplicate proof |
-
-The historical proposed next batch was exactly one unmodified identity:
-`Missaquadri@gmail.com` / Mighty `41567828`. It is explicitly NOT AUTHORIZED
-and NOT EXECUTED under the current hardening gate. Any future execution
-requires fresh owner authorization naming that exact identity and approving a
-single Plan `2000039` grant plus independent reads.
-The two old redacted unmatched records cannot be named retrospectively, but
-the current authoritative report resolves the live set with zero unmatched and
-zero ambiguous records. Missing Mighty identities, alternate Plans, extra
-Spaces, and privilege exceptions remain manual-review stops.
 
 ## Current reconciliation and security status — 2026-09-10
 
@@ -528,18 +511,16 @@ as a separate, explicitly authorized operator action.
 
 ## Missing before controlled cutover
 
-- Dedicated Admin API token owner, rotation policy, and target environment.
-- GitHub `production-mighty-sync` environment and scheduled-execution secret/
-  owner, followed by explicit `MIGHTY_ACCESS_SYNC_ENABLED=true` enablement.
-- Fresh owner authorization naming the exact next-batch identity
-  `Missaquadri@gmail.com` / Mighty `41567828`, with approval for one Plan grant
-  and independent verification. No such execution authorization is recorded
-  in Phase E0.
-- The current live identity reconciliation is `ALLOWED: 17`, `DENIED: 0`,
-  `AMBIGUOUS: 0`, `UNMATCHED: 0`; the eight exact-Mighty misses and the one
-  extra-Space identity remain outside the proposed batch.
-- Secure manual roster execution and aggregate reconciliation sign-off before
-  any further member migration.
+- This phase intentionally does not build or refresh a production migration
+  manifest or population reconciliation.
+- The only live identities authorized for engineering validation are
+  `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`.
+- Every other real identity is off limits until a future owner authorization
+  names exact identities and operations.
+- Production scheduler enablement, automated revocation, live Stripe
+  mutation, merge, and deploy remain disabled.
+- Synthetic fixtures must cover all remaining privilege, overlap, identity,
+  provider-failure, and migration-runner scenarios.
 - Production verification for billing, support, sponsored membership,
   operator/admin, and the cutover/rollback routes.
 - Separate production deployment, migration, data, and go/no-go authorization.
