@@ -56,7 +56,7 @@ evidence is limited to the three authorized accounts in the engineering
 boundary above. Use synthetic fixtures for all other classifications.
 
 
-## Current reconciliation and security status — 2026-09-10
+## HISTORICAL / SUPERSEDED — RECONCILIATION AND SECURITY STATUS — 2026-09-10
 
 - `origin/main` and the live production deployment are now at
   `5d0f318eb4c4b178364dcdbbb17670d101abb930`. The feature branch contains
@@ -118,7 +118,7 @@ boundary above. Use synthetic fixtures for all other classifications.
   occurred. The next gate is the separately authorized controlled migration
   batch prepared by Phase E0; no batch execution is authorized by this record.
 
-## Current acceptance evidence — 2026-09-10
+## HISTORICAL / SUPERSEDED — ACCEPTANCE EVIDENCE — 2026-09-10
 
 - The owner explicitly authorized Phase C against `info@prochat.tools`, the
   existing owner-canary identity. The pre-canary read-only inspection found
@@ -243,7 +243,11 @@ boundary above. Use synthetic fixtures for all other classifications.
 - Mighty API requests include the required identifying `User-Agent` header for
   the provider’s bot-protection boundary.
 
-## Canonical silent-build rollout model
+## HISTORICAL / SUPERSEDED — CANONICAL SILENT-BUILD ROLLOUT MODEL
+
+The following rollout model is retained as historical planning context only.
+It is superseded by the three-account engineering boundary at the top of this
+document and must not be executed or used to select production identities.
 
 This is a canary build phase. Plan `2000039` is the controlled access
 abstraction, but existing real Mighty members remain on their current
@@ -345,7 +349,10 @@ and sends the existing JPV welcome/login email only after the grant succeeds.
 | M8 | Staging configuration and controlled provider/API verification | **Skipped for this implementation lane; staging remains unchanged** |
 | M9 | Production cutover readiness, rollback, and go/no-go | **Owner, administrator, and Phase D ordinary-member canaries passed; cutover not started / not authorized** |
 
-## Approved execution sequence
+## HISTORICAL / SUPERSEDED — APPROVED EXECUTION SEQUENCE (DO NOT EXECUTE)
+
+This sequence is retained as historical planning context. The current phase
+does not authorize any population inspection, roster bridge, or migration.
 
 1. Keep existing Stripe Products, Prices, subscriptions, Checkout, webhooks,
    support, sponsored membership, and operator/admin paths unchanged.
@@ -430,7 +437,11 @@ production feature-branch cutover.
 - No custom Mighty course/community implementation is introduced in this
   migration branch.
 
-## Manual bridge procedure
+## HISTORICAL / SUPERSEDED — MANUAL BRIDGE PROCEDURE (DO NOT EXECUTE)
+
+This former full-roster bridge is retained for provenance only. It must not be
+run during the current engineering phase; use synthetic fixtures and the
+exact-three-account scripts instead.
 
 1. Verify the intended operator-owned environment and read-only database boundary.
 2. Run `pnpm mighty:bridge-roster` and record the aggregate expected-member count without exporting data.
@@ -445,7 +456,11 @@ production feature-branch cutover.
 7. Do not change Stripe subscriptions, Stripe products/prices, or local billing
    state as part of this bridge.
 
-## Existing-member migration procedure — prepared, unexecuted
+## HISTORICAL / SUPERSEDED — EXISTING-MEMBER MIGRATION PROCEDURE (UNEXECUTED)
+
+This procedure is documentation-only and is not an authorization to inspect or
+migrate any real member. A future owner-authorized phase must replace it with
+an exact approved manifest before any production use.
 
 For each Stripe-entitled existing member, the later Phase D operator run must:
 
@@ -472,7 +487,10 @@ exceptions remain explicit overlap risks; ordinary legacy direct Network
 membership is controlled by the Network-access Plan. This procedure remains
 documentation-only until the separate controlled-batch authorization.
 
-## Production cutover checklist
+## HISTORICAL / SUPERSEDED — PRODUCTION CUTOVER CHECKLIST
+
+This checklist is retained as future planning context only. It is not a
+current instruction and must not be executed during engineering validation.
 
 Complete these items only under the separate production deployment and go/no-go
 authorization:
