@@ -28,9 +28,7 @@ identities, operation, environment, and time window.
 - Branch: `codex/mighty-deployment-incident-hold`.
 - Worktree: only the pre-existing unrelated `newrelic_agent.log` is dirty; it
   was not read, edited, staged, or committed.
-- Current branch revision: `c81e27870249e8f8ff29dcd7513a6be170e2f27b` before
-  this hardening change; the resulting documentation/code commit is recorded
-  in the final handoff.
+- Current branch revision after this hardening: `f8d83a43bcac7efba471dd2cd7fff28b557c35fc`.
 - Deployed production revision remains
   `f430398048ecda70bbeeef6aa8cd41bd4befc870`; no deployment was initiated.
 - Read-only production health returned HTTP 200 for `/api/health`,
