@@ -2,11 +2,14 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: ENGINEERING / INTEGRATION VALIDATION — 2026-09-11
+## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
+`INERT-DEPLOYMENT READINESS GATE: PASS`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
+`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
+`PRODUCTION MERGE: NOT YET AUTHORIZED`
 
 Only these live identities are authorized: `westhoek@hotmail.com`,
 `steve@yeshua.academy`, and `info@prochat.tools`. Every other real identity is
@@ -16,7 +19,10 @@ for all other scenarios. Do not run a population reconciliation, build or
 refresh a production migration manifest, migrate members, mutate live Stripe,
 enable the scheduler, merge, or deploy.
 
-The former population rehearsal and manifest are historical and superseded;
+The current inert-deployment checklist, smoke-test design, rollback procedure,
+and trigger call graph are in
+`docs/release/MIGHTY_INERT_DEPLOYMENT_READINESS.md`. The former population
+rehearsal and manifest are historical and superseded;
 they are not a current roster and must not be refreshed or executed. Future
 population normalization requires new explicit owner authorization naming the
 exact accounts and scope.

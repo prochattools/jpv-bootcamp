@@ -47,13 +47,13 @@ function roleOverride(value: string): MightyRoleOverride | null {
 export function getMightyMutationScope(env: Record<string, string | undefined> = process.env): MightyMutationScope {
 	const providerEnv = env.MIGHTY_PROVIDER_ENV?.trim().toLowerCase() ?? ''
 	const enforce = providerEnv === 'production' || providerEnv === 'staging'
-	const liveTestOnly = providerEnv === 'production' && env.MIGHTY_PRODUCTION_ENGINEERING_ONLY?.trim().toLowerCase() !== 'false'
+	const liveTestOnly = providerEnv === 'production'
 	const guardEnabled = providerEnv === 'production'
 		? env.MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS?.trim() === 'true'
 		: providerEnv === 'staging'
 			? env.MIGHTY_STAGING_ALLOW_API_MUTATIONS?.trim() === 'true'
 			: false
-	const allowedEmails = new Set(listValues(env.MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST))
+	const allowedEmails = new Set(guardEnabled ? listValues(env.MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST) : [])
 	if (guardEnabled) {
 		const testEmail = normalizeEmail(
 			providerEnv === 'production' ? env.MIGHTY_PRODUCTION_TEST_EMAIL : env.MIGHTY_STAGING_TEST_EMAIL,
@@ -80,6 +80,15 @@ export function getMightyMutationScope(env: Record<string, string | undefined> =
 		allowedEmails,
 		allowNewMemberCreation: env.MIGHTY_ALLOW_NEW_MEMBER_CREATION?.trim() === 'true',
 		roleOverrides,
+	}
+}
+
+export function assertMightyMutationRuntimeReady(scope: MightyMutationScope): void {
+	if (!scope.enforce) {
+		throw new MightySafetyError('mighty_provider_environment_not_configured')
+	}
+	if (scope.allowedEmails.size === 0) {
+		throw new MightySafetyError('mighty_live_mutation_guard_disabled')
 	}
 }
 

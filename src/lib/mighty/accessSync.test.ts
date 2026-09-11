@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { reconcileAccess } from './accessSync'
+import { projectMightyAccessFromStripeEvent, reconcileAccess } from './accessSync'
 import { MightyApiError, type MightyAdminApi, type MightyMember } from './adminApi'
 import type { MightyConfig } from './config'
 import { getMightyMutationScope } from './mutationPolicy'
@@ -13,6 +13,14 @@ const config: MightyConfig = {
 	adminApiToken: 'test-token',
 	studentLoginUrl: 'https://jpv-community.mn.co/sign_in',
 }
+
+const syntheticMutationScope = getMightyMutationScope({
+	MIGHTY_PROVIDER_ENV: 'staging',
+	MIGHTY_STAGING_ALLOW_API_MUTATIONS: 'true',
+	MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST: 'student@example.com',
+	MIGHTY_ALLOW_NEW_MEMBER_CREATION: 'true',
+	MIGHTY_IDENTITY_ROLE_OVERRIDES: 'student@example.com:ordinary',
+})
 
 type FakeState = {
 	member: MightyMember | null
@@ -104,6 +112,7 @@ test('allowed reconciliation reuses an existing Mighty member, grants once, then
 		row: row(),
 		config,
 		api: fakeApi(state),
+		mutationScope: syntheticMutationScope,
 		sendWelcome: async () => {
 			welcomeCalls += 1
 		},
@@ -134,6 +143,7 @@ test('allowed reconciliation creates an absent member before granting access', a
 		row: row(),
 		config,
 		api: fakeApi(state),
+		mutationScope: syntheticMutationScope,
 		sendWelcome: async () => {
 			welcomeCalls += 1
 		},
@@ -173,6 +183,7 @@ test('allowed recovery re-provisions the stored Mighty identity after Plan remov
 		row: row({ mightyMemberId: '22', welcomeRequired: false }),
 		config,
 		api,
+		mutationScope: syntheticMutationScope,
 		sendWelcome: async () => {
 			welcomeCalls += 1
 		},
@@ -196,7 +207,7 @@ test('allowed reconciliation does not duplicate an existing Mighty purchase', as
 		revokePlanCalls: [],
 	}
 
-	const result = await reconcileAccess({ row: row({ welcomeRequired: false }), config, api: fakeApi(state) })
+	const result = await reconcileAccess({ row: row({ welcomeRequired: false }), config, api: fakeApi(state), mutationScope: syntheticMutationScope })
 	assert.equal(state.grantCalls, 0)
 		assert.equal(result.mightyPurchaseId, 'purchase-existing')
 })
@@ -217,6 +228,7 @@ test('denied reconciliation removes every matching purchase immediately and is a
 		row: row({ desiredAccess: 'DENIED', welcomeRequired: false }),
 		config,
 		api: fakeApi(state),
+		mutationScope: syntheticMutationScope,
 	})
 
 	assert.deepEqual(state.revokeCalls, ['purchase-1', 'purchase-2'])
@@ -239,6 +251,7 @@ test('denied reconciliation removes direct nonpaid plan access', async () => {
 		row: row({ desiredAccess: 'DENIED', welcomeRequired: false }),
 		config,
 		api: fakeApi(state),
+		mutationScope: syntheticMutationScope,
 	})
 
 	assert.deepEqual(state.revokePlanCalls, ['678'])
@@ -265,7 +278,7 @@ test('duplicate Plan 422 is accepted only after independent target-Plan verifica
 		},
 	} as unknown as MightyAdminApi
 
-	await assert.doesNotReject(() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api }))
+	await assert.doesNotReject(() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api, mutationScope: syntheticMutationScope }))
 	assert.equal(reads, 3)
 })
 
@@ -278,14 +291,15 @@ test('unrelated Plan 422 remains a failure even when current access is absent', 
 		},
 	} as unknown as MightyAdminApi
 
-	await assert.rejects(() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api }), /mighty_api_error_422/)
+	await assert.rejects(() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api, mutationScope: syntheticMutationScope }), /mighty_api_error_422/)
 })
 
 test('production mutation scope rejects an identity outside the explicit test allowlist', async () => {
 	const scope = getMightyMutationScope({
 		MIGHTY_PROVIDER_ENV: 'production',
 		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
-		MIGHTY_PRODUCTION_TEST_EMAIL: 'authorized@example.com',
+		MIGHTY_PRODUCTION_TEST_EMAIL: 'westhoek@hotmail.com',
+		MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST: 'westhoek@hotmail.com',
 		MIGHTY_IDENTITY_ROLE_OVERRIDES: 'student@example.com:ordinary',
 	})
 	const state: FakeState = {
@@ -303,6 +317,50 @@ test('production mutation scope rejects an identity outside the explicit test al
 		(error: unknown) => error instanceof Error && 'code' in error && (error as { code?: string }).code === 'mighty_mutation_scope_denied',
 	)
 	assert.equal(state.grantCalls, 0)
+})
+
+test('Stripe-projected entitlement for an unauthorized identity cannot reach a Mighty mutation', async () => {
+	const projection = projectMightyAccessFromStripeEvent({
+		id: 'evt_synthetic_unauthorized',
+		created: 1_757_000_000,
+		livemode: true,
+		type: 'checkout.session.completed',
+		data: {
+			object: {
+				mode: 'subscription',
+				payment_status: 'paid',
+				customer_email: 'unauthorized@example.com',
+				customer: 'cus_synthetic_unauthorized',
+				subscription: 'sub_synthetic_unauthorized',
+			},
+		},
+	} as never)
+	assert.equal(projection?.desiredAccess, 'ALLOWED')
+	assert.equal(projection?.email, 'unauthorized@example.com')
+
+	const scope = getMightyMutationScope({
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
+		MIGHTY_PRODUCTION_TEST_EMAIL: 'westhoek@hotmail.com',
+	})
+	const state: FakeState = {
+		member: { id: 22, email: 'unauthorized@example.com', role: 'contributor' },
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ email: projection!.email!, normalizedEmail: projection!.email!, welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }),
+		(error: unknown) => error instanceof Error && 'code' in error && (error as { code?: string }).code === 'mighty_mutation_scope_denied',
+	)
+	assert.equal(state.createMemberCalls, 0)
+	assert.equal(state.grantCalls, 0)
+	assert.equal(state.revokeCalls.length, 0)
+	assert.equal(state.revokePlanCalls.length, 0)
 })
 
 test('both authorized Host test accounts are protected from ordinary billing mutation', async () => {

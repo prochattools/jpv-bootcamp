@@ -6,6 +6,8 @@ export type MightyConfig = {
 	studentLoginUrl: string
 }
 
+export const JPV_MIGHTY_ACCESS_PLAN_ID = 2000039
+
 type Env = Record<string, string | undefined>
 
 function required(env: Env, key: string): string {
@@ -61,6 +63,14 @@ function requiredPositiveInteger(env: Env, key: string): number {
 	return parsed
 }
 
+function requiredAccessPlanId(env: Env): number {
+	const planId = requiredPositiveInteger(env, 'MIGHTY_ACCESS_PLAN_ID')
+	if (env.MIGHTY_PROVIDER_ENV?.trim().toLowerCase() === 'production' && planId !== JPV_MIGHTY_ACCESS_PLAN_ID) {
+		throw new Error(`MIGHTY_ACCESS_PLAN_ID must be ${JPV_MIGHTY_ACCESS_PLAN_ID} in production`)
+	}
+	return planId
+}
+
 export function parseMightyConfig(env: Env = process.env): MightyConfig {
 	const apiBaseUrl = requiredUrl(env, 'MIGHTY_API_BASE_URL')
 	if (!isMightyApiBaseUrl(apiBaseUrl)) throw new Error('MIGHTY_API_BASE_URL must be https://api.mn.co/admin/v1')
@@ -70,7 +80,7 @@ export function parseMightyConfig(env: Env = process.env): MightyConfig {
 	return {
 		apiBaseUrl,
 		networkId: required(env, 'MIGHTY_NETWORK_ID'),
-		accessPlanId: requiredPositiveInteger(env, 'MIGHTY_ACCESS_PLAN_ID'),
+		accessPlanId: requiredAccessPlanId(env),
 		adminApiToken: required(env, 'MIGHTY_ADMIN_API_TOKEN'),
 		studentLoginUrl,
 	}

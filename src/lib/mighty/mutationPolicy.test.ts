@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assertMightyMutationAllowed, AUTHORIZED_MIGHTY_HOST_TEST_EMAILS, AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS, classifyMightyIdentity, getMightyMutationScope } from './mutationPolicy'
+import { assertMightyMutationAllowed, assertMightyMutationRuntimeReady, AUTHORIZED_MIGHTY_HOST_TEST_EMAILS, AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS, classifyMightyIdentity, getMightyMutationScope } from './mutationPolicy'
 
 test('production scope fails closed without an explicit allowlist', () => {
 	const scope = getMightyMutationScope({ MIGHTY_PROVIDER_ENV: 'production' })
@@ -25,15 +25,39 @@ test('production engineering scope permits only the fixed three-account allowlis
 	assert.throws(() => assertMightyMutationAllowed(scope, 'student@example.com', 'grant_plan'), (error: unknown) => error instanceof Error && 'code' in error && ['mighty_live_test_scope_denied', 'mighty_mutation_scope_denied'].includes((error as { code?: string }).code ?? ''))
 })
 
-test('production engineering scope can be explicitly lifted only for a future authorized phase', () => {
+test('production engineering scope cannot be widened by an override flag', () => {
 	const scope = getMightyMutationScope({
 		MIGHTY_PROVIDER_ENV: 'production',
 		MIGHTY_PRODUCTION_ENGINEERING_ONLY: 'false',
 		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
 		MIGHTY_PRODUCTION_TEST_EMAIL: 'student@example.com',
 	})
-	assert.equal(scope.liveTestOnly, false)
-	assert.doesNotThrow(() => assertMightyMutationAllowed(scope, 'student@example.com', 'grant_plan'))
+	assert.equal(scope.liveTestOnly, true)
+	assert.throws(() => assertMightyMutationAllowed(scope, 'student@example.com', 'grant_plan'))
+})
+
+test('production mutation scope requires the explicit mutation guard', () => {
+	const scope = getMightyMutationScope({
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST: 'westhoek@hotmail.com',
+	})
+	assert.equal(scope.allowedEmails.size, 0)
+})
+
+test('live mutation runtime fails closed for missing, false, zero, and invalid controls', () => {
+	for (const value of [undefined, '', 'false', '0', 'invalid']) {
+		const scope = getMightyMutationScope({
+			MIGHTY_PROVIDER_ENV: 'production',
+			MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: value,
+			MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST: 'westhoek@hotmail.com',
+		})
+		assert.throws(() => assertMightyMutationRuntimeReady(scope), /mighty_live_mutation_guard_disabled/)
+	}
+
+	assert.throws(
+		() => assertMightyMutationRuntimeReady(getMightyMutationScope({ MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true', MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST: 'westhoek@hotmail.com' })),
+		/mighty_provider_environment_not_configured/,
+	)
 })
 
 test('owner-provided Host classifications are explicit for both authorized Host test accounts', () => {

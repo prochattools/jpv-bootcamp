@@ -1,4 +1,12 @@
+import { normalizeEmail } from '@/lib/normalize-email'
+
 import type { CutoverAction, CutoverManifestRow } from './cutoverManifest'
+import {
+	assertMightyMutationAllowed,
+	assertMightyMutationRuntimeReady,
+	getMightyMutationScope,
+	type MightyMutationScope,
+} from './mutationPolicy'
 
 export type CutoverCheckpointStatus = 'PENDING' | 'IN_PROGRESS' | 'VERIFIED' | 'REVIEW_REQUIRED' | 'FAILED_RESTORED' | 'COMPLETE'
 
@@ -52,19 +60,37 @@ export function planCutoverBatch(rows: CutoverManifestRow[], limit: number): Cut
 
 export async function runCutoverBatch(params: {
 	rows: CutoverManifestRow[]
-		batchSize: number
-		dryRun: boolean
-		store: CutoverCheckpointStore
-		adapter?: CutoverMutationAdapter
-		planId: string
+	batchSize: number
+	dryRun: boolean
+	store: CutoverCheckpointStore
+	adapter?: CutoverMutationAdapter
+	planId: string
+	mutationScope?: MightyMutationScope
 	}): Promise<CutoverRunResult> {
+	if (params.rows.length === 0) throw new Error('cutover_manifest_required')
 	const selected = planCutoverBatch(params.rows, params.batchSize)
 	if (!params.dryRun && !params.adapter) throw new Error('cutover_mutation_adapter_required')
+	const mutationScope = params.mutationScope ?? getMightyMutationScope()
+	assertMightyMutationRuntimeReady(mutationScope)
+	const seenEmails = new Set<string>()
+	for (const row of params.rows) {
+		const email = normalizeEmail(row.email)
+		if (!email) throw new Error('cutover_manifest_identity_required')
+		if (seenEmails.has(email)) throw new Error('cutover_manifest_duplicate_identity')
+		seenEmails.add(email)
+		assertMightyMutationAllowed(mutationScope, row.email, 'cutover')
+	}
 	const processed: CutoverCheckpoint[] = []
 	let mutationPerformed = false
 
 	for (const row of selected) {
 		const existing = params.store.get(row.email)
+		if (existing?.memberId && row.mightyMemberId && existing.memberId !== row.mightyMemberId) {
+			const review = checkpoint(row.email, 'REVIEW_REQUIRED', row.mightyMemberId, 'cutover_identity_changed_since_checkpoint')
+			params.store.put(review)
+			processed.push(review)
+			return { dryRun: params.dryRun, processed, stoppedOnError: true, mutationPerformed: false }
+		}
 		if (existing?.status === 'COMPLETE' || existing?.status === 'VERIFIED') {
 			processed.push(existing)
 			continue

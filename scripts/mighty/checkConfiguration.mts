@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url'
 
-import { isMightyApiBaseUrl, isMightyStudentLoginUrl } from '../../src/lib/mighty/config'
+import { isMightyApiBaseUrl, isMightyStudentLoginUrl, JPV_MIGHTY_ACCESS_PLAN_ID } from '../../src/lib/mighty/config'
 
 type Presence = 'PRESENT' | 'MISSING' | 'INVALID'
 
@@ -30,17 +30,21 @@ function positiveInteger(value: string): boolean {
 	return Number.isInteger(parsed) && parsed > 0
 }
 
+function providerEnvironment(value: string): boolean {
+	return value === 'production' || value === 'staging'
+}
+
 export function checkConfiguration(env: Record<string, string | undefined> = process.env) {
 	const provider: Record<string, Presence> = {
 		MIGHTY_API_BASE_URL: presence(env.MIGHTY_API_BASE_URL, isMightyApiBaseUrl),
 		MIGHTY_NETWORK_ID: presence(env.MIGHTY_NETWORK_ID),
-		MIGHTY_ACCESS_PLAN_ID: presence(env.MIGHTY_ACCESS_PLAN_ID, positiveInteger),
+		MIGHTY_ACCESS_PLAN_ID: presence(env.MIGHTY_ACCESS_PLAN_ID, (value) => positiveInteger(value) && (env.MIGHTY_PROVIDER_ENV?.trim().toLowerCase() !== 'production' || value === String(JPV_MIGHTY_ACCESS_PLAN_ID))),
 		MIGHTY_ADMIN_API_TOKEN: presence(env.MIGHTY_ADMIN_API_TOKEN),
 		MIGHTY_STUDENT_LOGIN_URL: presence(env.MIGHTY_STUDENT_LOGIN_URL, isMightyStudentLoginUrl),
 		MIGHTY_ACCESS_SYNC_WORKER_SECRET: presence(env.MIGHTY_ACCESS_SYNC_WORKER_SECRET),
 	}
 	const controls: Record<string, Presence> = {
-		MIGHTY_PROVIDER_ENV: presence(env.MIGHTY_PROVIDER_ENV),
+		MIGHTY_PROVIDER_ENV: presence(env.MIGHTY_PROVIDER_ENV, providerEnvironment),
 		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: presence(env.MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS, (value) => value === 'true'),
 		MIGHTY_PRODUCTION_TEST_EMAIL: presence(env.MIGHTY_PRODUCTION_TEST_EMAIL),
 	}

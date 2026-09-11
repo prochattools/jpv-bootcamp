@@ -18,6 +18,7 @@ import {
 	assertIdentityMutationSafe,
 	assertMightyMemberCreationAllowed,
 	assertMightyMutationAllowed,
+	assertMightyMutationRuntimeReady,
 	assertMightyRecoveryAllowed,
 	classifyMightyIdentity,
 	getMightyMutationScope,
@@ -435,6 +436,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 		} else {
 			member = await api.findMember(params.row.email)
 			if (!member) {
+				assertMightyMutationRuntimeReady(mutationScope)
 				assertMightyMemberCreationAllowed(mutationScope, params.row.email)
 				try {
 					member = await api.createMember({ email: params.row.email })
@@ -450,6 +452,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 		const currentState = await api.getAccessState(memberId, config.accessPlanId)
 		purchaseId = purchaseId ?? (String(currentState.purchases[0]?.purchase?.id ?? '') || null)
 		if (!currentState.hasAccess) {
+			assertMightyMutationRuntimeReady(mutationScope)
 			const spaces = typeof api.listMemberSpaces === 'function' ? await api.listMemberSpaces(memberId) : []
 			const identityClass = classifyMightyIdentity({
 				email: params.row.email,
@@ -511,6 +514,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 		plans: currentState.plans,
 		scope: mutationScope,
 	})
+	assertMightyMutationRuntimeReady(mutationScope)
 	assertMightyMutationAllowed(mutationScope, params.row.email, 'revoke_plan')
 	if (mutationScope.enforce) {
 		assertIdentityMutationSafe({ identityClass, desiredAccess: 'DENIED', mutationRequired: true })
@@ -566,10 +570,11 @@ function nextAttempt(attempt: number): Date {
 	return new Date(Date.now() + delayMs)
 }
 
-async function claimRows(limit: number): Promise<AccessSyncRow[]> {
+async function claimRows(limit: number, allowedEmails: ReadonlySet<string>): Promise<AccessSyncRow[]> {
 	const now = new Date()
 	const candidates = await prisma.mightyAccessSync.findMany({
 		where: {
+			normalizedEmail: { in: [...allowedEmails] },
 			OR: [
 				{ syncStatus: 'pending', OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
 				{ syncStatus: 'failed', OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
@@ -609,8 +614,10 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 	superseded: number
 }> {
 	const config = getMightyConfig()
+	const mutationScope = getMightyMutationScope()
+	assertMightyMutationRuntimeReady(mutationScope)
 	const api = createMightyAdminApi(config)
-	const rows = await claimRows(limit)
+	const rows = await claimRows(limit, mutationScope.allowedEmails)
 	let succeeded = 0
 	let failed = 0
 	let allowed = 0
@@ -619,7 +626,7 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 
 	for (const row of rows) {
 		try {
-			const result = await reconcileAccess({ row, config, api })
+			const result = await reconcileAccess({ row, config, api, mutationScope })
 			const finalized = await prisma.mightyAccessSync.updateMany({
 				where: {
 					id: row.id,

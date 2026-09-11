@@ -1,10 +1,13 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
-## CURRENT PHASE: ENGINEERING / INTEGRATION VALIDATION — 2026-09-11
+## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
+`INERT-DEPLOYMENT READINESS GATE: PASS`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
+`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
+`PRODUCTION MERGE: NOT YET AUTHORIZED`
 
 Only `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`
 may be read or mutated live, with Host/owner checks remaining read-only. Every
@@ -12,6 +15,10 @@ other real identity is off limits. Do not run population reconciliation, a
 population dry run, or any member migration; do not build or refresh a
 production migration manifest. Use synthetic fixtures for all other scenarios.
 Live Stripe mutation, scheduler enablement, merge, and deploy remain disabled.
+The current deployment-readiness checklist, trigger call graph, smoke-test
+design, and application rollback procedure are canonical in
+`docs/release/MIGHTY_INERT_DEPLOYMENT_READINESS.md`; all future population
+operations below require a new explicit owner authorization.
 The former population rehearsal is historical/superseded and is not a current
 roster. Future normalization requires fresh explicit owner authorization.
 
@@ -381,7 +388,7 @@ does not authorize any population inspection, roster bridge, or migration.
    separate staging deployment is not required for this feature-branch lane.
 7. Only after a separate authorization may the controlled cutover be deployed.
 
-## Worker execution and scheduling
+## FUTURE / OWNER-AUTHORIZED ONLY — Worker execution and scheduling
 
 The worker is an authenticated `POST /api/admin/process-mighty-access-sync`
 route. The production scheduler workflow is
@@ -517,7 +524,7 @@ authorization:
 7. Monitor Stripe delivery failures, queue failures, Mighty API errors, and
    access-denial/grant aggregates. Record the go/no-go decision and operator.
 
-## Rollback procedure
+## FUTURE MEMBER-MIGRATION ROLLBACK — not the current application rollback
 
 If the cutover is unhealthy, disable the production scheduler workflow first,
 then roll the application back to `pre-mighty-migration-2026-09-09` through the
@@ -527,7 +534,7 @@ for support and recovery. Do not automatically mutate Mighty memberships or
 delete queue history during rollback; review any provider access corrections
 as a separate, explicitly authorized operator action.
 
-## Missing before controlled cutover
+## FUTURE / OWNER-AUTHORIZED ONLY — Missing before controlled cutover
 
 - This phase intentionally does not build or refresh a production migration
   manifest or population reconciliation.

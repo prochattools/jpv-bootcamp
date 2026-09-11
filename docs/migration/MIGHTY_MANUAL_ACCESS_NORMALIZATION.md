@@ -1,10 +1,13 @@
 # Mighty Manual Access Normalization
 
-## CURRENT PHASE: ENGINEERING / INTEGRATION VALIDATION — 2026-09-11
+## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
+`INERT-DEPLOYMENT READINESS GATE: PASS`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
+`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
+`PRODUCTION MERGE: NOT YET AUTHORIZED`
 
 Only `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`
 are authorized for exact live reads; only the ordinary test may run the
@@ -15,11 +18,14 @@ Use synthetic fixtures for all other scenarios. Do not build or refresh a
 production migration manifest. The former population rehearsal is historical
 and superseded, not a current roster.
 
-The bounded ordinary lifecycle passed for `westhoek@hotmail.com` and ended
+The inert-deployment checklist, trigger call graph, post-deploy smoke design,
+and application rollback plan are in
+`docs/release/MIGHTY_INERT_DEPLOYMENT_READINESS.md`. The bounded ordinary
+lifecycle passed for `westhoek@hotmail.com` and ended
 restored/allowed. Exact read-only checks for `steve@yeshua.academy` and
 `info@prochat.tools` show Plan `2000039` present. No fourth identity was read.
 
-## Current gate — integration hardening only — 2026-09-10
+## Current boundary — inert deployment only — 2026-09-11
 
 This procedure is currently a design record only. No real-member population
 normalization, automated revocation, Stripe mutation, scheduler enablement,

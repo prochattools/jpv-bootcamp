@@ -117,7 +117,8 @@ test('one canonical entitlement function drives Stripe projection and access rec
 test('production mutations are explicitly scoped and fail closed for unresolved identity roles', () => {
 	assert.match(mutationPolicy, /MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST/)
 	assert.match(mutationPolicy, /AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS/)
-	assert.match(mutationPolicy, /MIGHTY_PRODUCTION_ENGINEERING_ONLY/)
+	assert.match(mutationPolicy, /const liveTestOnly = providerEnv === 'production'/)
+	assert.match(mutationPolicy, /assertMightyMutationRuntimeReady/)
 	assert.match(mutationPolicy, /MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS/)
 	assert.match(mutationPolicy, /mighty_identity_review_required/)
 	assert.match(mutationPolicy, /mighty_host_mutation_protected/)

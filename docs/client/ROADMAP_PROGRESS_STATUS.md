@@ -1,10 +1,13 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: ENGINEERING / INTEGRATION VALIDATION — 2026-09-11
+## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
+`INERT-DEPLOYMENT READINESS GATE: PASS`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
+`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
+`PRODUCTION MERGE: NOT YET AUTHORIZED`
 
 Only `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`
 are authorized for exact live checks. Every other real identity is off limits
@@ -13,7 +16,10 @@ mutation. Use synthetic fixtures for all other cases. No population
 reconciliation, production migration manifest, member migration, live Stripe
 mutation, scheduler enablement, merge, or deploy is authorized.
 
-The former population rehearsal and manifest are historical and superseded;
+The exact future owner deployment checklist, inert smoke-test design, rollback
+procedure, and mutation call graph are in
+`docs/release/MIGHTY_INERT_DEPLOYMENT_READINESS.md`. The former population
+rehearsal and manifest are historical and superseded;
 they are not a current production roster and must not be refreshed or
 executed. Future normalization requires new explicit owner authorization.
 
@@ -263,7 +269,7 @@ justify a migration apply or deployment. Full evidence is recorded in
 
 ## PRE-DEPLOYMENT PRODUCTION-HYGIENE VALIDATION — 2026-09-09
 
-`pnpm test:release` passed `194/194`; the release manifest contains 195 entries including one
+`pnpm test:release` passed `195/195`; the release manifest contains 196 entries including one
 conditional browser gate. Lint, root TypeScript, the controlled production
 build, both Prisma validations, and the production high-severity audit gate
 also passed.

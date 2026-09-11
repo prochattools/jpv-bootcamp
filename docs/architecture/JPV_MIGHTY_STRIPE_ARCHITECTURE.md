@@ -6,12 +6,13 @@
 **Production billing authority:** Existing Stripe integration  
 **Student platform target:** Mighty Networks
 
-## Current implementation gate — 2026-09-10
+## Current implementation gate — inert-deployment readiness — 2026-09-11
 
 Phase D and E0 evidence are complete. The current branch work is integration
-hardening and test-account validation only. No real member population is being
-migrated, no Stripe object is being changed, the production scheduler remains
-disabled, and this work is not being deployed or merged.
+hardening and inert-deployment validation only. The three-account integration
+gate and inert-deployment readiness gate pass. No real member population is
+being migrated, no Stripe object is being changed, the production scheduler
+remains disabled, and this work is not being deployed or merged.
 
 The only live mutation identities permitted by the bounded acceptance are
 `westhoek@hotmail.com` (ordinary), `steve@yeshua.academy` (administrator), and
@@ -20,6 +21,12 @@ proposed `Missaquadri@gmail.com` candidate—remain untouched and unauthorized.
 Provider role `null` is not inferred to mean ordinary; unresolved roles,
 Hosts, administrators, unexpected Spaces, and other Plan overlaps fail closed
 to review.
+
+The complete inert-deployment trigger audit, owner checklist, smoke-test design,
+rollback procedure, and call graph are canonical in
+`docs/release/MIGHTY_INERT_DEPLOYMENT_READINESS.md`. That document overrides
+older future-migration execution prose below until a new owner authorization is
+recorded.
 
 ## Canonical decision
 
@@ -35,7 +42,7 @@ cutover-preparation phase, but it is no longer the target student destination.
 Payload remains an internal/operator system for the functionality that still
 uses it; it is not the future student-facing course/community authority.
 
-## Runtime flow
+## Runtime flow (future worker model; currently inert)
 
 ```text
 Public website
@@ -78,8 +85,9 @@ cutover task.
 
 The implementation uses the documented Mighty Admin API operations only:
 
-- `GET /admin/v1/networks/{network_id}/members` with pagination to discover a
-  member by normalized email;
+- `GET /admin/v1/networks/{network_id}/members/by_email?email={email}` to
+  resolve exactly one normalized email; network-wide member enumeration is not
+  part of the current implementation;
 - `POST /admin/v1/networks/{network_id}/members` with
   `send_welcome_email: false` when a member is absent;
 - `POST /admin/v1/networks/{network_id}/plans/{plan_id}/members?user_id={id}`
@@ -169,7 +177,7 @@ desired state and provider mapping needed to reconcile it safely.
 - Courses/content/community history, LiveKit, Bunny, SSO, white-labeling,
   affiliate redesign, and Payload removal are outside this migration.
 
-## Manual existing-member bridge
+## FUTURE / OWNER-AUTHORIZED ONLY — Manual existing-member bridge (not current)
 
 `pnpm mighty:bridge-roster` performs a read-only query of currently entitled
 Stripe-projected subscribers. It prints only a count by default. An operator
@@ -185,7 +193,7 @@ and future owner go/no-go approval are complete. The current read-only dry run
 classifies rows as in-sync, Plan grant/revoke needed, identity review,
 privileged excluded, overlap review, or provider error; it performs no writes.
 
-## Staging verification harness
+## FUTURE / SEPARATE NON-PRODUCTION WORK — Staging verification harness
 
 After a disposable test identity and non-production configuration are supplied,
 `pnpm mighty:staging-acceptance` runs the bounded create/find, grant, repeated
