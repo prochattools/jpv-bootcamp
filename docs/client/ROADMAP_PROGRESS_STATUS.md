@@ -1,13 +1,13 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
+## CURRENT PHASE: PRODUCTION DEPLOYED / ACCEPTANCE INCIDENT HOLD — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
-`INERT-DEPLOYMENT READINESS GATE: PASS`
+`INERT PRODUCTION DEPLOYMENT: COMPLETE`
+`THREE-ACCOUNT POST-DEPLOY SMOKE: NOT CERTIFIED`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
-`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
-`PRODUCTION MERGE: NOT YET AUTHORIZED`
+`PRODUCTION AUTOMATION: DISABLED`
 
 Only `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`
 are authorized for exact live checks. Every other real identity is off limits
@@ -24,8 +24,19 @@ they are not a current production roster and must not be refreshed or
 executed. Future normalization requires new explicit owner authorization.
 
 The bounded ordinary lifecycle passed for `westhoek@hotmail.com` with final
-access restored. Exact read-only checks for `steve@yeshua.academy` and
-`info@prochat.tools` show Plan `2000039` present. No fourth identity was read.
+access restored before deployment. Exact pre-deployment read-only checks for
+`steve@yeshua.academy` and `info@prochat.tools` showed Plan `2000039` present.
+The post-deployment smoke was stopped after a pre-opened Mighty all-members
+page exposed identities outside the authorized three. No Mighty or Stripe
+mutation occurred. The acceptance gate is on hold and no further Mighty reads
+are authorized until the owner records an incident disposition.
+
+The exact approved revision `80edb73cfabbe6d569b4869495ff85ea1ac48d28` was
+merged as `f430398048ecda70bbeeef6aa8cd41bd4befc870`; publish workflow
+`34584712903` completed successfully and live health reports the exact image.
+The scheduler remains disabled, no production sync run occurred, and the
+application is deliberately inert. The next action is owner disposition of the
+acceptance incident, not population migration or automation.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 

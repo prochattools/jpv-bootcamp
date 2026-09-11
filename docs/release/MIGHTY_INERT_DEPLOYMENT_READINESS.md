@@ -2,12 +2,17 @@
 
 ## Current release gate — 2026-09-11
 
-`INERT-DEPLOYMENT READINESS GATE: PASS`
+`INERT PRODUCTION DEPLOYMENT: COMPLETE`
+`POST-DEPLOY THREE-ACCOUNT SMOKE: NOT CERTIFIED — ACCEPTANCE INCIDENT HOLD`
 
-This branch contains the Stripe → Mighty integration, but the current target is
-an inert application deployment only. No production merge, deployment,
-population inspection, migration, scheduler enablement, or live Stripe mutation
-is authorized.
+The Stripe → Mighty integration is deployed to production as an inert
+application revision. Population inspection, migration, scheduler enablement,
+and live Stripe mutation remain unauthorized. The merge/deployment evidence is
+complete, but the post-deployment acceptance gate is on hold: a pre-opened
+Mighty admin all-members page was read while attempting to establish the
+bounded smoke context, exposing identities outside the authorized three. No
+Mighty or Stripe mutation occurred, and no further provider reads are allowed
+until the owner records the incident disposition.
 
 The only real identities permitted for this engineering gate are:
 
@@ -114,11 +119,27 @@ new owner authorization names the exact identity and operation.
    member-migration rollback is needed. Application rollback does not undo a
    member migration; no member migration is authorized by this gate.
 
+## Current production evidence and next gate
+
+Approved feature revision: `80edb73cfabbe6d569b4869495ff85ea1ac48d28`.
+Merge revision and deployed image: `f430398048ecda70bbeeef6aa8cd41bd4befc870`.
+Publish workflow: `34584712903`, successful. Live health and deployment-health
+endpoints report the exact production image tag; the homepage and legal routes
+return HTTP 200. The GitHub repository has no `MIGHTY_ACCESS_SYNC_ENABLED`
+variable and no post-deployment Mighty Access Sync workflow run.
+
+The three-account smoke is not a PASS. Pre-deployment evidence remains
+historical for this release record; post-deployment exact-account verification
+was stopped after the boundary incident. Do not claim provider connectivity,
+Host protection, or post-deployment account state from this incomplete smoke.
+
 ## Current boundary and next gate
 
-The three-account integration gate is already passed. The current gate proves
-deployment inertness, not production deployment. Real-member normalization,
-automated revocation, and scheduler enablement remain separate future work and
-require fresh explicit owner authorization. The next exact goal is: owner
-authorizes one exact revision for an inert production merge/deployment only;
-member migration and automation remain disabled.
+The three-account integration gate passed before deployment, and the exact
+inert deployment is live. Real-member normalization, automated revocation, and
+scheduler enablement remain separate future work and require fresh explicit
+owner authorization. Before any additional Mighty read, the owner must give a
+written disposition for the acceptance-boundary incident and explicitly name
+whether a new bounded verification is authorized. The next population gate
+still requires a new authorization naming the exact accounts, operation, and
+scope; member migration and automation remain disabled.

@@ -2,14 +2,14 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
+## CURRENT PHASE: PRODUCTION DEPLOYED / ACCEPTANCE INCIDENT HOLD — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
-`INERT-DEPLOYMENT READINESS GATE: PASS`
+`INERT-DEPLOYMENT READINESS GATE: DEPLOYED; POST-DEPLOY SMOKE NOT CERTIFIED`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
-`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
-`PRODUCTION MERGE: NOT YET AUTHORIZED`
+`PRODUCTION DEPLOYMENT: COMPLETE — f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`PRODUCTION MERGE: COMPLETE — PR #42`
 
 Only these live identities are authorized: `westhoek@hotmail.com`,
 `steve@yeshua.academy`, and `info@prochat.tools`. Every other real identity is
@@ -28,8 +28,31 @@ population normalization requires new explicit owner authorization naming the
 exact accounts and scope.
 
 The bounded ordinary lifecycle passed for `westhoek@hotmail.com` with final
-access restored. Exact read-only checks for `steve@yeshua.academy` and
-`info@prochat.tools` show Plan `2000039` present. No fourth identity was read.
+access restored before deployment. Exact pre-deployment read-only checks for
+`steve@yeshua.academy` and `info@prochat.tools` showed Plan `2000039` present.
+The post-deployment three-account smoke was stopped and is not certified: a
+pre-opened Mighty admin all-members page was read, exposing identities outside
+the authorized three. No click, search, grant, revoke, restore, worker run,
+Stripe mutation, or other external mutation occurred. Do not perform further
+Mighty reads until the owner records how this acceptance incident is to be
+handled.
+
+## CURRENT PRODUCTION DEPLOYMENT EVIDENCE — 2026-09-11
+
+The exact approved feature revision `80edb73cfabbe6d569b4869495ff85ea1ac48d28`
+was merged by PR #42 as merge revision
+`f430398048ecda70bbeeef6aa8cd41bd4befc870`. Publish workflow `34584712903`
+completed successfully and converged the Dokploy root application to the same
+immutable image tag. Live `/api/health` reports `status=live`,
+`deploymentEnv=production`, and the exact merge revision; `/api/health/deployment`
+reports the same image tag. Public homepage and legal routes returned HTTP 200.
+
+The GitHub repository has no `MIGHTY_ACCESS_SYNC_ENABLED` variable, and no
+Mighty Access Sync workflow run was present after deployment. Release/build
+validation passed before merge, including `RELEASE TESTS PASSED: 195/195`.
+The deployment is therefore live and deliberately inert, but the final
+acceptance result is HOLD rather than PASS because the post-deployment account
+boundary was not preserved by the operator read.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
