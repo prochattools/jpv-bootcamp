@@ -2,9 +2,257 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
+
+`THREE-ACCOUNT INTEGRATION GATE: PASS`
+`INERT-DEPLOYMENT READINESS GATE: PASS`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`PRODUCTION SCHEDULER: DISABLED`
+`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
+`PRODUCTION MERGE: NOT YET AUTHORIZED`
+
+Only these live identities are authorized: `westhoek@hotmail.com`,
+`steve@yeshua.academy`, and `info@prochat.tools`. Every other real identity is
+off limits: do not inspect, query, classify, reconcile, dry-run, create,
+invite, grant, revoke, restore, or otherwise mutate it. Use synthetic fixtures
+for all other scenarios. Do not run a population reconciliation, build or
+refresh a production migration manifest, migrate members, mutate live Stripe,
+enable the scheduler, merge, or deploy.
+
+The current inert-deployment checklist, smoke-test design, rollback procedure,
+and trigger call graph are in
+`docs/release/MIGHTY_INERT_DEPLOYMENT_READINESS.md`. The former population
+rehearsal and manifest are historical and superseded;
+they are not a current roster and must not be refreshed or executed. Future
+population normalization requires new explicit owner authorization naming the
+exact accounts and scope.
+
+The bounded ordinary lifecycle passed for `westhoek@hotmail.com` with final
+access restored. Exact read-only checks for `steve@yeshua.academy` and
+`info@prochat.tools` show Plan `2000039` present. No fourth identity was read.
+
+## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
+
+The implementation is being validated with synthetic lifecycle, ordering,
+identity, privilege, overlap, reconciliation, provider-failure, and runner
+fixtures. The ordinary test ends restored/allowed. Host/owner protection is
+read-only for live accounts; synthetic privileged cases prove mutation denial.
+
+## HISTORICAL / SUPERSEDED — PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10
+
+Phase E0 is complete as a read-only reconciliation and controlled-migration
+preparation gate. The branch is `feature/mighty-stripe-migration` at
+the pushed validation tip, matching `origin`; the only dirty
+file is unrelated `newrelic_agent.log`. No migration batch, Stripe mutation,
+scheduler enablement, merge, or production deployment was performed.
+
+Historical population evidence exists in repository history, but it is
+superseded and intentionally not reproduced here. It is not a current roster,
+was not refreshed in this phase, and must not be used to inspect or classify
+any additional identity. The current evidence set is limited to the three
+authorized accounts above.
+
+## HISTORICAL / SUPERSEDED — MIGHTY RECONCILIATION AND SECURITY GATE — 2026-09-10
+
+The working branch is `feature/mighty-stripe-migration`. It contains the
+production hotfix deployed at
+`5d0f318eb4c4b178364dcdbbb17670d101abb930` through merge commit `6b34c451`;
+the obsolete homepage sentence is absent from source and the Mighty commits
+remain intact. The branch was pushed only after validation and was not merged
+or deployed.
+
+The bounded environment-diagnostic exposure requires rotation of
+`MIGHTY_ADMIN_API_TOKEN` and `MIGHTY_ACCESS_SYNC_WORKER_SECRET`. Both values
+were replaced in production Dokploy without printing or committing secrets.
+The replacement Admin API token passed a read-only Mighty members request
+(HTTP 200); the worker secret is freshly generated with 64 hex characters.
+GitHub has no `production-mighty-sync` environment or workflow secret. The
+previously configured Mighty key and intermediate replacement keys were
+revoked in Mighty Admin. The final replacement is stored in Dokploy and passed
+the harmless read-only provider check. Production deployment is outside this
+gate; the next authorized deployment must repeat that read-only check before
+any scheduler action.
+
+Automatic Mighty processing remains disabled. There is no
+`MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no
+`production-mighty-sync` environment. The older six-record preparation
+snapshot was `ALLOWED: 4`, `DENIED: 0`, `AMBIGUOUS: 0`, `UNMATCHED: 2`; it is
+historical and superseded by the current Phase E0 result above. The owner `info@prochat.tools` is present, has Plan
+`2000039`, has no other Plan overlap, and remains restored/allowed. No real
+student, member population, Stripe object, staging application, or live
+scheduler was modified.
+
+The additional administrator canary is complete. Phase D then passed for the
+explicitly authorized `westhoek@hotmail.com` identity. The corrected lifecycle
+accepts Plan removal as the desired Network lockout and proves normal ALLOWED
+recovery of the same member after that lockout. Do not choose another member or
+run a batch. The exact evidence and remaining overlap-audit procedure are
+documented in `docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
+
+## HISTORICAL / SUPERSEDED — MIGHTY ORDINARY-MEMBER CANARY — 2026-09-10
+
+The owner-authorized Phase D canary for `westhoek@hotmail.com` resolved to one
+live Stripe JPV customer with one active paid subscription; Stripe
+classification was `ALLOWED`. The existing Mighty account was reused as member
+ID `41580317`, a `Full Member` with five Spaces and zero Plans before the test.
+
+Plan `2000039` is hidden/non-paid and configured for Network access only.
+Mighty documents that Network access includes the entire Network and all
+Spaces, so the canary is `PLAN_SCOPE_COMPLETE` for this member.
+
+The normal application acceptance granted Plan `2000039` and independently
+verified one target Plan, full membership, profile fields, and five Spaces. The
+repeat grant returned duplicate HTTP 422 while the independent read remained
+exactly one Plan. Plan-only revoke returned HTTP 204, removed active
+Network/member/Space access, and made those reads unavailable. This is the
+desired effective denial for Stripe `DENIED`, not identity loss. Repeated
+denial was safe.
+
+Without manually re-adding direct/full membership first, the normal
+application `ALLOWED` path recovered the inactive member, re-provisioned it
+with `send_welcome_email=false`, returned the original member ID, and granted
+the Plan. Final reads showed the same ID `41580317`, full membership, five
+Spaces, exactly one target Plan, and zero purchases. A second deny → restore
+cycle passed with the same ID and no duplicate. The provider masks the owner
+email value in the member payload, but exact-email lookup, stable ID, member
+type, profile fields, Plan, and Space evidence remained available. The
+historical `network_membership` probe is retained in the migration document;
+its direct-membership-only behavior is no longer required.
+
+Result: `PHASE D: PASS`. Existing Stripe-ALLOWED direct members are migrated by
+granting Plan `2000039`; direct Network membership is not separately deleted.
+Other Plan overlaps, exceptional Space grants, and staff/admin exceptions must
+still be audited before automated revocation. No other member was touched.
+
+## HISTORICAL / SUPERSEDED — MIGHTY ACCEPTANCE UPDATE — 2026-09-10
+
+The owner explicitly authorized Phase C against `info@prochat.tools`, and the
+second administrator canary was authorized against `steve@yeshua.academy`. The
+owner pre-canary read-only inspection found exactly one matching Mighty
+identity, `member_type=full`, the target Plan already present, no other Plan or
+purchase overlap, and six direct Space memberships. The second administrator
+precheck found exactly one existing identity, stable member ID `41580680`,
+`member_type=full`, no Plan or purchase membership, and five direct Space
+memberships. The provider exposed no definitive network Host/Admin role field
+for either identity, so effective Network denial was not tested.
+
+The second administrator Plan canary passed: the existing identity was
+reused; the first grant was independently verified; the repeat grant returned
+duplicate-assignment HTTP 422 without creating a duplicate Plan membership;
+Plan-only revoke returned HTTP 204 and was independently verified absent; and
+restore returned HTTP 200 and was independently verified present. The member
+ID and all five direct Space memberships were preserved. No welcome email,
+privilege change, Space or Network removal, profile/content/history change,
+duplicate identity, student, other-member, Stripe, deployment, merge, or
+scheduler mutation occurred. The administrator remains fully restored and
+allowed. The Phase D ordinary-member pilot is complete; the next gate is
+separate authorization for any controlled migration batch.
+
+The six-record unresolved provisioning snapshot in this historical acceptance
+section is retained for auditability only. The current authoritative
+production identity-dry-run is recorded in the Phase E0 section above.
+
+The production scheduler safety check still finds no
+`MIGHTY_ACCESS_SYNC_ENABLED` repository variable and no visible
+`production-mighty-sync` environment variable endpoint, so automatic
+processing remains disabled.
+
+The bounded live Mighty acceptance passed on `feature/mighty-stripe-migration`
+using only the authorized operator-controlled test identity. The existing
+Mighty member was reused; access was granted and verified by a separate read,
+the repeated grant was idempotent, access was revoked and separately verified
+absent, repeated revoke was safe, and access was restored and separately
+verified present. The final restored state is confirmed in Plan `2000039`.
+No real student, Stripe object, staging application, production deployment,
+merge, migration apply, or scheduler enablement was performed.
+
+The live check exposed and fixed an implementation mismatch: Mighty’s
+non-paid access-only Plan is represented by member Plan membership, not a
+purchase row. The client now reads `/members/{member_id}/plans` and revokes
+with the documented plan-member DELETE endpoint. Local provider/sync tests and
+the migration contract suite pass.
+
+The production Dokploy application now returns the canonical endpoint values:
+`MIGHTY_API_BASE_URL=https://api.mn.co/admin/v1` and the canonical
+`jpv-community.mn.co/sign_in` URL. All six required Mighty keys are present;
+secrets were not printed or committed.
+
 ---
 
-## CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
+## HISTORICAL MIGHTY MIGRATION PRE-CANARY — 2026-09-09
+
+The approved JPV migration is now being executed on
+`feature/mighty-stripe-migration`, based on synchronized `origin/main`, was
+pushed through `873c8f82` and is protected by
+the pushed annotated tag. It is based on synchronized `origin/main` and
+protected by annotated tag `pre-mighty-migration-2026-09-09` at the documented
+live production revision `a287800735d465a41ad9e45d2c7914ab9cc34a26`.
+
+Stripe remains the sole billing authority. The canonical architecture and
+phase plan are [JPV Mighty → Stripe Architecture](architecture/JPV_MIGHTY_STRIPE_ARCHITECTURE.md)
+and [Mighty Migration Implementation Plan](migration/MIGHTY_MIGRATION_IMPLEMENTATION_PLAN.md).
+The existing Stripe Checkout, webhook, support, sponsored membership, public
+sales, and operator/admin paths remain in scope and are preserved.
+
+Implemented locally: typed fail-closed Mighty configuration, documented Admin
+API client, durable Stripe-derived desired access state with event ordering,
+authenticated retrying worker endpoint with lease/finalization guards, delayed
+welcome ordering, canonical Mighty Sign In target, legacy `/sign-in` and
+`/login` redirects, and a read-only entitled-member bridge roster tool. The
+production scheduler workflow and disposable staging acceptance harness are
+defined. The canonical staging application now contains all six Mighty
+variable names, but its configured API base redirects to the public Network
+landing page, its access Plan value is a placeholder, and the running image
+`8b1f459fed358776fda791553ef225cc9f03b2ae` predates the Mighty implementation.
+Read-only requests against the official Mighty API base authenticate and show
+zero Plans. The GitHub `staging-mighty-sync` environment is also not yet
+configured. No production deployment, production database mutation, or Stripe
+mutation was performed. A read-only production health/configuration check
+confirmed the baseline image remains deployed; the production Mighty values
+were not revealed or used. The old portal remains in the repository for
+controlled rollback and operator continuity.
+The owner has since manually created the hidden, non-paid, access-only JPV
+member Plan `2000039`. The Plan ID is supplied through environment configuration
+only. The guarded acceptance entry point was invoked with the authorized test
+identity and passed after the client was corrected to verify nonpaid member
+Plan membership. The test identity remains restored; the manual-access audit
+also completed read-only.
+Subsequent read-only verification through the masked production Dokploy
+configuration authenticated successfully against the JPV Mighty Network and
+confirmed the configured Plan as `JPV Member Access`, hidden, and non-paid. The
+fresh production inspection confirms the canonical Admin API base and `/sign_in`
+URL, with all six required Mighty values present. Secret values were not
+printed or committed.
+
+Staging is intentionally unchanged and is not a prerequisite for this
+production feature-branch lane. Its provider verification blockers remain
+recorded for reference in `migration/MIGHTY_STAGING_PROVIDER_VERIFICATION.md`.
+The fixed staging scheduler remains defined in
+`.github/workflows/staging-mighty-access-sync.yml`; the production scheduler is
+`.github/workflows/mighty-access-sync.yml` and remains inactive until merge,
+worker-secret configuration, and the explicit GitHub environment variable
+`MIGHTY_ACCESS_SYNC_ENABLED=true`; manual dispatch also requires an explicit
+confirmation input.
+
+The real-network acceptance command is `pnpm mighty:production-acceptance`.
+It requires `MIGHTY_PROVIDER_ENV=production`, an explicit production mutation
+guard, the configured Plan ID, and one disposable operator-controlled test
+email. It passed and left the authorized test identity restored. The read-only
+production roster bridge and manual-access audit also completed without
+mutation.
+The read-only `pnpm mighty:config-check` command can validate environment
+presence and URL/number shapes before a Mighty access Plan exists; it never
+prints secret values or contacts the provider.
+The read-only `pnpm mighty:manual-access-audit` command is available for the
+required pre-revocation review; it reports aggregate overlap/direct-access
+risk and performs no provider mutation. The normalization procedure is in
+`docs/migration/MIGHTY_MANUAL_ACCESS_NORMALIZATION.md`.
+The earlier corrected read-only production audit recorded six active
+provisioning records with missing subscription status. That local-projection
+snapshot is historical and is not permission to normalize or revoke any real
+member; the authoritative Phase E0 live result is recorded at the top.
+
+## HISTORICAL / SUPERSEDED — CURRENT DEPLOYED PRODUCTION STATE — 2026-09-09
 
 The production release authority is `main`. The deployed production revision is
 `a287800735d465a41ad9e45d2c7914ab9cc34a26` (PR #38). PR #31 and PR #32 are merged, followed

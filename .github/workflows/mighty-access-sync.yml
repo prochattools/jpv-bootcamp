@@ -1,0 +1,74 @@
+name: Mighty Access Sync
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      run_production_sync:
+        description: Explicitly authorize one production queue-processing run
+        required: true
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mighty-access-sync
+  cancel-in-progress: false
+
+jobs:
+  process:
+    name: Process production Mighty access queue
+    if: |
+      github.repository == 'prochattools/jpvbootcamp' &&
+      ((github.event_name == 'schedule' && vars.MIGHTY_ACCESS_SYNC_ENABLED == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.run_production_sync == 'yes'))
+    runs-on: ubuntu-latest
+    environment: production-mighty-sync
+    timeout-minutes: 5
+    env:
+      PRODUCTION_ORIGIN: https://jpvbootcamp.com
+      MIGHTY_ACCESS_SYNC_WORKER_SECRET: ${{ secrets.MIGHTY_ACCESS_SYNC_WORKER_SECRET }}
+    steps:
+      - name: Process queued access reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${MIGHTY_ACCESS_SYNC_WORKER_SECRET:-}" ]; then
+            echo "MIGHTY-SYNC-DENIED: production worker secret is not configured" >&2
+            exit 1
+          fi
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          http_status="$(curl --silent --show-error --max-time 30 \
+            -o "$response_file" \
+            -w '%{http_code}' \
+            -X POST "${PRODUCTION_ORIGIN}/api/admin/process-mighty-access-sync" \
+            -H "Authorization: Bearer ${MIGHTY_ACCESS_SYNC_WORKER_SECRET}" \
+            -H 'Content-Type: application/json' \
+            --data '{"limit":100}')"
+
+          case "$http_status" in
+            2??) ;;
+            *)
+              echo "MIGHTY-SYNC-FAILED: production worker returned HTTP $http_status" >&2
+              jq -c '{ok, error}' "$response_file" 2>/dev/null || true
+              exit 1
+              ;;
+          esac
+
+          if ! jq -e '.ok == true' "$response_file" >/dev/null; then
+            echo 'MIGHTY-SYNC-FAILED: production worker did not confirm success' >&2
+            jq -c '{ok, error}' "$response_file" 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "Mighty access sync completed with HTTP $http_status"
+          jq -c '{ok, processed, succeeded, failed, allowed, denied, superseded}' "$response_file"

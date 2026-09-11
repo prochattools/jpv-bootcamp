@@ -1,5 +1,24 @@
 # JPV Bootcamp Architecture
 
+## Current Stripe-to-Mighty inert-deployment boundary — 2026-09-11
+
+`THREE-ACCOUNT INTEGRATION GATE: PASS`; `INERT-DEPLOYMENT READINESS GATE:
+PASS`; `REAL MEMBER MIGRATION: NOT AUTHORIZED`. Only
+`westhoek@hotmail.com`, `steve@yeshua.academy`, and
+`info@prochat.tools` may be read live; only the ordinary test may run the
+bounded lifecycle mutation and it must end restored/allowed. Every other real
+identity is off limits. Use synthetic fixtures for all other scenarios. No
+population reconciliation, population dry run, production migration manifest,
+live Stripe mutation, scheduler enablement, merge, or deploy is authorized.
+The exact owner deployment checklist, post-deploy smoke design, rollback plan,
+and trigger call graph are in
+`docs/release/MIGHTY_INERT_DEPLOYMENT_READINESS.md`.
+Stripe is the sole billing authority; Plan `2000039` is the downstream Mighty
+access projection. Unknown provider roles, privileged identities, alternate
+Plans, extra Spaces, ambiguous identities, and provider uncertainty fail
+closed. Future population normalization requires new explicit owner
+authorization.
+
 > **Current production authority — 2026-08-27:** JPV Bootcamp is live on
 > `main` at `08605e52af4abb0b1bdcdfbe6890d010c545b636`; GitHub Actions run
 > `33093612107` passed and the production deployment reported the exact SHA with

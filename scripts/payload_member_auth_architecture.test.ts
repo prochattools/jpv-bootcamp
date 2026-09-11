@@ -37,8 +37,8 @@ assert.doesNotMatch(portalLayout, /requirePortalMember\('/)
 assert.match(portalLayout, /cachedResolvePayloadRequestSession|resolvePayloadRequestSession/)
 assert.match(portalLayout, /showLogout/)
 
-assert.match(loginPage, /new URLSearchParams\(\{ mode: 'login' \}\)/)
-assert.match(loginPage, /redirect\(`\/portal/)
+assert.match(loginPage, /MIGHTY_STUDENT_LOGIN_URL/)
+assert.match(loginPage, /redirect\(MIGHTY_STUDENT_LOGIN_URL\)/)
 assert.doesNotMatch(loginPage, /MemberLoginForm/)
 
 assert.match(registerRoute, /410|Gone/)
