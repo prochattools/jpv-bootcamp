@@ -1,10 +1,11 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: PRODUCTION DEPLOYED / ACCEPTANCE INCIDENT HOLD — 2026-09-11
+## CURRENT PHASE: PRODUCTION DEPLOYED / SYSTEM-LEVEL INERT ACCEPTANCE — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
-`INERT PRODUCTION DEPLOYMENT: COMPLETE`
-`THREE-ACCOUNT POST-DEPLOY SMOKE: NOT CERTIFIED — SCOPE LEAK`
+`INERT PRODUCTION DEPLOYMENT: ACCEPTED`
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
 `PRODUCTION AUTOMATION: DISABLED`
@@ -14,7 +15,8 @@ are authorized for exact live checks. Every other real identity is off limits
 for inspection, querying, classification, reconciliation, dry-run, or
 mutation. Use synthetic fixtures for all other cases. No population
 reconciliation, production migration manifest, member migration, live Stripe
-mutation, scheduler enablement, merge, or deploy is authorized.
+mutation, scheduler enablement, or worker execution is authorized. The
+approved merge and deployment are complete.
 
 The exact future owner deployment checklist, inert smoke-test design, rollback
 procedure, and mutation call graph are in
@@ -23,24 +25,22 @@ rehearsal and manifest are historical and superseded;
 they are not a current production roster and must not be refreshed or
 executed. Future normalization requires new explicit owner authorization.
 
-The bounded ordinary lifecycle passed for `westhoek@hotmail.com` with final
-access restored before deployment. Exact pre-deployment read-only checks for
-`steve@yeshua.academy` and `info@prochat.tools` showed Plan `2000039` present.
-The post-deployment smoke was stopped after a pre-opened Mighty all-members
-page exposed identities outside the authorized three. No Mighty or Stripe
-mutation occurred. The acceptance gate is on hold and no further Mighty reads
-are authorized until the owner records an incident disposition.
+The ordinary lifecycle and Host protections passed pre-deployment using only
+the three authorized accounts. The owner waived live post-deployment Mighty
+member reads because the provider/UI response surface cannot guarantee strict
+account isolation. No live Mighty account read is part of this acceptance.
 
 The exact approved revision `80edb73cfabbe6d569b4869495ff85ea1ac48d28` was
 merged as `f430398048ecda70bbeeef6aa8cd41bd4befc870`; publish workflow
 `34584712903` completed successfully and live health reports the exact image.
 The scheduler remains disabled, no production sync run occurred, and the
-application is deliberately inert. The next action is owner disposition of the
-acceptance incident, not population migration or automation.
+application is deliberately inert and accepted at system level. The next
+roadmap gate is explicit owner authorization for any future production
+member/population phase, not automatic migration or automation.
 
-`UNEXPECTED SCOPE LEAK OCCURRED` during the clean acceptance: the exact
-member-details UI rendered an unrelated production-member referrals list. The
-run stopped immediately; no Mighty or Stripe mutation occurred.
+The two prior provider/UI scope-leak attempts remain documented as
+non-mutating acceptance-procedure incidents and are closed by the owner waiver.
+No unauthorized identity details are reproduced here.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 

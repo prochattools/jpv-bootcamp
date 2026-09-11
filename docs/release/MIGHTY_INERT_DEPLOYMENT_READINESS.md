@@ -2,17 +2,17 @@
 
 ## Current release gate — 2026-09-11
 
-`INERT PRODUCTION DEPLOYMENT: COMPLETE`
-`POST-DEPLOY THREE-ACCOUNT SMOKE: NOT CERTIFIED — ACCEPTANCE INCIDENT HOLD`
+`INERT PRODUCTION DEPLOYMENT: ACCEPTED`
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 
 The Stripe → Mighty integration is deployed to production as an inert
-application revision. Population inspection, migration, scheduler enablement,
-and live Stripe mutation remain unauthorized. The merge/deployment evidence is
-complete, but the post-deployment acceptance gate is on hold: a pre-opened
-Mighty admin all-members page was read while attempting to establish the
-bounded smoke context, exposing identities outside the authorized three. No
-Mighty or Stripe mutation occurred, and no further provider reads are allowed
-until the owner records the incident disposition.
+application revision and is accepted using system-level evidence. Population
+inspection, migration, scheduler enablement, and live Stripe mutation remain
+unauthorized. The owner explicitly waived live post-deployment Mighty member
+reads because two non-mutating provider/UI scope incidents showed that even
+apparently member-scoped views can expose unrelated identities. No further
+provider/account read is part of this acceptance.
 
 The only real identities permitted for this engineering gate are:
 
@@ -68,7 +68,7 @@ There is no startup path from `start-production.sh`, `start-staging.sh`,
 processing, reconciliation, cutover, member creation, Plan grant, or Plan
 revoke.
 
-## Future owner deployment checklist
+## Historical owner deployment checklist
 
 This checklist is review material, not deployment authorization.
 
@@ -87,21 +87,19 @@ This checklist is review material, not deployment authorization.
 13. Record the approved revision and deployment evidence.
 14. Schedule the three-account post-deploy smoke test before any later automation decision.
 
-## Future post-deploy smoke test
+## Deferred provider smoke — not a current acceptance requirement
 
-After a separately authorized inert deployment, use only the three identities
-above and prefer reads. Confirm:
+The owner has explicitly waived this live provider smoke for the current
+deployment. Do not run it as a workaround or attempt to filter broad provider
+responses. A future provider-read project would require separate explicit
+authorization and a provider surface that proves account isolation. The
+current acceptance instead uses:
 
 - application health and exact deployed revision;
-- Mighty configuration shape and Plan `2000039` without printing secrets;
+- static Plan `2000039` configuration and fail-closed tests without printing secrets;
 - scheduler disabled;
-- exact-email resolution for the three permitted identities;
-- Host protection for Steve and Info;
-- ordinary safe-state read for Westhoek;
+- previously completed, authorized pre-deployment lifecycle and Host evidence;
 - no population processing, queue worker run, migration, or fourth identity access.
-
-Do not run a live grant/revoke cycle as part of the inert smoke test unless a
-new owner authorization names the exact identity and operation.
 
 ## Application rollback procedure
 
@@ -128,23 +126,22 @@ endpoints report the exact production image tag; the homepage and legal routes
 return HTTP 200. The GitHub repository has no `MIGHTY_ACCESS_SYNC_ENABLED`
 variable and no post-deployment Mighty Access Sync workflow run.
 
-The three-account smoke is not a PASS. Pre-deployment evidence remains
-historical for this release record; post-deployment exact-account verification
-was stopped after the boundary incident. Do not claim provider connectivity,
-Host protection, or post-deployment account state from this incomplete smoke.
+System-level inert acceptance is PASS. The target Plan ID `2000039`,
+three-account mutation allowlist, webhook inertness, startup inertness, worker
+authentication, scheduler guard, provider-failure handling, and synthetic
+unauthorized-identity protections are covered by the deployed source and
+release suite. Required server-side Mighty configuration presence was verified
+in the pre-deployment Dokploy evidence without recording secret values.
 
-`UNEXPECTED SCOPE LEAK OCCURRED` — during the clean run, the exact
-member-details UI rendered an unrelated production-member referrals list. The
-acceptance run stopped immediately. No unrelated names or identifiers are
-recorded in this documentation, and no Mighty or Stripe mutation occurred.
+The two non-mutating provider/UI scope incidents remain documented. The owner
+waived live provider member smoke for this acceptance; no live Mighty account
+read was performed in this acceptance goal.
 
 ## Current boundary and next gate
 
 The three-account integration gate passed before deployment, and the exact
-inert deployment is live. Real-member normalization, automated revocation, and
-scheduler enablement remain separate future work and require fresh explicit
-owner authorization. Before any additional Mighty read, the owner must give a
-written disposition for the acceptance-boundary incident and explicitly name
-whether a new bounded verification is authorized. The next population gate
-still requires a new authorization naming the exact accounts, operation, and
-scope; member migration and automation remain disabled.
+inert deployment is live and accepted at system level. Real-member
+normalization, automated revocation, and scheduler enablement remain separate
+future work and require fresh explicit owner authorization. The next gate is
+only a new owner-authorized production member/population phase; migration and
+automation remain disabled.

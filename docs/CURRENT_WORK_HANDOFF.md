@@ -2,12 +2,14 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION DEPLOYED / ACCEPTANCE INCIDENT HOLD — 2026-09-11
+## CURRENT PHASE: PRODUCTION DEPLOYED / SYSTEM-LEVEL INERT ACCEPTANCE — 2026-09-11
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
-`INERT-DEPLOYMENT READINESS GATE: DEPLOYED; POST-DEPLOY SMOKE NOT CERTIFIED`
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
+`PRODUCTION AUTOMATION: DISABLED`
 `PRODUCTION DEPLOYMENT: COMPLETE — f430398048ecda70bbeeef6aa8cd41bd4befc870`
 `PRODUCTION MERGE: COMPLETE — PR #42`
 
@@ -17,7 +19,8 @@ off limits: do not inspect, query, classify, reconcile, dry-run, create,
 invite, grant, revoke, restore, or otherwise mutate it. Use synthetic fixtures
 for all other scenarios. Do not run a population reconciliation, build or
 refresh a production migration manifest, migrate members, mutate live Stripe,
-enable the scheduler, merge, or deploy.
+enable the scheduler, or execute the worker. The approved application merge
+and deployment are already complete.
 
 The current inert-deployment checklist, smoke-test design, rollback procedure,
 and trigger call graph are in
@@ -27,15 +30,12 @@ they are not a current roster and must not be refreshed or executed. Future
 population normalization requires new explicit owner authorization naming the
 exact accounts and scope.
 
-The bounded ordinary lifecycle passed for `westhoek@hotmail.com` with final
-access restored before deployment. Exact pre-deployment read-only checks for
-`steve@yeshua.academy` and `info@prochat.tools` showed Plan `2000039` present.
-The post-deployment three-account smoke was stopped and is not certified: a
-pre-opened Mighty admin all-members page was read, exposing identities outside
-the authorized three. No click, search, grant, revoke, restore, worker run,
-Stripe mutation, or other external mutation occurred. Do not perform further
-Mighty reads until the owner records how this acceptance incident is to be
-handled.
+The ordinary lifecycle and Host protections were completed before deployment
+using only the three authorized accounts; that provider evidence remains the
+functional proof. The owner has waived all live post-deployment Mighty member
+reads because the provider/UI response surface cannot guarantee the strict
+account-isolation boundary. No live Mighty account read is authorized in this
+acceptance goal.
 
 ## CURRENT PRODUCTION DEPLOYMENT EVIDENCE — 2026-09-11
 
@@ -50,18 +50,23 @@ reports the same image tag. Public homepage and legal routes returned HTTP 200.
 The GitHub repository has no `MIGHTY_ACCESS_SYNC_ENABLED` variable, and no
 Mighty Access Sync workflow run was present after deployment. Release/build
 validation passed before merge, including `RELEASE TESTS PASSED: 195/195`.
-The deployment is therefore live and deliberately inert, but the final
-acceptance result is HOLD rather than PASS because the post-deployment account
-boundary was not preserved by the operator read.
+The deployment is live and deliberately inert. System-level acceptance is PASS;
+the live provider member smoke is explicitly waived by the owner and is not a
+deployment defect or a migration authorization.
 
-## CLEAN ACCEPTANCE ATTEMPT — 2026-09-11
+## ACCEPTANCE DECISION AND INCIDENT CLOSURE — 2026-09-11
 
-`CLEAN THREE-ACCOUNT ACCEPTANCE: NOT CERTIFIED`
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 
-`UNEXPECTED SCOPE LEAK OCCURRED` — the exact member-details UI rendered an
-unrelated production-member referrals list. The acceptance run stopped
-immediately as required. No unrelated names or identifiers are recorded here;
-no Mighty mutation, Stripe mutation, worker run, or migration occurred.
+The two prior attempts are preserved as non-mutating acceptance-procedure
+incidents: the first exposed an all-members page and the second exposed an
+unrelated referrals list from an exact-looking member-details page. Both were
+stopped immediately; no unrelated names or identifiers are recorded here, and
+neither incident caused a Mighty mutation, Stripe mutation, production sync,
+worker run, or migration. The owner replaced the unsafe live provider smoke
+with system-level inert acceptance. No further provider/account read is part
+of this goal.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
