@@ -2,32 +2,39 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION FROZEN / SYNTHETIC HARDENING — 2026-09-11
+## CURRENT PHASE: POST-DEPLOYMENT HARDENING RC / OWNER REVIEW — 2026-09-12
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
+`POST-DEPLOYMENT HARDENING RC: READY FOR OWNER REVIEW`
+`UNCERTAIN-GRANT FIX: IN RC`
+`CHECKPOINT MEMBER-ID RESUME FIX: IN RC`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
-`PRODUCTION DEPLOYMENT: COMPLETE — f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`PRODUCTION: FROZEN — f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`PRODUCTION DEPLOYMENT OF RC: NOT AUTHORIZED`
 `PRODUCTION MERGE: COMPLETE — PR #42`
 
-The live platform is now frozen. No live Mighty read or mutation, live Stripe
+The live platform is frozen at `f430398048ecda70bbeeef6aa8cd41bd4befc870`.
+The release candidate is on
+`codex/mighty-post-deploy-hardening-rc`, based on the production lineage and
+ready for owner review. No live Mighty read or mutation, live Stripe
 operation, population inspection, production test data, worker execution,
-scheduler enablement, configuration change, or deployment is authorized in
-the current goal. The controlling synthetic-hardening evidence is
+scheduler enablement, configuration change, merge, or deployment is authorized
+in the current goal. The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
-The post-hardening release suite passes `196/196`; the only dirty pre-existing
-artifact remains `newrelic_agent.log` and is excluded from all changes.
+The release suite passes `196/196`. The exact candidate revision is recorded
+after the RC is pushed; its hardening baseline is
+`bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
 
-Only these live identities are authorized: `westhoek@hotmail.com`,
-`steve@yeshua.academy`, and `info@prochat.tools`. Every other real identity is
-off limits: do not inspect, query, classify, reconcile, dry-run, create,
-invite, grant, revoke, restore, or otherwise mutate it. Use synthetic fixtures
-for all other scenarios. Do not run a population reconciliation, build or
-refresh a production migration manifest, migrate members, mutate live Stripe,
-enable the scheduler, merge, or deploy.
+No live identity is authorized for this clean hardening goal. Do not inspect,
+query, classify, reconcile, dry-run, create, invite, grant, revoke, restore,
+or otherwise mutate any real identity. Use synthetic fixtures only. Do not run
+a population reconciliation, build or refresh a production migration
+manifest, migrate members, mutate live Stripe, enable the scheduler, merge,
+or deploy.
 
 The current inert-deployment checklist, smoke-test design, rollback procedure,
 and trigger call graph are in

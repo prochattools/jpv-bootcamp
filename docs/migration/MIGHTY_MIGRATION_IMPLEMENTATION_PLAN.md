@@ -1,27 +1,32 @@
 # JPV Bootcamp Mighty Migration Implementation Plan
 
-## CURRENT PHASE: PRODUCTION FROZEN / SYNTHETIC HARDENING — 2026-09-11
+## CURRENT PHASE: POST-DEPLOYMENT HARDENING RC / OWNER REVIEW — 2026-09-12
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `INERT-DEPLOYMENT READINESS GATE: PASS`
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
+`POST-DEPLOYMENT HARDENING RC: READY FOR OWNER REVIEW`
+`UNCERTAIN-GRANT FIX: IN RC`
+`CHECKPOINT MEMBER-ID RESUME FIX: IN RC`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
-`PRODUCTION DEPLOYMENT: COMPLETE — f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`PRODUCTION: FROZEN — f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`PRODUCTION DEPLOYMENT OF RC: NOT AUTHORIZED`
 `PRODUCTION MERGE: COMPLETE — PR #42`
 
-The live platform is frozen for the current goal. No live Mighty read or
-mutation, live Stripe operation, population inspection, production test data,
-worker execution, scheduler enablement, configuration change, or deployment is
-authorized. The controlling evidence is
+The live platform remains frozen at `f430398048ecda70bbeeef6aa8cd41bd4befc870`.
+The clean production-lineage RC is on
+`codex/mighty-post-deploy-hardening-rc` and is ready for owner review. No live
+Mighty read or mutation, live Stripe operation, population inspection,
+production test data, worker execution, scheduler enablement, configuration
+change, merge, or deployment is authorized. The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 
-Only `westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`
-may be read or mutated live, with Host/owner checks remaining read-only. Every
-other real identity is off limits. Do not run population reconciliation, a
-population dry run, or any member migration; do not build or refresh a
-production migration manifest. Use synthetic fixtures for all other scenarios.
-Live Stripe mutation, scheduler enablement, merge, and deploy remain disabled.
+No real identity may be read or mutated in this clean hardening goal. Do not
+run population reconciliation, a population dry run, or any member migration;
+do not build or refresh a production migration manifest. Use synthetic
+fixtures only. Live Stripe mutation, scheduler enablement, merge, and deploy
+remain disabled.
 The current deployment-readiness checklist, trigger call graph, smoke-test
 design, and application rollback procedure are canonical in
 `docs/release/MIGHTY_INERT_DEPLOYMENT_READINESS.md`; all future population
@@ -29,10 +34,9 @@ operations below require a new explicit owner authorization.
 The former population rehearsal is historical/superseded and is not a current
 roster. Future normalization requires fresh explicit owner authorization.
 
-The bounded ordinary lifecycle passed for `westhoek@hotmail.com`; exact
-read-only checks for `steve@yeshua.academy` and `info@prochat.tools` show Plan
-`2000039` present. No fourth identity was read and no Host/owner mutation was
-performed.
+The prior bounded provider acceptance is retained as historical evidence only;
+this RC validation performed no live Mighty or Stripe operation and no real
+identity inspection.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
@@ -48,10 +52,10 @@ production scheduler, deployment, and merge remain untouched. Unknown
 provider roles, Host/Admin identities, unexpected Spaces, and alternate Plans
 fail closed to review.
 
-**Status:** Feature branch reconciled with the production hotfix; bounded live provider acceptance passed; cutover remains separately unauthorized
+**Status:** Production-lineage hardening RC fully validated; owner review pending; deployment and cutover remain separately unauthorized
 **Date:** 2026-09-10
-**Branch:** `feature/mighty-stripe-migration`  
-**Current branch HEAD:** pushed validation tip (see repository log)
+**Branch:** `codex/mighty-post-deploy-hardening-rc`
+**Current branch HEAD:** exact pushed RC revision recorded in the owner review package
 **Production baseline tag:** `pre-mighty-migration-2026-09-09`
 
 ## HISTORICAL / SUPERSEDED — PHASE E0 READ-ONLY RECONCILIATION — 2026-09-10

@@ -1,8 +1,9 @@
-# Mighty Production-Freeze Synthetic Hardening
+# Mighty Post-Deployment Hardening Release Candidate
 
 ## Gate
 
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
+`POST-DEPLOYMENT HARDENING RELEASE CANDIDATE: READY FOR OWNER REVIEW`
 
 This document is the controlling record for the 2026-09-11 hardening goal. The
 live JPV/Mighty platform is frozen. Production users must observe no change.
@@ -15,7 +16,7 @@ live JPV/Mighty platform is frozen. Production users must observe no change.
 | Production database | No test mutation |
 | Real-member population | Not inspected, reconciled, dry-run, or migrated |
 | Production scheduler / worker | Disabled; not executed |
-| Production deployment | Not changed during this goal |
+| Production deployment | Frozen at `f430398048ecda70bbeeef6aa8cd41bd4befc870`; not changed during this goal |
 | Configuration | Read-only; not changed during this goal |
 
 Historical acceptance documents do not override this freeze. A future member or
@@ -25,12 +26,14 @@ identities, operation, environment, and time window.
 ## Repository and deployment evidence
 
 - Repository: `prochattools/jpv-bootcamp`.
-- Branch: `codex/mighty-deployment-incident-hold`.
-- Worktree: only the pre-existing unrelated `newrelic_agent.log` is dirty; it
-  was not read, edited, staged, or committed.
-- Current branch revision: `c81e27870249e8f8ff29dcd7513a6be170e2f27b` before
-  this hardening change; the resulting documentation/code commit is recorded
-  in the final handoff.
+- RC branch: `codex/mighty-post-deploy-hardening-rc`.
+- RC production-lineage base: `f430398048ecda70bbeeef6aa8cd41bd4befc870`.
+- RC hardening baseline: `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
+- Validated resume-fix source: `e847688c3871e36885c31a38a2544b7ffd51e8de`.
+- The RC contains the same validated resume behavior and regression coverage;
+  the source commit was based on the older incident branch, so it was
+  incorporated into this clean production-lineage candidate without a
+  duplicate commit.
 - Deployed production revision remains
   `f430398048ecda70bbeeef6aa8cd41bd4befc870`; no deployment was initiated.
 - Read-only production health returned HTTP 200 for `/api/health`,
@@ -87,7 +90,7 @@ Primary coverage is in:
 Validation results:
 
 - synthetic hardening tests: PASS (`4/4`);
-- cutover runner tests: PASS (`7/7`);
+- cutover runner tests: PASS (`10/10`);
 - TypeScript: PASS;
 - Prisma validation: PASS through the release suite;
 - production build: PASS through the release suite;
@@ -101,6 +104,13 @@ grant or verification error. The provider result may be uncertain, so the
 runner preserves the member ID, records `REVIEW_REQUIRED`, stops the batch, and
 requires a state read/reconciliation before retrying. This preserves positive
 entitled access and prevents an uncertain mutation from becoming a denial.
+
+The resume path now prefers the checkpointed member ID over the immutable
+manifest row ID. A member created before an uncertain grant is therefore
+reused on resume, and `createMember` is not called a second time. Definite
+member-creation rejection records no provider ID and attempts no grant;
+verification failure preserves the member identity, records
+`REVIEW_REQUIRED`, and stops without destructive rollback.
 
 The freeze, evidence boundary, synthetic matrix, and future migration entry
 conditions are recorded in this document and the canonical current handoff,
@@ -146,6 +156,5 @@ population manifest may be created or refreshed before it is granted.
 
 No waiting loop or automatic follow-up is authorized. The next exact goal is:
 
-> Obtain a new explicit owner authorization for a bounded production-member
-> phase, naming the exact identities and operations. Until then, keep the live
-> platform frozen and continue using synthetic/local validation only.
+> Owner review of the exact pushed RC revision. Deployment of the RC,
+> scheduler enablement, and real-member migration remain unauthorized.

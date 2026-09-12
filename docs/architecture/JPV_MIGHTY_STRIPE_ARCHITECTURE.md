@@ -1,26 +1,25 @@
 # JPV Bootcamp Stripe → Mighty Architecture
 
-**Status:** Approved migration architecture; implementation started on
-`feature/mighty-stripe-migration`  
+**Status:** Approved migration architecture; hardening RC under owner review on
+`codex/mighty-post-deploy-hardening-rc`
 **Date:** 2026-09-09  
 **Production billing authority:** Existing Stripe integration  
 **Student platform target:** Mighty Networks
 
-## Current implementation gate — production-freeze synthetic hardening — 2026-09-11
+## Current implementation gate — post-deployment hardening RC — 2026-09-12
 
-Phase D and E0 evidence are complete. The inert application revision is already
-deployed and accepted at system level; the current work is production-freeze
-synthetic hardening only. No real member population is being migrated, no
-Stripe object is being changed, the production scheduler remains disabled, and
-this goal does not deploy or merge anything.
+Phase D and E0 evidence are complete. The inert application revision remains
+deployed and accepted at system level; the current production-lineage hardening
+RC is fully validated and awaits owner review. No real member population is
+being migrated, no Stripe object is being changed, the production scheduler
+remains disabled, and this goal does not deploy or merge anything.
 
 The controlling freeze record is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 
-The only live mutation identities permitted by the bounded acceptance are
-`westhoek@hotmail.com` (ordinary), `steve@yeshua.academy` (administrator), and
-`info@prochat.tools` (owner/Host). All other members—including the historical
-proposed `Missaquadri@gmail.com` candidate—remain untouched and unauthorized.
+No live identity is permitted in this clean hardening goal. All real members—
+including the historical proposed `Missaquadri@gmail.com` candidate—remain
+untouched and unauthorized.
 Provider role `null` is not inferred to mean ordinary; unresolved roles,
 Hosts, administrators, unexpected Spaces, and other Plan overlaps fail closed
 to review.
