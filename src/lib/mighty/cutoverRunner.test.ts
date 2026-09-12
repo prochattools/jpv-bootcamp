@@ -66,6 +66,74 @@ test('runner is bounded, idempotent, and stops on the first provider error witho
 	assert.equal(third.mutationPerformed, false)
 })
 
+test('definite grant rejection stops safely without verification or rollback', async () => {
+	const store = createMemoryCutoverCheckpointStore()
+	const calls: string[] = []
+	const result = await runCutoverBatch({
+		rows: [row()],
+		batchSize: 1,
+		dryRun: false,
+		store,
+		adapter: {
+			createMember: async () => ({ id: 'never-created' }),
+			grantPlan: async () => { calls.push('grant'); throw new Error('provider_rejected_before_mutation') },
+			verifyPlan: async () => { calls.push('verify'); return false },
+		},
+		planId: '2000039',
+		mutationScope: syntheticScope,
+	})
+	assert.equal(result.stoppedOnError, true)
+	assert.equal(store.get('student@example.com')?.status, 'REVIEW_REQUIRED')
+	assert.deepEqual(calls, ['grant'])
+})
+
+test('verification failure after a possible successful grant stays review-only', async () => {
+	const store = createMemoryCutoverCheckpointStore()
+	const calls: string[] = []
+	const result = await runCutoverBatch({
+		rows: [row()],
+		batchSize: 1,
+		dryRun: false,
+		store,
+		adapter: {
+			createMember: async () => ({ id: 'never-created' }),
+			grantPlan: async () => { calls.push('grant') },
+			verifyPlan: async () => { calls.push('verify'); return false },
+		},
+		planId: '2000039',
+		mutationScope: syntheticScope,
+	})
+	assert.equal(result.stoppedOnError, true)
+	assert.equal(result.mutationPerformed, true)
+	assert.equal(store.get('student@example.com')?.status, 'REVIEW_REQUIRED')
+	assert.deepEqual(calls, ['grant', 'verify'])
+})
+
+test('definite member-creation rejection records no provider ID and never grants', async () => {
+	const store = createMemoryCutoverCheckpointStore()
+	const calls: string[] = []
+	const result = await runCutoverBatch({
+		rows: [buildCutoverManifestRow({ email: 'rejected-new@example.com', stripeEntitled: true, member: null, plans: [], purchases: [], spaces: [], targetPlanId: 2000039 })],
+		batchSize: 1,
+		dryRun: false,
+		store,
+		adapter: {
+			createMember: async () => { calls.push('create'); throw new Error('member_creation_rejected') },
+			grantPlan: async () => { calls.push('grant') },
+			verifyPlan: async () => { calls.push('verify'); return false },
+		},
+		planId: '2000039',
+		mutationScope: {
+			...syntheticScope,
+			allowedEmails: new Set([...syntheticScope.allowedEmails, 'rejected-new@example.com']),
+		},
+	})
+	assert.equal(result.stoppedOnError, true)
+	assert.equal(store.get('rejected-new@example.com')?.status, 'REVIEW_REQUIRED')
+	assert.equal(store.get('rejected-new@example.com')?.memberId, null)
+	assert.deepEqual(calls, ['create'])
+})
+
 test('runner skips identity, overlap, and privileged actions', async () => {
 	const store = createMemoryCutoverCheckpointStore()
 	const skipped = [
@@ -80,6 +148,7 @@ test('runner skips identity, overlap, and privileged actions', async () => {
 test('new-subscriber failure preserves the created ID for review and never deletes it', async () => {
 	const store = createMemoryCutoverCheckpointStore()
 	const calls: string[] = []
+	let fail = true
 	const result = await runCutoverBatch({
 		rows: [buildCutoverManifestRow({ email: 'new@example.com', stripeEntitled: true, member: null, plans: [], purchases: [], spaces: [], targetPlanId: 2000039 })],
 		batchSize: 1,
@@ -87,8 +156,8 @@ test('new-subscriber failure preserves the created ID for review and never delet
 		store,
 		adapter: {
 			createMember: async () => { calls.push('create'); return { id: '99' } },
-			grantPlan: async () => { calls.push('grant'); throw new Error('provider_timeout') },
-			verifyPlan: async () => false,
+			grantPlan: async () => { calls.push('grant'); if (fail) throw new Error('provider_timeout') },
+			verifyPlan: async () => true,
 		},
 		planId: '2000039',
 		mutationScope: syntheticScope,
@@ -98,6 +167,25 @@ test('new-subscriber failure preserves the created ID for review and never delet
 	assert.equal(store.get('new@example.com')?.status, 'REVIEW_REQUIRED')
 	assert.equal(store.get('new@example.com')?.memberId, '99')
 	assert.deepEqual(calls, ['create', 'grant'])
+
+	fail = false
+	const resumed = await runCutoverBatch({
+		rows: [buildCutoverManifestRow({ email: 'new@example.com', stripeEntitled: true, member: null, plans: [], purchases: [], spaces: [], targetPlanId: 2000039 })],
+		batchSize: 1,
+		dryRun: false,
+		store,
+		adapter: {
+			createMember: async () => { calls.push('duplicate-create'); return { id: '100' } },
+			grantPlan: async (memberId: string) => { calls.push(`resume-grant:${memberId}`) },
+			verifyPlan: async (memberId: string) => memberId === '99',
+		},
+		planId: '2000039',
+		mutationScope: syntheticScope,
+	})
+	assert.equal(resumed.stoppedOnError, false)
+	assert.equal(store.get('new@example.com')?.status, 'COMPLETE')
+	assert.equal(store.get('new@example.com')?.memberId, '99')
+	assert.deepEqual(calls, ['create', 'grant', 'resume-grant:99'])
 })
 
 test('runner rejects an empty manifest and unauthorized identities before provider mutation', async () => {

@@ -108,9 +108,13 @@ export async function runCutoverBatch(params: {
 		}
 
 		const adapter = params.adapter!
-		const started = checkpoint(row.email, 'IN_PROGRESS', row.mightyMemberId, null)
+		// A newly created member may exist only in the checkpoint because the
+		// immutable manifest row intentionally still has no provider ID. Reuse
+		// that checkpointed identity on resume instead of creating a duplicate.
+		const resumedMemberId = existing?.memberId ?? row.mightyMemberId
+		const started = checkpoint(row.email, 'IN_PROGRESS', resumedMemberId, null)
 		params.store.put(started)
-		let memberId = row.mightyMemberId
+		let memberId = resumedMemberId
 		try {
 			if (!memberId) {
 				memberId = (await adapter.createMember(row.email)).id
