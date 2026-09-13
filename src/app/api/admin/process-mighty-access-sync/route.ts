@@ -5,6 +5,8 @@ import { processMightyAccessSync } from '@/lib/mighty/accessSync'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const MAX_WORKER_SCOPE_EMAILS = 50
+
 function json(body: unknown, status = 200): Response {
 	return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 }
@@ -23,19 +25,34 @@ export async function POST(request: Request): Promise<Response> {
 	if (!authorized(request, secret)) return json({ ok: false, error: 'unauthorized' }, 401)
 
 	let limit = 25
+	let emails: string[] | undefined
 	if ((request.headers.get('content-type') ?? '').includes('application/json')) {
 		try {
-			const body = await request.json() as { limit?: unknown }
+			const body = await request.json() as { limit?: unknown; emails?: unknown }
 			if (typeof body.limit === 'number' && Number.isInteger(body.limit) && body.limit > 0) {
 				limit = Math.min(body.limit, 100)
+			}
+			if (body.emails !== undefined) {
+				if (
+					!Array.isArray(body.emails) ||
+					body.emails.length === 0 ||
+					body.emails.length > MAX_WORKER_SCOPE_EMAILS ||
+					body.emails.some((email) => typeof email !== 'string' || !email.trim())
+				) {
+					return json({ ok: false, error: 'invalid_scope' }, 400)
+				}
+				emails = body.emails
 			}
 		} catch {
 			return json({ ok: false, error: 'invalid_json' }, 400)
 		}
 	}
+	if (process.env.MIGHTY_PROVIDER_ENV?.trim().toLowerCase() === 'production' && emails === undefined) {
+		return json({ ok: false, error: 'scope_required' }, 400)
+	}
 
 	try {
-		return json({ ok: true, ...(await processMightyAccessSync(limit)) })
+		return json({ ok: true, ...(await processMightyAccessSync(limit, emails)) })
 	} catch (error) {
 		console.error('mighty_access_sync_worker_failed', {
 			error: error instanceof Error ? error.name : 'unknown_error',

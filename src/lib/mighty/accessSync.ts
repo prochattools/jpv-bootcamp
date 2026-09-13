@@ -58,6 +58,39 @@ type QueueParams = {
 	welcomeRequired?: boolean
 }
 
+export class MightyAccessSyncCheckpointError extends Error {
+	readonly mightyMemberId: string | null
+	readonly mightyPurchaseId: string | null
+	readonly originalError: unknown
+	readonly code: string | undefined
+
+	constructor(error: unknown, mightyMemberId: string | null, mightyPurchaseId: string | null) {
+		super(error instanceof Error ? error.message : 'Mighty access reconciliation failed')
+		this.name = 'MightyAccessSyncCheckpointError'
+		this.mightyMemberId = mightyMemberId
+		this.mightyPurchaseId = mightyPurchaseId
+		this.originalError = error
+		this.code = error instanceof MightySafetyError ? error.code : undefined
+	}
+}
+
+export function normalizeMightyAccessSyncScope(
+	emails: readonly string[] | undefined,
+	allowedEmails: ReadonlySet<string>,
+): string[] | undefined {
+	if (emails === undefined) return undefined
+	const normalized = emails.map((email) => normalizeEmail(email))
+	if (normalized.length === 0 || normalized.some((email) => !email)) {
+		throw new MightySafetyError('mighty_worker_scope_invalid')
+	}
+	const unique = new Set(normalized)
+	if (unique.size !== normalized.length) throw new MightySafetyError('mighty_worker_scope_duplicate')
+	for (const email of unique) {
+		if (!allowedEmails.has(email)) throw new MightySafetyError('mighty_worker_scope_denied', email)
+	}
+	return [...unique]
+}
+
 const accessSyncSelect = {
 	id: true,
 	email: true,
@@ -267,6 +300,7 @@ export function shouldApplyMightyStripeEvent(
 }
 
 function errorCode(error: unknown): string {
+	if (error instanceof MightyAccessSyncCheckpointError) return errorCode(error.originalError)
 	if (error instanceof MightyApiError) return error.message
 	if (error instanceof MightySafetyError) return error.code
 	if (error instanceof Error) {
@@ -274,6 +308,15 @@ function errorCode(error: unknown): string {
 		return normalized.startsWith('mighty_') ? normalized : error.name.toLowerCase()
 	}
 	return 'unknown_error'
+}
+
+function checkpointReconciliationError(
+	error: unknown,
+	mightyMemberId: string | null,
+	mightyPurchaseId: string | null,
+): MightyAccessSyncCheckpointError {
+	if (error instanceof MightyAccessSyncCheckpointError) return error
+	return new MightyAccessSyncCheckpointError(error, mightyMemberId, mightyPurchaseId)
 }
 
 function isPrismaUniqueError(error: unknown): boolean {
@@ -427,71 +470,75 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 	let purchaseId = params.row.mightyPurchaseId
 
 	if (params.row.desiredAccess === 'ALLOWED') {
-		let member: MightyMember | null = null
-		if (memberId) {
-			member = typeof api.findMember === 'function'
-				? await api.findMember(params.row.email)
-				: { id: memberId, email: params.row.email }
-			if (member && String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
-		} else {
-			member = await api.findMember(params.row.email)
-			if (!member) {
-				assertMightyMutationRuntimeReady(mutationScope)
-				assertMightyMemberCreationAllowed(mutationScope, params.row.email)
-				try {
-					member = await api.createMember({ email: params.row.email })
-				} catch (error) {
-					if (!(error instanceof MightyApiError) || error.status !== 422) throw error
-					member = await api.findMember(params.row.email)
-					if (!member) throw error
-				}
-			}
-			memberId = String(member.id)
-		}
-
-		const currentState = await api.getAccessState(memberId, config.accessPlanId)
-		purchaseId = purchaseId ?? (String(currentState.purchases[0]?.purchase?.id ?? '') || null)
-		if (!currentState.hasAccess) {
-			assertMightyMutationRuntimeReady(mutationScope)
-			const spaces = typeof api.listMemberSpaces === 'function' ? await api.listMemberSpaces(memberId) : []
-			const identityClass = classifyMightyIdentity({
-				email: params.row.email,
-				member,
-				spaces,
-				plans: currentState.plans,
-				scope: mutationScope,
-			})
-			assertMightyMutationAllowed(mutationScope, params.row.email, 'grant_plan')
-			if (mutationScope.enforce) {
-				assertIdentityMutationSafe({ identityClass, desiredAccess: 'ALLOWED', mutationRequired: true })
-			}
-			try {
-				await api.restoreAccess(memberId, config.accessPlanId)
-			} catch (error) {
-				if (error instanceof MightyApiError && error.status === 404) {
-					assertMightyRecoveryAllowed(mutationScope, params.row.email)
-					const recoveredMember = await api.createMember({ email: params.row.email })
-					if (String(recoveredMember.id) !== memberId) throw new Error('mighty_member_identity_changed')
-					await api.restoreAccess(memberId, config.accessPlanId)
-				} else if (isDuplicatePlanAssignmentError(error)) {
-					const duplicateVerification = await api.getAccessState(memberId, config.accessPlanId)
-					if (!duplicateVerification.hasAccess || !duplicateVerification.memberPlanAccess) {
-						throw new Error('mighty_duplicate_grant_not_verified')
+		try {
+			let member: MightyMember | null = null
+			if (memberId) {
+				member = typeof api.findMember === 'function'
+					? await api.findMember(params.row.email)
+					: { id: memberId, email: params.row.email }
+				if (member && String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
+			} else {
+				member = await api.findMember(params.row.email)
+				if (!member) {
+					assertMightyMutationRuntimeReady(mutationScope)
+					assertMightyMemberCreationAllowed(mutationScope, params.row.email)
+					try {
+						member = await api.createMember({ email: params.row.email })
+					} catch (error) {
+						if (!(error instanceof MightyApiError) || error.status !== 422) throw error
+						member = await api.findMember(params.row.email)
+						if (!member) throw error
 					}
-				} else {
-					throw error
 				}
+				memberId = String(member.id)
 			}
-			const grantedState = await api.getAccessState(memberId, config.accessPlanId)
-			if (!grantedState.hasAccess) throw new Error('mighty_access_not_found_after_grant')
-			purchaseId = purchaseId ?? (String(grantedState.purchases[0]?.purchase?.id ?? '') || null)
-		}
 
-		if (params.row.welcomeRequired && !params.row.welcomeSentAt) {
-			await (params.sendWelcome ?? sendMightyWelcome)(params.row)
-			return { mightyMemberId: memberId, mightyPurchaseId: purchaseId, welcomeSent: true }
+			const currentState = await api.getAccessState(memberId, config.accessPlanId)
+			purchaseId = purchaseId ?? (String(currentState.purchases[0]?.purchase?.id ?? '') || null)
+			if (!currentState.hasAccess) {
+				assertMightyMutationRuntimeReady(mutationScope)
+				const spaces = typeof api.listMemberSpaces === 'function' ? await api.listMemberSpaces(memberId) : []
+				const identityClass = classifyMightyIdentity({
+					email: params.row.email,
+					member,
+					spaces,
+					plans: currentState.plans,
+					scope: mutationScope,
+				})
+				assertMightyMutationAllowed(mutationScope, params.row.email, 'grant_plan')
+				if (mutationScope.enforce) {
+					assertIdentityMutationSafe({ identityClass, desiredAccess: 'ALLOWED', mutationRequired: true })
+				}
+				try {
+					await api.restoreAccess(memberId, config.accessPlanId)
+				} catch (error) {
+					if (error instanceof MightyApiError && error.status === 404) {
+						assertMightyRecoveryAllowed(mutationScope, params.row.email)
+						const recoveredMember = await api.createMember({ email: params.row.email })
+						if (String(recoveredMember.id) !== memberId) throw new Error('mighty_member_identity_changed')
+						await api.restoreAccess(memberId, config.accessPlanId)
+					} else if (isDuplicatePlanAssignmentError(error)) {
+						const duplicateVerification = await api.getAccessState(memberId, config.accessPlanId)
+						if (!duplicateVerification.hasAccess || !duplicateVerification.memberPlanAccess) {
+							throw new Error('mighty_duplicate_grant_not_verified')
+						}
+					} else {
+						throw error
+					}
+				}
+				const grantedState = await api.getAccessState(memberId, config.accessPlanId)
+				if (!grantedState.hasAccess) throw new Error('mighty_access_not_found_after_grant')
+				purchaseId = purchaseId ?? (String(grantedState.purchases[0]?.purchase?.id ?? '') || null)
+			}
+
+			if (params.row.welcomeRequired && !params.row.welcomeSentAt) {
+				await (params.sendWelcome ?? sendMightyWelcome)(params.row)
+				return { mightyMemberId: memberId, mightyPurchaseId: purchaseId, welcomeSent: true }
+			}
+			return { mightyMemberId: memberId, mightyPurchaseId: purchaseId, welcomeSent: false }
+		} catch (error) {
+			throw checkpointReconciliationError(error, memberId, purchaseId)
 		}
-		return { mightyMemberId: memberId, mightyPurchaseId: purchaseId, welcomeSent: false }
 	}
 
 	if (!memberId && !purchaseId) {
@@ -570,11 +617,15 @@ function nextAttempt(attempt: number): Date {
 	return new Date(Date.now() + delayMs)
 }
 
-async function claimRows(limit: number, allowedEmails: ReadonlySet<string>): Promise<AccessSyncRow[]> {
+async function claimRows(
+	limit: number,
+	allowedEmails: ReadonlySet<string>,
+	scopedEmails: readonly string[] | undefined,
+): Promise<AccessSyncRow[]> {
 	const now = new Date()
 	const candidates = await prisma.mightyAccessSync.findMany({
 		where: {
-			normalizedEmail: { in: [...allowedEmails] },
+			normalizedEmail: { in: [...(scopedEmails ?? allowedEmails)] },
 			OR: [
 				{ syncStatus: 'pending', OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
 				{ syncStatus: 'failed', OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
@@ -605,7 +656,7 @@ async function claimRows(limit: number, allowedEmails: ReadonlySet<string>): Pro
 	return claimed
 }
 
-export async function processMightyAccessSync(limit = 25): Promise<{
+export async function processMightyAccessSync(limit = 25, emails?: readonly string[]): Promise<{
 	processed: number
 	succeeded: number
 	failed: number
@@ -616,8 +667,12 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 	const config = getMightyConfig()
 	const mutationScope = getMightyMutationScope()
 	assertMightyMutationRuntimeReady(mutationScope)
+	if (mutationScope.liveTestOnly && emails === undefined) {
+		throw new MightySafetyError('mighty_worker_scope_required')
+	}
+	const scopedEmails = normalizeMightyAccessSyncScope(emails, mutationScope.allowedEmails)
 	const api = createMightyAdminApi(config)
-	const rows = await claimRows(limit, mutationScope.allowedEmails)
+	const rows = await claimRows(limit, mutationScope.allowedEmails, scopedEmails)
 	let succeeded = 0
 	let failed = 0
 	let allowed = 0
@@ -666,6 +721,12 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 			})
 		} catch (error) {
 			const attemptCount = row.attemptCount + 1
+			const checkpoint = error instanceof MightyAccessSyncCheckpointError
+				? {
+					...(error.mightyMemberId ? { mightyMemberId: error.mightyMemberId } : {}),
+					...(error.mightyPurchaseId ? { mightyPurchaseId: error.mightyPurchaseId } : {}),
+				}
+				: {}
 			const failedUpdate = await prisma.mightyAccessSync.updateMany({
 				where: {
 					id: row.id,
@@ -673,6 +734,7 @@ export async function processMightyAccessSync(limit = 25): Promise<{
 					lastStripeEventId: row.lastStripeEventId,
 				},
 				data: {
+					...checkpoint,
 					syncStatus: 'failed',
 					attemptCount,
 					lastError: errorCode(error),

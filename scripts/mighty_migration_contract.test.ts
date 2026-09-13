@@ -158,7 +158,7 @@ test('welcome email is ordered after Mighty access reconciliation', () => {
 test('worker has a dedicated authenticated route and no synchronous webhook dependency', () => {
 	const route = readFileSync('src/app/api/admin/process-mighty-access-sync/route.ts', 'utf8')
 	assert.match(route, /MIGHTY_ACCESS_SYNC_WORKER_SECRET/)
-	assert.match(route, /processMightyAccessSync\(limit\)/)
+	assert.match(route, /processMightyAccessSync\(limit, emails\)/)
 	assert.match(sync, /leaseUntil: candidate\.leaseUntil/)
 	assert.match(sync, /lastStripeEventId: row\.lastStripeEventId/)
 })
