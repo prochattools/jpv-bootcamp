@@ -1,25 +1,29 @@
 # Mighty Inert-Deployment Readiness
 
-## Current release gate — 2026-09-11
+## Current release gate — 2026-09-13
 
 `INERT PRODUCTION DEPLOYMENT: ACCEPTED`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
-`POST-DEPLOYMENT HARDENING RC: READY FOR OWNER REVIEW`
+`POST-DEPLOYMENT HARDENING RC: DEPLOYED`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
+`SYSTEM HEALTH: PASS`
+`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
 
-The live platform is frozen for the current engineering goal. The controlling
-freeze and synthetic evidence record is
+The exact validated RC source `d393371ad5e737794e145da4959f67f3b85af0a1` was
+deployed through production merge revision
+`1555bab05df64a173737080f0b6988a6789434a4`. The application is healthy and
+deliberately inert. The controlling freeze and synthetic evidence record is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 No live provider read, provider mutation, Stripe operation, population
 inspection, production test data, worker execution, scheduler enablement,
-configuration change, or deployment is authorized here.
+configuration change, or migration was performed here. Future migration
+preparation requires a separate owner decision.
 
-The live Stripe → Mighty integration remains at inert production revision
-`f430398048ecda70bbeeef6aa8cd41bd4befc870`. The separate clean hardening RC is
-on `codex/mighty-post-deploy-hardening-rc` and is ready for owner review; it is
-not deployed. Population inspection, migration, scheduler enablement, and live
-Stripe mutation remain unauthorized. The owner explicitly waived live
+The live Stripe → Mighty integration is running the inert hardening deployment
+at `1555bab05df64a173737080f0b6988a6789434a4`, sourced from RC
+`d393371ad5e737794e145da4959f67f3b85af0a1`. Population inspection, migration,
+scheduler enablement, and live Stripe mutation remain unauthorized. The owner explicitly waived live
 post-deployment Mighty member reads because two non-mutating provider/UI scope
 incidents showed that even apparently member-scoped views can expose unrelated
 identities. No further provider/account read is part of this acceptance.

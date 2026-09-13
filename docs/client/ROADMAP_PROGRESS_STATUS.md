@@ -1,30 +1,36 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: POST-DEPLOYMENT HARDENING RC / OWNER REVIEW — 2026-09-12
+## CURRENT PHASE: DEPLOYED + HARDENED + INERT — 2026-09-13
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `INERT PRODUCTION DEPLOYMENT: ACCEPTED`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
 `PRODUCTION ACCEPTANCE: PASS`
-`POST-DEPLOYMENT HARDENING RC: READY FOR OWNER REVIEW`
+`POST-DEPLOYMENT HARDENING RC: DEPLOYED`
 `UNCERTAIN-GRANT SAFETY FIX: PRESENT`
 `CHECKPOINT MEMBER-ID RESUME FIX: PRESENT`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `POPULATION INSPECTION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
-`PRODUCTION: FROZEN — f430398048ecda70bbeeef6aa8cd41bd4befc870`
-`RC DEPLOYMENT: NOT AUTHORIZED`
-`PRODUCTION MERGE: COMPLETE — PR #42`
-`NEXT GATE: OWNER REVIEW OF ONE EXACT RC COMMIT`
+`PRODUCTION BEFORE: f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`RC SOURCE REVISION: d393371ad5e737794e145da4959f67f3b85af0a1`
+`PRODUCTION DEPLOYED REVISION: 1555bab05df64a173737080f0b6988a6789434a4`
+`SYSTEM HEALTH: PASS`
+`MIGHTY WORKER: DORMANT`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`POPULATION INSPECTION: NOT AUTHORIZED`
+`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
+`NEXT GATE: SEPARATE OWNER DECISION ABOUT FUTURE MIGRATION PREPARATION`
 
-The live platform remains frozen at `f430398048ecda70bbeeef6aa8cd41bd4befc870`.
-The clean production-lineage RC is on
-`codex/mighty-post-deploy-hardening-rc` and is ready for owner review. No live
-Mighty read or mutation, live Stripe operation, population inspection,
-production test data, worker execution, scheduler enablement, configuration
-change, merge, or deployment is authorized. The controlling evidence is
+The exact validated RC source `d393371ad5e737794e145da4959f67f3b85af0a1` is
+deployed through production merge revision
+`1555bab05df64a173737080f0b6988a6789434a4`. The application is healthy and
+deliberately inert. No live Mighty read or mutation, live Stripe operation,
+population inspection, production test data, worker execution, scheduler
+enablement, configuration change, or migration was performed. The controlling
+evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 The final RC validation is recorded as `pnpm test:release` passed `196/196`; the RC
 hardening baseline is `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
@@ -42,8 +48,8 @@ they are not a current production roster and must not be refreshed or
 executed. Future normalization requires new explicit owner authorization.
 
 The prior bounded provider acceptance is retained as historical evidence only;
-this RC validation performed no live Mighty or Stripe operation and no real
-identity inspection.
+this deployment performed no live Mighty or Stripe operation and no real
+identity inspection. Live provider smoke was not performed and remains waived.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 
