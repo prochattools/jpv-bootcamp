@@ -1,6 +1,6 @@
 # Mighty Inert-Deployment Readiness
 
-## Current release gate — 2026-09-11
+## Current release gate — 2026-09-13
 
 `INERT PRODUCTION DEPLOYMENT: ACCEPTED`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
@@ -8,9 +8,16 @@
 `POST-DEPLOYMENT HARDENING RC: DEPLOYED`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `SYSTEM HEALTH: PASS`
-`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + ZERO-TOUCH SAFETY CONTROLS + INERT`
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
-`ZERO-TOUCH MIGRATION SAFETY RC: READY FOR OWNER REVIEW`
+`ZERO-TOUCH MIGRATION SAFETY RC: DEPLOYED`
+`RC SOURCE REVISION: 9fb8993fd0112a215a617ab89cdb90c66949e7d4`
+`PRODUCTION DEPLOYED REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
+`MIGRATION CONTROL LIBRARY: DEPLOYED BUT NOT LIVE-WIRED`
+`SCHEDULER: DISABLED`
+`WORKER: DORMANT`
+`CUTOVER: NOT EXECUTED`
+`MIGRATION: NOT EXECUTED`
 
 The live platform is deployed, hardened, and inert for the current engineering
 goal. The controlling
@@ -18,7 +25,7 @@ freeze and synthetic evidence record is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 No live provider read, provider mutation, Stripe operation, population
 inspection, production test data, worker execution, scheduler enablement,
-configuration change, or deployment is authorized here.
+configuration change, or further deployment is authorized here.
 
 The synthetic-only migration operations gate is complete. The exact manifest,
 authorization, entitlement re-check, checkpoint/resume, stop-on-error, and
@@ -27,10 +34,10 @@ operator procedure are documented in
 population was inspected and no real migration manifest was created.
 
 The live Stripe → Mighty integration is running the inert hardening deployment
-at `1555bab05df64a173737080f0b6988a6789434a4`, sourced from RC
-`d393371ad5e737794e145da4959f67f3b85af0a1`. Population inspection, migration,
+at `01ac372f1676117451abd2c18a6e0f7d64abd737`, sourced from zero-touch safety
+RC `9fb8993fd0112a215a617ab89cdb90c66949e7d4`. Population inspection, migration,
 scheduler enablement, and live Stripe mutation remain unauthorized. The owner explicitly waived live
- post-deployment Mighty member reads because two non-mutating provider/UI scope
+post-deployment Mighty member reads because two non-mutating provider/UI scope
 incidents showed that even apparently member-scoped views can expose unrelated
 identities. No further provider/account read is part of this acceptance.
 

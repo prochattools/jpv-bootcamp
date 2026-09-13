@@ -4,10 +4,17 @@
 
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
 `POST-DEPLOYMENT HARDENING RELEASE CANDIDATE: DEPLOYED`
-`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + ZERO-TOUCH SAFETY CONTROLS + INERT`
 `LIVE PROVIDER SMOKE: NOT PERFORMED / WAIVED`
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
-`ZERO-TOUCH MIGRATION SAFETY RC: READY FOR OWNER REVIEW`
+`ZERO-TOUCH MIGRATION SAFETY RC: DEPLOYED`
+`RC SOURCE REVISION: 9fb8993fd0112a215a617ab89cdb90c66949e7d4`
+`PRODUCTION DEPLOYED REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
+`MIGRATION CONTROL LIBRARY: DEPLOYED BUT NOT LIVE-WIRED`
+`SCHEDULER: DISABLED`
+`WORKER: DORMANT`
+`CUTOVER: NOT EXECUTED`
+`MIGRATION: NOT EXECUTED`
 
 This document is the controlling record for the 2026-09-11 hardening goal and
 the zero-touch safety RC review. The live JPV/Mighty platform is deployed,
@@ -21,7 +28,7 @@ hardened, and inert. Production users must observe no change.
 | Production database | No test mutation |
 | Real-member population | Not inspected, reconciled, dry-run, or migrated |
 | Production scheduler / worker | Disabled; not executed |
-| Production deployment | `1555bab05df64a173737080f0b6988a6789434a4`; unchanged during this goal |
+| Production deployment | `01ac372f1676117451abd2c18a6e0f7d64abd737`; exact zero-touch safety RC deployment |
 | Configuration | Read-only; not changed during this goal |
 
 Historical acceptance documents do not override this freeze. A future member or
@@ -33,20 +40,24 @@ identities, operation, environment, and time window.
 - Repository: `prochattools/jpv-bootcamp`.
 - RC branch: `codex/mighty-zero-touch-readiness-rc`.
 - RC production-lineage base: `1555bab05df64a173737080f0b6988a6789434a4`.
+- RC source revision: `9fb8993fd0112a215a617ab89cdb90c66949e7d4`.
 - RC hardening baseline: `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
 - Validated resume-fix source: `e847688c3871e36885c31a38a2544b7ffd51e8de`.
 - The RC contains the same validated resume behavior and regression coverage;
   the source commit was based on the older incident branch, so it was
   incorporated into this clean production-lineage candidate without a
   duplicate commit.
-- Production remains at deployed revision
-  `1555bab05df64a173737080f0b6988a6789434a4`; this RC was not deployed.
+- Production is deployed at merge revision
+  `01ac372f1676117451abd2c18a6e0f7d64abd737`, containing only the reviewed RC
+  delta plus normal merge metadata.
 - Read-only production health returned HTTP 200 for `/api/health`,
   `/api/health/deployment`, `/`, `/terms`, `/privacy`, and `/cookies`.
   `/api/health` reported the exact deployed image tag and `deploymentEnv` of
   `production`.
-- GitHub repository variables contained no `MIGHTY_ACCESS_SYNC_ENABLED`, and
-  the Mighty Access Sync workflow had no runs.
+- Publish workflow `34783518592` completed successfully. GitHub repository
+  variables contain no enabled `MIGHTY_ACCESS_SYNC_ENABLED`, and the Mighty
+  Access Sync, production migration, and production reconciliation workflows
+  had no runs after deployment.
 - No Mighty provider UI, member endpoint, population endpoint, Stripe API
   operation, production worker, production migration, or reconciliation was
   used. Live provider smoke was not performed and remains waived.
@@ -54,11 +65,11 @@ identities, operation, environment, and time window.
 ## Post-deployment system acceptance — 2026-09-13
 
 - `/api/health`: HTTP 200, `status=live`, `deploymentEnv=production`, image tag
-  `1555bab05df64a173737080f0b6988a6789434a4`.
+  `01ac372f1676117451abd2c18a6e0f7d64abd737`.
 - `/api/health/deployment`: HTTP 200 and the same image tag.
 - Public `/`, `/terms`, `/privacy`, and `/cookies`: HTTP 200.
-- Dokploy application status: `done`; deployed image tag matches the merge
-  revision.
+- Dokploy application status: `done`; deployed image tag matches merge
+  revision `01ac372f1676117451abd2c18a6e0f7d64abd737`.
 - Scheduler: disabled. Worker, cutover, migration, and reconciliation:
   dormant / zero executions for this deployment.
 - Zero-touch migration operations readiness passed with synthetic fixtures only;

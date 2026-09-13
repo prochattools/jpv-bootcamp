@@ -2,7 +2,7 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
+## CURRENT PHASE: ZERO-TOUCH SAFETY INERT DEPLOYMENT / SYSTEM ACCEPTANCE — 2026-09-13
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
@@ -10,7 +10,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 `PRODUCTION ACCEPTANCE: PASS`
 `POST-DEPLOYMENT HARDENING RC: DEPLOYED`
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
-`ZERO-TOUCH MIGRATION SAFETY RC: READY FOR OWNER REVIEW`
+`ZERO-TOUCH MIGRATION SAFETY RC: DEPLOYED`
 `UNCERTAIN-GRANT SAFETY FIX: PRESENT`
 `CHECKPOINT MEMBER-ID RESUME FIX: PRESENT`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
@@ -18,22 +18,28 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 `POPULATION INSPECTION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
 `PRODUCTION BEFORE: f430398048ecda70bbeeef6aa8cd41bd4befc870`
-`RC SOURCE REVISION: d393371ad5e737794e145da4959f67f3b85af0a1`
-`PRODUCTION DEPLOYED REVISION: 1555bab05df64a173737080f0b6988a6789434a4`
+`RC SOURCE REVISION: 9fb8993fd0112a215a617ab89cdb90c66949e7d4`
+`PRODUCTION MERGE REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
+`PRODUCTION DEPLOYED REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
 `SYSTEM HEALTH: PASS`
 `MIGHTY WORKER: DORMANT`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `POPULATION INSPECTION: NOT AUTHORIZED`
-`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + ZERO-TOUCH SAFETY CONTROLS + INERT`
+`MIGRATION CONTROL LIBRARY: DEPLOYED BUT NOT LIVE-WIRED`
+`SCHEDULER: DISABLED`
+`WORKER: DORMANT`
+`CUTOVER: NOT EXECUTED`
+`MIGRATION: NOT EXECUTED`
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
 `LIVE MEMBER POPULATION: NOT INSPECTED`
 `REAL MIGRATION MANIFEST: NOT CREATED`
 `MIGHTY AUTOMATION: DISABLED`
-`NEXT GATE: OWNER REVIEW OF EXACT ZERO-TOUCH SAFETY RC`
+`NEXT GATE: OWNER DECISION ABOUT A STRICTLY BOUNDED REAL MIGRATION-PREPARATION PHASE`
 
-Production was deployed from the exact validated RC source
-`d393371ad5e737794e145da4959f67f3b85af0a1` through merge revision
-`1555bab05df64a173737080f0b6988a6789434a4`. The application is healthy and
+Production was deployed from the exact validated zero-touch safety RC source
+`9fb8993fd0112a215a617ab89cdb90c66949e7d4` through merge revision
+`01ac372f1676117451abd2c18a6e0f7d64abd737`. The application is healthy and
 deliberately inert. No live Mighty read or mutation, live Stripe operation,
 population inspection, production test data, worker execution, scheduler
 enablement, configuration change, or migration was authorized or performed in
@@ -41,8 +47,8 @@ this deployment. The zero-touch operator gate is now complete using synthetic
 fixtures only. The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 The release suite passed `197/197` after the synthetic readiness gate was
-added. The zero-touch safety RC is based directly on deployed production
-revision `1555bab05df64a173737080f0b6988a6789434a4` and is not deployed.
+added. The migration control library is deployed but not live-wired, and no
+real migration manifest or automatic migration path exists.
 
 No live identity is authorized for this clean hardening goal. Do not inspect,
 query, classify, reconcile, dry-run, create, invite, grant, revoke, restore,

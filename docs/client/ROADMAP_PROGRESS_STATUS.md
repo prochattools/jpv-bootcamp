@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
+## CURRENT PHASE: ZERO-TOUCH SAFETY INERT DEPLOYMENT / SYSTEM ACCEPTANCE — 2026-09-13
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `INERT PRODUCTION DEPLOYMENT: ACCEPTED`
@@ -9,7 +9,7 @@
 `PRODUCTION ACCEPTANCE: PASS`
 `POST-DEPLOYMENT HARDENING RC: DEPLOYED`
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
-`ZERO-TOUCH MIGRATION SAFETY RC: READY FOR OWNER REVIEW`
+`ZERO-TOUCH MIGRATION SAFETY RC: DEPLOYED`
 `UNCERTAIN-GRANT SAFETY FIX: PRESENT`
 `CHECKPOINT MEMBER-ID RESUME FIX: PRESENT`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
@@ -17,28 +17,33 @@
 `POPULATION INSPECTION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
 `PRODUCTION BEFORE: f430398048ecda70bbeeef6aa8cd41bd4befc870`
-`RC SOURCE REVISION: d393371ad5e737794e145da4959f67f3b85af0a1`
-`PRODUCTION DEPLOYED REVISION: 1555bab05df64a173737080f0b6988a6789434a4`
+`RC SOURCE REVISION: 9fb8993fd0112a215a617ab89cdb90c66949e7d4`
+`PRODUCTION MERGE REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
+`PRODUCTION DEPLOYED REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
 `SYSTEM HEALTH: PASS`
 `MIGHTY WORKER: DORMANT`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `POPULATION INSPECTION: NOT AUTHORIZED`
-`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + ZERO-TOUCH SAFETY CONTROLS + INERT`
+`MIGRATION CONTROL LIBRARY: DEPLOYED BUT NOT LIVE-WIRED`
+`SCHEDULER: DISABLED`
+`WORKER: DORMANT`
+`CUTOVER: NOT EXECUTED`
+`MIGRATION: NOT EXECUTED`
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
 `LIVE MEMBER POPULATION: NOT INSPECTED`
 `REAL MIGRATION MANIFEST: NOT CREATED`
 `MIGHTY AUTOMATION: DISABLED`
-`NEXT GATE: OWNER REVIEW OF EXACT ZERO-TOUCH SAFETY RC`
+`NEXT GATE: OWNER DECISION ABOUT A STRICTLY BOUNDED REAL MIGRATION-PREPARATION PHASE`
 
 The live platform remains deployed, hardened, and inert at
-`1555bab05df64a173737080f0b6988a6789434a4`. The clean zero-touch safety RC is
-based directly on that production revision and is ready for owner review; it is
-not deployed. No live Mighty read or mutation, live Stripe operation,
-population inspection, production test data, worker execution, scheduler
-enablement, configuration change, merge, or deployment is authorized. The controlling evidence is
+`01ac372f1676117451abd2c18a6e0f7d64abd737`, from exact RC source
+`9fb8993fd0112a215a617ab89cdb90c66949e7d4`. No live Mighty read or mutation,
+live Stripe operation, population inspection, production test data, worker
+execution, scheduler enablement, configuration change, or migration was
+authorized or performed. The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
-The final readiness validation is recorded as `pnpm test:release` passed `197/197`; the RC
-hardening baseline is `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
+The final readiness validation is recorded as `pnpm test:release` passed `197/197`; the zero-touch safety controls are deployed but not live-wired.
 
 The zero-touch migration operations gate now passes entirely with synthetic
 fixtures. The exact manifest/hash, owner-authorization, worker-authentication,
@@ -49,8 +54,8 @@ manifest was created and no real population was inspected.
 
 No real identity is authorized for this clean hardening goal. Use synthetic
 fixtures only. No population reconciliation, production migration manifest,
-member migration, live Stripe mutation, scheduler enablement, merge, or deploy
-is authorized.
+member migration, live Stripe mutation, scheduler enablement, or worker
+execution is authorized.
 
 The exact future owner deployment checklist, inert smoke-test design, rollback
 procedure, and mutation call graph are in
