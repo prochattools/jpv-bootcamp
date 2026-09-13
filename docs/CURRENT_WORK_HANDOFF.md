@@ -2,22 +2,42 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION RELEASE / INERT-DEPLOYMENT READINESS — 2026-09-11
+## CURRENT PHASE: POST-DEPLOYMENT HARDENING RC / OWNER REVIEW — 2026-09-12
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
-`INERT-DEPLOYMENT READINESS GATE: PASS`
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
+`PRODUCTION ACCEPTANCE: PASS`
+`POST-DEPLOYMENT HARDENING RC: READY FOR OWNER REVIEW`
+`UNCERTAIN-GRANT SAFETY FIX: PRESENT`
+`CHECKPOINT MEMBER-ID RESUME FIX: PRESENT`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`POPULATION INSPECTION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
-`PRODUCTION DEPLOYMENT: NOT YET AUTHORIZED`
-`PRODUCTION MERGE: NOT YET AUTHORIZED`
+`PRODUCTION: FROZEN — f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`RC DEPLOYMENT: NOT AUTHORIZED`
+`PRODUCTION MERGE: COMPLETE — PR #42`
+`NEXT GATE: OWNER REVIEW OF ONE EXACT RC COMMIT`
 
-Only these live identities are authorized: `westhoek@hotmail.com`,
-`steve@yeshua.academy`, and `info@prochat.tools`. Every other real identity is
-off limits: do not inspect, query, classify, reconcile, dry-run, create,
-invite, grant, revoke, restore, or otherwise mutate it. Use synthetic fixtures
-for all other scenarios. Do not run a population reconciliation, build or
-refresh a production migration manifest, migrate members, mutate live Stripe,
-enable the scheduler, merge, or deploy.
+The live platform is frozen at `f430398048ecda70bbeeef6aa8cd41bd4befc870`.
+The release candidate is on
+`codex/mighty-post-deploy-hardening-rc`, based on the production lineage and
+ready for owner review. No live Mighty read or mutation, live Stripe
+operation, population inspection, production test data, worker execution,
+scheduler enablement, configuration change, merge, or deployment is authorized
+in the current goal. The controlling evidence is
+`docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
+The release suite passes `196/196`. The exact candidate revision is recorded
+after the RC is pushed; its hardening baseline is
+`bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
+
+No live identity is authorized for this clean hardening goal. Do not inspect,
+query, classify, reconcile, dry-run, create, invite, grant, revoke, restore,
+or otherwise mutate any real identity. Use synthetic fixtures only. Do not run
+a population reconciliation, build or refresh a production migration
+manifest, migrate members, mutate live Stripe, enable the scheduler, merge,
+or deploy.
 
 The current inert-deployment checklist, smoke-test design, rollback procedure,
 and trigger call graph are in
@@ -27,9 +47,44 @@ they are not a current roster and must not be refreshed or executed. Future
 population normalization requires new explicit owner authorization naming the
 exact accounts and scope.
 
-The bounded ordinary lifecycle passed for `westhoek@hotmail.com` with final
-access restored. Exact read-only checks for `steve@yeshua.academy` and
-`info@prochat.tools` show Plan `2000039` present. No fourth identity was read.
+The ordinary lifecycle and Host protections were completed before deployment
+using only the three authorized accounts; that provider evidence remains the
+functional proof. The owner has waived all live post-deployment Mighty member
+reads because the provider/UI response surface cannot guarantee the strict
+account-isolation boundary. No live Mighty account read is authorized in this
+acceptance goal.
+
+## CURRENT PRODUCTION DEPLOYMENT EVIDENCE — 2026-09-11
+
+The exact approved feature revision `80edb73cfabbe6d569b4869495ff85ea1ac48d28`
+was merged by PR #42 as merge revision
+`f430398048ecda70bbeeef6aa8cd41bd4befc870`. Publish workflow `34584712903`
+completed successfully and converged the Dokploy root application to the same
+immutable image tag. Live `/api/health` reports `status=live`,
+`deploymentEnv=production`, and the exact merge revision; `/api/health/deployment`
+reports the same image tag. Public homepage and legal routes returned HTTP 200.
+
+The GitHub repository has no `MIGHTY_ACCESS_SYNC_ENABLED` variable, and no
+Mighty Access Sync workflow run was present after deployment. Release/build
+validation passed before merge, including `RELEASE TESTS PASSED: 195/195`;
+the post-deployment synthetic hardening suite now passes `196/196`.
+The deployment is live and deliberately inert. System-level acceptance is PASS;
+the live provider member smoke is explicitly waived by the owner and is not a
+deployment defect or a migration authorization.
+
+## ACCEPTANCE DECISION AND INCIDENT CLOSURE — 2026-09-11
+
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
+
+The two prior attempts are preserved as non-mutating acceptance-procedure
+incidents: the first exposed an all-members page and the second exposed an
+unrelated referrals list from an exact-looking member-details page. Both were
+stopped immediately; no unrelated names or identifiers are recorded here, and
+neither incident caused a Mighty mutation, Stripe mutation, production sync,
+worker run, or migration. The owner replaced the unsafe live provider smoke
+with system-level inert acceptance. No further provider/account read is part
+of this goal.
 
 ## CURRENT INTEGRATION HARDENING / TEST IDENTITIES ONLY — 2026-09-10
 

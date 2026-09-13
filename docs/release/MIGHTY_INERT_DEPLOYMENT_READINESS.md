@@ -2,12 +2,27 @@
 
 ## Current release gate — 2026-09-11
 
-`INERT-DEPLOYMENT READINESS GATE: PASS`
+`INERT PRODUCTION DEPLOYMENT: ACCEPTED`
+`SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
+`PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
+`POST-DEPLOYMENT HARDENING RC: READY FOR OWNER REVIEW`
+`LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 
-This branch contains the Stripe → Mighty integration, but the current target is
-an inert application deployment only. No production merge, deployment,
-population inspection, migration, scheduler enablement, or live Stripe mutation
-is authorized.
+The live platform is frozen for the current engineering goal. The controlling
+freeze and synthetic evidence record is
+`docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
+No live provider read, provider mutation, Stripe operation, population
+inspection, production test data, worker execution, scheduler enablement,
+configuration change, or deployment is authorized here.
+
+The live Stripe → Mighty integration remains at inert production revision
+`f430398048ecda70bbeeef6aa8cd41bd4befc870`. The separate clean hardening RC is
+on `codex/mighty-post-deploy-hardening-rc` and is ready for owner review; it is
+not deployed. Population inspection, migration, scheduler enablement, and live
+Stripe mutation remain unauthorized. The owner explicitly waived live
+post-deployment Mighty member reads because two non-mutating provider/UI scope
+incidents showed that even apparently member-scoped views can expose unrelated
+identities. No further provider/account read is part of this acceptance.
 
 The only real identities permitted for this engineering gate are:
 
@@ -67,7 +82,7 @@ revoke.
 
 This checklist is review material, not deployment authorization.
 
-1. Approve exact branch `feature/mighty-stripe-migration` and exact commit.
+1. Review exact branch `codex/mighty-post-deploy-hardening-rc` and exact pushed commit.
 2. Confirm the complete release suite and production build are green.
 3. Review the complete diff against current `main`; leave `newrelic_agent.log` untouched.
 4. Confirm the hard production allowlist contains only the three authorized test identities.
@@ -117,8 +132,9 @@ new owner authorization names the exact identity and operation.
 ## Current boundary and next gate
 
 The three-account integration gate is already passed. The current gate proves
-deployment inertness, not production deployment. Real-member normalization,
-automated revocation, and scheduler enablement remain separate future work and
-require fresh explicit owner authorization. The next exact goal is: owner
-authorizes one exact revision for an inert production merge/deployment only;
-member migration and automation remain disabled.
+the hardening release candidate and deployment inertness; it does not
+authorize production deployment. Real-member normalization, automated
+revocation, and scheduler enablement remain separate future work and require
+fresh explicit owner authorization. The next exact gate is owner review of the
+single pushed RC revision; deployment and real-member migration remain
+separately unauthorized.
