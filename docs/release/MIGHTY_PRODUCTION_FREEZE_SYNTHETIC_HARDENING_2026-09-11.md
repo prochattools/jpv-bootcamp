@@ -3,20 +3,25 @@
 ## Gate
 
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
-`POST-DEPLOYMENT HARDENING RELEASE CANDIDATE: READY FOR OWNER REVIEW`
+`POST-DEPLOYMENT HARDENING RELEASE CANDIDATE: DEPLOYED`
+`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
+`LIVE PROVIDER SMOKE: NOT PERFORMED / WAIVED`
+`ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
+`ZERO-TOUCH MIGRATION SAFETY RC: READY FOR OWNER REVIEW`
 
-This document is the controlling record for the 2026-09-11 hardening goal. The
-live JPV/Mighty platform is frozen. Production users must observe no change.
+This document is the controlling record for the 2026-09-11 hardening goal and
+the zero-touch safety RC review. The live JPV/Mighty platform is deployed,
+hardened, and inert. Production users must observe no change.
 
 | Boundary | Current state |
 | --- | --- |
-| Live production platform | Frozen; no user-visible change authorized |
+| Live production platform | Hardened and inert; no user-visible change |
 | Live Mighty data | No reads for engineering validation; no mutations |
 | Live Stripe data | No reads for engineering validation; no mutations |
 | Production database | No test mutation |
 | Real-member population | Not inspected, reconciled, dry-run, or migrated |
 | Production scheduler / worker | Disabled; not executed |
-| Production deployment | Frozen at `f430398048ecda70bbeeef6aa8cd41bd4befc870`; not changed during this goal |
+| Production deployment | `1555bab05df64a173737080f0b6988a6789434a4`; unchanged during this goal |
 | Configuration | Read-only; not changed during this goal |
 
 Historical acceptance documents do not override this freeze. A future member or
@@ -26,16 +31,16 @@ identities, operation, environment, and time window.
 ## Repository and deployment evidence
 
 - Repository: `prochattools/jpv-bootcamp`.
-- RC branch: `codex/mighty-post-deploy-hardening-rc`.
-- RC production-lineage base: `f430398048ecda70bbeeef6aa8cd41bd4befc870`.
+- RC branch: `codex/mighty-zero-touch-readiness-rc`.
+- RC production-lineage base: `1555bab05df64a173737080f0b6988a6789434a4`.
 - RC hardening baseline: `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
 - Validated resume-fix source: `e847688c3871e36885c31a38a2544b7ffd51e8de`.
 - The RC contains the same validated resume behavior and regression coverage;
   the source commit was based on the older incident branch, so it was
   incorporated into this clean production-lineage candidate without a
   duplicate commit.
-- Deployed production revision remains
-  `f430398048ecda70bbeeef6aa8cd41bd4befc870`; no deployment was initiated.
+- Production remains at deployed revision
+  `1555bab05df64a173737080f0b6988a6789434a4`; this RC was not deployed.
 - Read-only production health returned HTTP 200 for `/api/health`,
   `/api/health/deployment`, `/`, `/terms`, `/privacy`, and `/cookies`.
   `/api/health` reported the exact deployed image tag and `deploymentEnv` of
@@ -43,7 +48,23 @@ identities, operation, environment, and time window.
 - GitHub repository variables contained no `MIGHTY_ACCESS_SYNC_ENABLED`, and
   the Mighty Access Sync workflow had no runs.
 - No Mighty provider UI, member endpoint, population endpoint, Stripe API
-  mutation, production worker, or production migration was used.
+  operation, production worker, production migration, or reconciliation was
+  used. Live provider smoke was not performed and remains waived.
+
+## Post-deployment system acceptance — 2026-09-13
+
+- `/api/health`: HTTP 200, `status=live`, `deploymentEnv=production`, image tag
+  `1555bab05df64a173737080f0b6988a6789434a4`.
+- `/api/health/deployment`: HTTP 200 and the same image tag.
+- Public `/`, `/terms`, `/privacy`, and `/cookies`: HTTP 200.
+- Dokploy application status: `done`; deployed image tag matches the merge
+  revision.
+- Scheduler: disabled. Worker, cutover, migration, and reconciliation:
+  dormant / zero executions for this deployment.
+- Zero-touch migration operations readiness passed with synthetic fixtures only;
+  no real population was inspected and no real migration manifest was created.
+- The canonical future operator procedure is
+  `docs/migration/MIGHTY_ZERO_TOUCH_MIGRATION_OPERATOR_RUNBOOK.md`.
 
 ## Synthetic validation completed
 
@@ -85,6 +106,7 @@ Primary coverage is in:
 - `src/lib/mighty/cutoverManifest.test.ts`
 - `src/lib/mighty/cutoverRunner.test.ts`
 - `scripts/mighty/syntheticHardening.test.ts`
+- `scripts/mighty/migrationReadiness.test.ts`
 - the complete `pnpm test:release` manifest
 
 Validation results:
@@ -95,7 +117,7 @@ Validation results:
 - Prisma validation: PASS through the release suite;
 - production build: PASS through the release suite;
 - `git diff --check`: PASS;
-- complete release suite: `RELEASE TESTS PASSED: 196/196`.
+- complete release suite: `RELEASE TESTS PASSED: 197/197`.
 
 ## Code and documentation changes
 

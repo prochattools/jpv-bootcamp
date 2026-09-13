@@ -1,6 +1,7 @@
 import { normalizeEmail } from '@/lib/normalize-email'
 
 import type { CutoverAction, CutoverManifestRow } from './cutoverManifest'
+import { JPV_MIGHTY_ACCESS_PLAN_ID } from './config'
 import {
 	assertMightyMutationAllowed,
 	assertMightyMutationRuntimeReady,
@@ -29,6 +30,10 @@ export type CutoverMutationAdapter = {
 	verifyPlan(memberId: string, planId: string): Promise<boolean>
 }
 
+export type CutoverEntitlementRecheck = (row: CutoverManifestRow) => Promise<'ALLOWED' | 'DENIED'>
+
+export const MAX_CUTOVER_BATCH_SIZE = 50
+
 export type CutoverRunResult = {
 	dryRun: boolean
 	processed: CutoverCheckpoint[]
@@ -54,6 +59,7 @@ function mutableAction(action: CutoverAction): boolean {
 
 export function planCutoverBatch(rows: CutoverManifestRow[], limit: number): CutoverManifestRow[] {
 	if (!Number.isInteger(limit) || limit <= 0) throw new Error('cutover_batch_limit_must_be_positive')
+	if (limit > MAX_CUTOVER_BATCH_SIZE) throw new Error('cutover_batch_limit_exceeds_approved_maximum')
 	return rows.filter((row) => mutableAction(row.proposedCutoverAction)).slice(0, limit)
 }
 
@@ -65,10 +71,13 @@ export async function runCutoverBatch(params: {
 	adapter?: CutoverMutationAdapter
 	planId: string
 	mutationScope?: MightyMutationScope
+	currentEntitlement?: CutoverEntitlementRecheck
 	}): Promise<CutoverRunResult> {
 	if (params.rows.length === 0) throw new Error('cutover_manifest_required')
+	if (String(params.planId) !== String(JPV_MIGHTY_ACCESS_PLAN_ID)) throw new Error('cutover_target_plan_mismatch')
 	const selected = planCutoverBatch(params.rows, params.batchSize)
 	if (!params.dryRun && !params.adapter) throw new Error('cutover_mutation_adapter_required')
+	if (!params.dryRun && !params.currentEntitlement) throw new Error('cutover_current_entitlement_recheck_required')
 	const mutationScope = params.mutationScope ?? getMightyMutationScope()
 	assertMightyMutationRuntimeReady(mutationScope)
 	const seenEmails = new Set<string>()
@@ -107,11 +116,28 @@ export async function runCutoverBatch(params: {
 			continue
 		}
 
+		const checkpointMemberId = existing?.memberId ?? row.mightyMemberId
+		try {
+			const currentEntitlement = await params.currentEntitlement!(row)
+			if (currentEntitlement !== row.stripeEntitlement) {
+				const review = checkpoint(row.email, 'REVIEW_REQUIRED', checkpointMemberId, 'cutover_current_entitlement_mismatch')
+				params.store.put(review)
+				processed.push(review)
+				return { dryRun: false, processed, stoppedOnError: true, mutationPerformed: false }
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'cutover_entitlement_recheck_failed'
+			const review = checkpoint(row.email, 'REVIEW_REQUIRED', checkpointMemberId, message)
+			params.store.put(review)
+			processed.push(review)
+			return { dryRun: false, processed, stoppedOnError: true, mutationPerformed: false }
+		}
+
 		const adapter = params.adapter!
 		// A newly created member may exist only in the checkpoint because the
 		// immutable manifest row intentionally still has no provider ID. Reuse
 		// that checkpointed identity on resume instead of creating a duplicate.
-		const resumedMemberId = existing?.memberId ?? row.mightyMemberId
+		const resumedMemberId = checkpointMemberId
 		const started = checkpoint(row.email, 'IN_PROGRESS', resumedMemberId, null)
 		params.store.put(started)
 		let memberId = resumedMemberId
