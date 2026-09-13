@@ -9,6 +9,7 @@
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `SYSTEM HEALTH: PASS`
 `PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
+`ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
 
 The exact validated RC source `d393371ad5e737794e145da4959f67f3b85af0a1` was
 deployed through production merge revision
@@ -19,6 +20,12 @@ No live provider read, provider mutation, Stripe operation, population
 inspection, production test data, worker execution, scheduler enablement,
 configuration change, or migration was performed here. Future migration
 preparation requires a separate owner decision.
+
+The synthetic-only migration operations gate is complete. The exact manifest,
+authorization, entitlement re-check, checkpoint/resume, stop-on-error, and
+operator procedure are documented in
+`docs/migration/MIGHTY_ZERO_TOUCH_MIGRATION_OPERATOR_RUNBOOK.md`. No real
+population was inspected and no real migration manifest was created.
 
 The live Stripe → Mighty integration is running the inert hardening deployment
 at `1555bab05df64a173737080f0b6988a6789434a4`, sourced from RC

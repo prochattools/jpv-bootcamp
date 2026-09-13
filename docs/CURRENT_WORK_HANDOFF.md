@@ -23,7 +23,11 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `POPULATION INSPECTION: NOT AUTHORIZED`
 `PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
-`NEXT GATE: SEPARATE OWNER DECISION ABOUT FUTURE MIGRATION PREPARATION`
+`ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
+`LIVE MEMBER POPULATION: NOT INSPECTED`
+`REAL MIGRATION MANIFEST: NOT CREATED`
+`MIGHTY AUTOMATION: DISABLED`
+`NEXT GATE: WAIT FOR OWNER AUTHORIZATION`
 
 Production was deployed from the exact validated RC source
 `d393371ad5e737794e145da4959f67f3b85af0a1` through merge revision
@@ -31,9 +35,11 @@ Production was deployed from the exact validated RC source
 deliberately inert. No live Mighty read or mutation, live Stripe operation,
 population inspection, production test data, worker execution, scheduler
 enablement, configuration change, or migration was authorized or performed in
-this deployment. The controlling evidence is
+this deployment. The zero-touch operator gate is now complete using synthetic
+fixtures only. The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
-The release suite passed `196/196` before deployment. The approved RC source
+The release suite passed `197/197` after the synthetic readiness gate was
+added. The approved RC source
 revision is `d393371ad5e737794e145da4959f67f3b85af0a1`; its hardening baseline
 is `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
 
@@ -51,6 +57,13 @@ rehearsal and manifest are historical and superseded;
 they are not a current roster and must not be refreshed or executed. Future
 population normalization requires new explicit owner authorization naming the
 exact accounts and scope.
+
+The future zero-touch migration contract and operator procedure are documented
+in `docs/migration/MIGHTY_ZERO_TOUCH_MIGRATION_OPERATOR_RUNBOOK.md`. It uses an
+exact immutable manifest hash, explicit owner authorization, an authenticated
+bounded worker request, current-entitlement re-checks, checkpointed resume, and
+stop-on-error. No real manifest was created and no real population was
+inspected.
 
 The ordinary lifecycle and Host protections were completed before deployment
 using only the three authorized accounts; that provider evidence remains the

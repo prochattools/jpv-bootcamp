@@ -6,6 +6,7 @@
 `POST-DEPLOYMENT HARDENING RELEASE CANDIDATE: DEPLOYED`
 `PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
 `LIVE PROVIDER SMOKE: NOT PERFORMED / WAIVED`
+`ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
 
 This document is the controlling record for the 2026-09-11 hardening goal and
 its 2026-09-13 inert production deployment. Production users must observe no
@@ -62,6 +63,10 @@ identities, operation, environment, and time window.
   revision.
 - Scheduler: disabled. Worker, cutover, migration, and reconciliation:
   dormant / zero executions for this deployment.
+- Zero-touch migration operations readiness passed with synthetic fixtures only;
+  no real population was inspected and no real migration manifest was created.
+- The canonical future operator procedure is
+  `docs/migration/MIGHTY_ZERO_TOUCH_MIGRATION_OPERATOR_RUNBOOK.md`.
 
 ## Synthetic validation completed
 
@@ -103,6 +108,7 @@ Primary coverage is in:
 - `src/lib/mighty/cutoverManifest.test.ts`
 - `src/lib/mighty/cutoverRunner.test.ts`
 - `scripts/mighty/syntheticHardening.test.ts`
+- `scripts/mighty/migrationReadiness.test.ts`
 - the complete `pnpm test:release` manifest
 
 Validation results:
@@ -113,7 +119,7 @@ Validation results:
 - Prisma validation: PASS through the release suite;
 - production build: PASS through the release suite;
 - `git diff --check`: PASS;
-- complete release suite: `RELEASE TESTS PASSED: 196/196`.
+- complete release suite: `RELEASE TESTS PASSED: 197/197`.
 
 ## Code and documentation changes
 

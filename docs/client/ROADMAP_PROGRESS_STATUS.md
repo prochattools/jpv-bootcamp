@@ -22,7 +22,11 @@
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `POPULATION INSPECTION: NOT AUTHORIZED`
 `PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
-`NEXT GATE: SEPARATE OWNER DECISION ABOUT FUTURE MIGRATION PREPARATION`
+`ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
+`LIVE MEMBER POPULATION: NOT INSPECTED`
+`REAL MIGRATION MANIFEST: NOT CREATED`
+`MIGHTY AUTOMATION: DISABLED`
+`NEXT GATE: WAIT FOR OWNER AUTHORIZATION`
 
 The exact validated RC source `d393371ad5e737794e145da4959f67f3b85af0a1` is
 deployed through production merge revision
@@ -32,8 +36,15 @@ population inspection, production test data, worker execution, scheduler
 enablement, configuration change, or migration was performed. The controlling
 evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
-The final RC validation is recorded as `pnpm test:release` passed `196/196`; the RC
+The final readiness validation is recorded as `pnpm test:release` passed `197/197`; the RC
 hardening baseline is `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
+
+The zero-touch migration operations gate now passes entirely with synthetic
+fixtures. The exact manifest/hash, owner-authorization, worker-authentication,
+entitlement re-check, checkpoint/resume, overlap, privilege, dry-run, and
+stop-on-error procedure is documented in
+`docs/migration/MIGHTY_ZERO_TOUCH_MIGRATION_OPERATOR_RUNBOOK.md`. No real
+manifest was created and no real population was inspected.
 
 No real identity is authorized for this clean hardening goal. Use synthetic
 fixtures only. No population reconciliation, production migration manifest,
