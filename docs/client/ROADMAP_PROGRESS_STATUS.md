@@ -1,6 +1,29 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
+## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
+
+`PHASE A: BLOCKED — PRE-LIVE RUNTIME DEFECT FOUND`
+`PRODUCTION REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
+`LIVE MIGHTY READS: 0`
+`LIVE MIGHTY MUTATIONS: 0`
+`LIVE STRIPE READS: 0`
+`LIVE STRIPE MUTATIONS: 0`
+`REAL MANIFEST: NOT CREATED`
+`REAL POPULATION: NOT INSPECTED`
+`NEW RC REQUIRED: YES`
+`NEXT GATE: OWNER REVIEW AND DEPLOYMENT OF THE FIXED RC`
+
+Phase A was stopped before live account access. The deployed worker could lose
+the ID of a newly-created Mighty member when a later reconciliation step failed,
+allowing a retry to create a duplicate. Its production endpoint also lacked an
+exact email scope and could process every queued row in the configured
+allowlist. The non-production branch
+`codex/phase-a-worker-hardening` fixes both defects and passes the synthetic
+regressions plus the full `197/197` release suite. The fix is not deployed;
+Phase A live reads, dry runs, worker execution, and lifecycle mutations remain
+unauthorized until a new exact RC is reviewed and deployed.
+
+## PRIOR PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `INERT PRODUCTION DEPLOYMENT: ACCEPTED`

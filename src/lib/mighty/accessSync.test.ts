@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { projectMightyAccessFromStripeEvent, reconcileAccess } from './accessSync'
+import {
+	MightyAccessSyncCheckpointError,
+	normalizeMightyAccessSyncScope,
+	projectMightyAccessFromStripeEvent,
+	reconcileAccess,
+} from './accessSync'
 import { MightyApiError, type MightyAdminApi, type MightyMember } from './adminApi'
 import type { MightyConfig } from './config'
 import { getMightyMutationScope } from './mutationPolicy'
@@ -154,6 +159,63 @@ test('allowed reconciliation creates an absent member before granting access', a
 	assert.equal(state.grantCalls, 1)
 	assert.equal(welcomeCalls, 1)
 	assert.equal(result.mightyMemberId, '22')
+})
+
+test('late reconciliation failure checkpoints the newly-created member for safe resume', async () => {
+	const state: FakeState = {
+		member: null,
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	let firstGrant = true
+	const api = {
+		...fakeApi(state),
+		restoreAccess: async () => {
+			state.grantCalls += 1
+			if (firstGrant) {
+				firstGrant = false
+				throw new Error('synthetic_provider_timeout')
+			}
+			state.purchases = [{ purchase: { id: 'purchase-1' } }]
+			return { id: 678 }
+		},
+	} as unknown as MightyAdminApi
+
+	let checkpoint: MightyAccessSyncCheckpointError | null = null
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api, mutationScope: syntheticMutationScope }),
+		(error: unknown) => {
+			checkpoint = error instanceof MightyAccessSyncCheckpointError ? error : null
+			return checkpoint !== null
+		},
+	)
+	assert.equal(checkpoint?.mightyMemberId, '22')
+	assert.equal(state.createMemberCalls, 1)
+
+	const resumed = await reconcileAccess({
+		row: row({ mightyMemberId: checkpoint?.mightyMemberId, welcomeRequired: false }),
+		config,
+		api,
+		mutationScope: syntheticMutationScope,
+	})
+	assert.equal(resumed.mightyMemberId, '22')
+	assert.equal(state.createMemberCalls, 1)
+})
+
+test('worker scope normalization is explicit, unique, and limited to the allowed set', () => {
+	const allowed = new Set(['student@example.com', 'second@example.com'])
+	assert.deepEqual(normalizeMightyAccessSyncScope([' Student@Example.com '], allowed), ['student@example.com'])
+	assert.throws(() => normalizeMightyAccessSyncScope([], allowed), /mighty_worker_scope_invalid/)
+	assert.throws(() => normalizeMightyAccessSyncScope(['student@example.com', 'student@example.com'], allowed), /mighty_worker_scope_duplicate/)
+	assert.throws(
+		() => normalizeMightyAccessSyncScope(['outside@example.com'], allowed),
+		(error: unknown) => error instanceof Error && 'code' in error && (error as { code?: string }).code === 'mighty_worker_scope_denied',
+	)
 })
 
 test('allowed recovery re-provisions the stored Mighty identity after Plan removal', async () => {

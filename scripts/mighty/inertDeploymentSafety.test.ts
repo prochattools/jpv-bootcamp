@@ -35,14 +35,15 @@ test('verified Stripe webhooks only persist desired state; the worker owns provi
 	assert.match(stripeWebhook, /queueMightyAccessFromStripeEvent\(event\)/)
 	assert.doesNotMatch(stripeWebhook, /createMightyAdminApi|reconcileAccess|grantAccess|revokeAccess|createMember/)
 	assert.match(accessSync, /assertMightyMutationRuntimeReady\(mutationScope\)/)
-	assert.match(accessSync, /claimRows\(limit, mutationScope\.allowedEmails\)/)
+	assert.match(accessSync, /claimRows\(limit, mutationScope\.allowedEmails, scopedEmails\)/)
 	assert.match(accessSync, /reconcileAccess\(\{ row, config, api, mutationScope \}\)/)
 })
 
 test('worker route requires a dedicated bearer secret and cannot bypass the runtime scope', () => {
 	assert.match(workerRoute, /MIGHTY_ACCESS_SYNC_WORKER_SECRET/)
 	assert.match(workerRoute, /timingSafeEqual/)
-	assert.match(workerRoute, /processMightyAccessSync\(limit\)/)
-	assert.match(accessSync, /normalizedEmail: \{ in: \[\.\.\.allowedEmails\] \}/)
+	assert.match(workerRoute, /processMightyAccessSync\(limit, emails\)/)
+	assert.match(workerRoute, /scope_required/)
+	assert.match(accessSync, /normalizedEmail: \{ in: \[\.\.\.\(scopedEmails \?\? allowedEmails\)\] \}/)
 	assert.doesNotMatch(workerRoute, /console\.log\(.*secret/i)
 })

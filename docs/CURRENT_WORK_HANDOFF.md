@@ -2,7 +2,41 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
+## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
+
+`PHASE A: BLOCKED — PRE-LIVE RUNTIME DEFECT FOUND`
+`PRODUCTION REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
+`LIVE MIGHTY READS: 0`
+`LIVE MIGHTY MUTATIONS: 0`
+`LIVE STRIPE READS: 0`
+`LIVE STRIPE MUTATIONS: 0`
+`REAL MANIFEST: NOT CREATED`
+`REAL POPULATION: NOT INSPECTED`
+`NEW RC REQUIRED: YES`
+`NEXT GATE: OWNER REVIEW AND DEPLOYMENT OF THE FIXED RC`
+
+The authorized Phase A three-account preparation was stopped before any real
+Stripe or Mighty account was queried. Static audit of the deployed worker found
+two release-blocking defects:
+
+1. If a new Mighty member was created and a later grant, verification, or
+   welcome step failed, the worker recorded the row as failed without saving
+   the newly-created `mightyMemberId`. A retry could therefore call
+   `createMember` again.
+2. The production worker endpoint accepted only a batch limit and could claim
+   every queued row in the configured allowlist. It had no exact email scope
+   for a bounded operator canary.
+
+The non-production branch
+`codex/phase-a-worker-hardening` contains the bounded fix: newly-created
+provider IDs are checkpointed on failure and production worker calls require an
+explicit email scope that is still intersected with the configured allowlist.
+The fix was validated locally with synthetic tests and the full `197/197`
+release suite. It has not been deployed. Phase A live reads, dry runs, worker
+execution, and lifecycle mutations remain forbidden until a new exact RC is
+reviewed and deployed under separate authorization.
+
+## PRIOR PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
