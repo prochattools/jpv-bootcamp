@@ -3,25 +3,27 @@
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 
 `PHASE A: BLOCKED — PRE-LIVE RUNTIME DEFECT FOUND`
-`PRODUCTION REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
+`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
 `LIVE MIGHTY READS: 0`
 `LIVE MIGHTY MUTATIONS: 0`
 `LIVE STRIPE READS: 0`
 `LIVE STRIPE MUTATIONS: 0`
 `REAL MANIFEST: NOT CREATED`
 `REAL POPULATION: NOT INSPECTED`
-`NEW RC REQUIRED: YES`
-`NEXT GATE: OWNER REVIEW AND DEPLOYMENT OF THE FIXED RC`
+`NEW RC REQUIRED: NO`
+`NEXT GATE: RESUME THREE-ACCOUNT PHASE A USING EXACT WORKER EMAIL SCOPE`
 
-Phase A was stopped before live account access. The deployed worker could lose
+Phase A was stopped before live account access. The previously deployed worker could lose
 the ID of a newly-created Mighty member when a later reconciliation step failed,
 allowing a retry to create a duplicate. Its production endpoint also lacked an
 exact email scope and could process every queued row in the configured
-allowlist. The non-production branch
-`codex/phase-a-worker-hardening` fixes both defects and passes the synthetic
-regressions plus the full `197/197` release suite. The fix is not deployed;
-Phase A live reads, dry runs, worker execution, and lifecycle mutations remain
-unauthorized until a new exact RC is reviewed and deployed.
+allowlist. The fix was deployed as merge revision
+`1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b` from source
+`f3878875052f6273c011d9692037be90391f0402` by workflow `34789835920`, after
+passing the synthetic regressions and full `197/197` release suite. System
+health and public routes pass. Phase A live reads, dry runs, worker execution,
+and lifecycle mutations were not resumed; the worker remains dormant and the
+scheduler remains disabled.
 
 ## PRIOR PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
 

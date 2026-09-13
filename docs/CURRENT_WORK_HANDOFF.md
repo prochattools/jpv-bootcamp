@@ -5,18 +5,19 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 
 `PHASE A: BLOCKED — PRE-LIVE RUNTIME DEFECT FOUND`
-`PRODUCTION REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`
+`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
 `LIVE MIGHTY READS: 0`
 `LIVE MIGHTY MUTATIONS: 0`
 `LIVE STRIPE READS: 0`
 `LIVE STRIPE MUTATIONS: 0`
 `REAL MANIFEST: NOT CREATED`
 `REAL POPULATION: NOT INSPECTED`
-`NEW RC REQUIRED: YES`
-`NEXT GATE: OWNER REVIEW AND DEPLOYMENT OF THE FIXED RC`
+`NEW RC REQUIRED: NO`
+`NEXT GATE: RESUME THREE-ACCOUNT PHASE A USING EXACT WORKER EMAIL SCOPE`
 
 The authorized Phase A three-account preparation was stopped before any real
-Stripe or Mighty account was queried. Static audit of the deployed worker found
+Stripe or Mighty account was queried. Static audit of the previously deployed
+worker found
 two release-blocking defects:
 
 1. If a new Mighty member was created and a later grant, verification, or
@@ -27,14 +28,13 @@ two release-blocking defects:
    every queued row in the configured allowlist. It had no exact email scope
    for a bounded operator canary.
 
-The non-production branch
-`codex/phase-a-worker-hardening` contains the bounded fix: newly-created
-provider IDs are checkpointed on failure and production worker calls require an
-explicit email scope that is still intersected with the configured allowlist.
-The fix was validated locally with synthetic tests and the full `197/197`
-release suite. It has not been deployed. Phase A live reads, dry runs, worker
-execution, and lifecycle mutations remain forbidden until a new exact RC is
-reviewed and deployed under separate authorization.
+The bounded fix was deployed from source `f3878875052f6273c011d9692037be90391f0402`
+as merge revision `1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b` by publish workflow
+`34789835920`. Newly-created provider IDs are checkpointed on failure and
+production worker calls require an explicit email scope intersected with the
+configured allowlist. The deployment passed system health and public-route
+checks. Phase A live reads, dry runs, worker execution, and lifecycle mutations
+were not resumed; the worker remains dormant and the scheduler remains disabled.
 
 ## PRIOR PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
 
