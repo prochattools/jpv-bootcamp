@@ -2,35 +2,47 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: POST-DEPLOYMENT HARDENING RC / OWNER REVIEW — 2026-09-12
+## CURRENT PHASE: ZERO-TOUCH MIGRATION SAFETY RC / OWNER REVIEW — 2026-09-13
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
 `SYSTEM-LEVEL INERT PRODUCTION ACCEPTANCE: PASS`
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
 `PRODUCTION ACCEPTANCE: PASS`
-`POST-DEPLOYMENT HARDENING RC: READY FOR OWNER REVIEW`
+`POST-DEPLOYMENT HARDENING RC: DEPLOYED`
+`ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
+`ZERO-TOUCH MIGRATION SAFETY RC: READY FOR OWNER REVIEW`
 `UNCERTAIN-GRANT SAFETY FIX: PRESENT`
 `CHECKPOINT MEMBER-ID RESUME FIX: PRESENT`
 `LIVE PROVIDER POST-DEPLOY MEMBER SMOKE: WAIVED BY OWNER`
 `REAL MEMBER MIGRATION: NOT AUTHORIZED`
 `POPULATION INSPECTION: NOT AUTHORIZED`
 `PRODUCTION SCHEDULER: DISABLED`
-`PRODUCTION: FROZEN — f430398048ecda70bbeeef6aa8cd41bd4befc870`
-`RC DEPLOYMENT: NOT AUTHORIZED`
-`PRODUCTION MERGE: COMPLETE — PR #42`
-`NEXT GATE: OWNER REVIEW OF ONE EXACT RC COMMIT`
+`PRODUCTION BEFORE: f430398048ecda70bbeeef6aa8cd41bd4befc870`
+`RC SOURCE REVISION: d393371ad5e737794e145da4959f67f3b85af0a1`
+`PRODUCTION DEPLOYED REVISION: 1555bab05df64a173737080f0b6988a6789434a4`
+`SYSTEM HEALTH: PASS`
+`MIGHTY WORKER: DORMANT`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`POPULATION INSPECTION: NOT AUTHORIZED`
+`PRODUCTION OPERATING MODE: DEPLOYED + HARDENED + INERT`
+`ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
+`LIVE MEMBER POPULATION: NOT INSPECTED`
+`REAL MIGRATION MANIFEST: NOT CREATED`
+`MIGHTY AUTOMATION: DISABLED`
+`NEXT GATE: OWNER REVIEW OF EXACT ZERO-TOUCH SAFETY RC`
 
-The live platform is frozen at `f430398048ecda70bbeeef6aa8cd41bd4befc870`.
-The release candidate is on
-`codex/mighty-post-deploy-hardening-rc`, based on the production lineage and
-ready for owner review. No live Mighty read or mutation, live Stripe
-operation, population inspection, production test data, worker execution,
-scheduler enablement, configuration change, merge, or deployment is authorized
-in the current goal. The controlling evidence is
+Production was deployed from the exact validated RC source
+`d393371ad5e737794e145da4959f67f3b85af0a1` through merge revision
+`1555bab05df64a173737080f0b6988a6789434a4`. The application is healthy and
+deliberately inert. No live Mighty read or mutation, live Stripe operation,
+population inspection, production test data, worker execution, scheduler
+enablement, configuration change, or migration was authorized or performed in
+this deployment. The zero-touch operator gate is now complete using synthetic
+fixtures only. The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
-The release suite passes `196/196`. The exact candidate revision is recorded
-after the RC is pushed; its hardening baseline is
-`bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
+The release suite passed `197/197` after the synthetic readiness gate was
+added. The zero-touch safety RC is based directly on deployed production
+revision `1555bab05df64a173737080f0b6988a6789434a4` and is not deployed.
 
 No live identity is authorized for this clean hardening goal. Do not inspect,
 query, classify, reconcile, dry-run, create, invite, grant, revoke, restore,
@@ -46,6 +58,13 @@ rehearsal and manifest are historical and superseded;
 they are not a current roster and must not be refreshed or executed. Future
 population normalization requires new explicit owner authorization naming the
 exact accounts and scope.
+
+The future zero-touch migration contract and operator procedure are documented
+in `docs/migration/MIGHTY_ZERO_TOUCH_MIGRATION_OPERATOR_RUNBOOK.md`. It uses an
+exact immutable manifest hash, explicit owner authorization, an authenticated
+bounded worker request, current-entitlement re-checks, checkpointed resume, and
+stop-on-error. No real manifest was created and no real population was
+inspected.
 
 The ordinary lifecycle and Host protections were completed before deployment
 using only the three authorized accounts; that provider evidence remains the

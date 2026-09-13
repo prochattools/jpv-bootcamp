@@ -17,6 +17,8 @@ const syntheticScope = {
 	]),
 } as const
 
+const entitlementRecheck = async (manifestRow: CutoverManifestRow): Promise<'ALLOWED' | 'DENIED'> => manifestRow.stripeEntitlement
+
 function row(email = 'student@example.com'): CutoverManifestRow {
 	return buildCutoverManifestRow({
 		email,
@@ -50,7 +52,7 @@ test('runner is bounded, idempotent, and stops on the first provider error witho
 		},
 		verifyPlan: async () => providerHasPlan,
 	}
-	const first = await runCutoverBatch({ rows: [row(), row('second@example.com')], batchSize: 2, dryRun: false, store, adapter, planId: '2000039', mutationScope: syntheticScope })
+	const first = await runCutoverBatch({ rows: [row(), row('second@example.com')], batchSize: 2, dryRun: false, store, adapter, planId: '2000039', mutationScope: syntheticScope, currentEntitlement: entitlementRecheck })
 	assert.equal(first.stoppedOnError, true)
 	assert.equal(first.mutationPerformed, true)
 	assert.deepEqual(calls, ['grant:41'])
@@ -58,11 +60,11 @@ test('runner is bounded, idempotent, and stops on the first provider error witho
 	assert.equal(store.get('second@example.com'), null)
 
 	fail = false
-	const second = await runCutoverBatch({ rows: [row(), row('second@example.com')], batchSize: 2, dryRun: false, store, adapter, planId: '2000039', mutationScope: syntheticScope })
+	const second = await runCutoverBatch({ rows: [row(), row('second@example.com')], batchSize: 2, dryRun: false, store, adapter, planId: '2000039', mutationScope: syntheticScope, currentEntitlement: entitlementRecheck })
 	assert.equal(second.stoppedOnError, false)
 	assert.equal(store.get('student@example.com')?.status, 'COMPLETE')
 	assert.equal(store.get('second@example.com')?.status, 'COMPLETE')
-	const third = await runCutoverBatch({ rows: [row(), row('second@example.com')], batchSize: 2, dryRun: false, store, adapter, planId: '2000039', mutationScope: syntheticScope })
+	const third = await runCutoverBatch({ rows: [row(), row('second@example.com')], batchSize: 2, dryRun: false, store, adapter, planId: '2000039', mutationScope: syntheticScope, currentEntitlement: entitlementRecheck })
 	assert.equal(third.mutationPerformed, false)
 })
 
@@ -81,6 +83,7 @@ test('definite grant rejection stops safely without verification or rollback', a
 		},
 		planId: '2000039',
 		mutationScope: syntheticScope,
+		currentEntitlement: entitlementRecheck,
 	})
 	assert.equal(result.stoppedOnError, true)
 	assert.equal(store.get('student@example.com')?.status, 'REVIEW_REQUIRED')
@@ -102,6 +105,7 @@ test('verification failure after a possible successful grant stays review-only',
 		},
 		planId: '2000039',
 		mutationScope: syntheticScope,
+		currentEntitlement: entitlementRecheck,
 	})
 	assert.equal(result.stoppedOnError, true)
 	assert.equal(result.mutationPerformed, true)
@@ -127,6 +131,7 @@ test('definite member-creation rejection records no provider ID and never grants
 			...syntheticScope,
 			allowedEmails: new Set([...syntheticScope.allowedEmails, 'rejected-new@example.com']),
 		},
+		currentEntitlement: entitlementRecheck,
 	})
 	assert.equal(result.stoppedOnError, true)
 	assert.equal(store.get('rejected-new@example.com')?.status, 'REVIEW_REQUIRED')
@@ -140,7 +145,7 @@ test('runner skips identity, overlap, and privileged actions', async () => {
 		buildCutoverManifestRow({ email: 'unknown@example.com', stripeEntitled: true, member: { id: 1, email: 'unknown@example.com', role: null }, plans: [], purchases: [], spaces: [], targetPlanId: 2000039 }),
 		buildCutoverManifestRow({ email: 'overlap@example.com', stripeEntitled: true, member: { id: 2, email: 'overlap@example.com', role: 'contributor' }, plans: [], purchases: [], spaces: [{ id: 1, name: 'FIRST FOUNDATION' }], targetPlanId: 2000039 }),
 	]
-	const result = await runCutoverBatch({ rows: skipped, batchSize: 10, dryRun: false, store, adapter: { createMember: async () => ({ id: 'nope' }), grantPlan: async () => { throw new Error('must_not_call') }, verifyPlan: async () => false }, planId: '2000039', mutationScope: syntheticScope })
+	const result = await runCutoverBatch({ rows: skipped, batchSize: 10, dryRun: false, store, adapter: { createMember: async () => ({ id: 'nope' }), grantPlan: async () => { throw new Error('must_not_call') }, verifyPlan: async () => false }, planId: '2000039', mutationScope: syntheticScope, currentEntitlement: entitlementRecheck })
 	assert.equal(result.mutationPerformed, false)
 	assert.equal(result.processed.length, 0)
 })
@@ -161,6 +166,7 @@ test('new-subscriber failure preserves the created ID for review and never delet
 		},
 		planId: '2000039',
 		mutationScope: syntheticScope,
+		currentEntitlement: entitlementRecheck,
 	})
 	assert.equal(result.stoppedOnError, true)
 	assert.equal(result.mutationPerformed, true)
@@ -181,6 +187,7 @@ test('new-subscriber failure preserves the created ID for review and never delet
 		},
 		planId: '2000039',
 		mutationScope: syntheticScope,
+		currentEntitlement: entitlementRecheck,
 	})
 	assert.equal(resumed.stoppedOnError, false)
 	assert.equal(store.get('new@example.com')?.status, 'COMPLETE')
@@ -214,6 +221,7 @@ test('runner rejects an empty manifest and unauthorized identities before provid
 			},
 			planId: '2000039',
 			mutationScope: productionScope,
+			currentEntitlement: entitlementRecheck,
 		}),
 		(error: unknown) => error instanceof Error && 'code' in error && ['mighty_mutation_scope_denied', 'mighty_live_test_scope_denied'].includes(String((error as { code?: unknown }).code)),
 	)
@@ -248,6 +256,7 @@ test('runner stops without mutation when a checkpoint identity changes', async (
 		},
 		planId: '2000039',
 		mutationScope: syntheticScope,
+		currentEntitlement: entitlementRecheck,
 	})
 	assert.equal(result.stoppedOnError, true)
 	assert.equal(result.mutationPerformed, false)
