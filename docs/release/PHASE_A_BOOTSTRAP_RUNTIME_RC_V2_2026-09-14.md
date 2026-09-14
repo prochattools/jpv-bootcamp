@@ -1,5 +1,21 @@
 # Phase A authoritative bootstrap runtime RC v2
 
+## Live canary result — BLOCKED — 2026-09-15
+
+The authorized canary was limited to `westhoek@hotmail.com`, expected Mighty
+member `41580317`, and target Plan `2000039`. The exact-member baseline found
+the target Plan present and no target purchase. The bootstrap endpoint was
+invoked once and returned HTTP 502 `bootstrap_failed`; the exact production
+`customer_provisioning` lookup was absent, so the safe-stop code is
+`mighty_bootstrap_identity_missing` before Stripe retrieval or queue write.
+
+The exact Westhoek queue row remained absent after the failure. The worker was
+not invoked, no Stripe read or mutation occurred, no Mighty mutation occurred,
+no email was sent, and no other identity or population endpoint was accessed.
+The scheduler remained disabled. Phase A is `BLOCKED`, not complete. A fresh
+owner authorization is required after the exact local Westhoek entitlement
+identity is repaired through the approved application path.
+
 ## Deployment status
 
 `DEPLOYED + HARDENED + INERT`

@@ -1,5 +1,18 @@
 # JPV Mighty zero-touch migration operator runbook
 
+## Phase A live canary result — BLOCKED — 2026-09-15
+
+The one-shot live canary was authorized for `westhoek@hotmail.com` only, with
+known Mighty member `41580317` and target Plan `2000039`. The exact Mighty
+baseline read found the target Plan present and no target purchase. Bootstrap
+returned HTTP 502 `bootstrap_failed` before Stripe retrieval because the exact
+local `customer_provisioning` row was absent; the queue remained unchanged.
+
+The worker was not invoked and no Stripe/Mighty mutation or welcome email
+occurred. Do not retry the bootstrap or invoke the worker in this goal. Resolve
+the exact Westhoek local entitlement identity through a separately authorized
+application path, then obtain a fresh owner authorization for a new canary.
+
 ## Phase A bootstrap runtime — deployed + inert — 2026-09-14
 
 Production runs merge revision

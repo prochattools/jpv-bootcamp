@@ -1,5 +1,32 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT PHASE: PHASE A WESTHOEK LIVE CANARY — BLOCKED — 2026-09-15
+
+`PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
+`AUTHORIZED ACCOUNT: westhoek@hotmail.com ONLY`
+`EXPECTED MIGHTY MEMBER ID: 41580317`
+`TARGET PLAN: 2000039`
+`MIGHTY BASELINE: target Plan present; target purchases 0`
+`PRE-CANARY QUEUE ROW: ABSENT`
+`BOOTSTRAP: INVOKED ONCE — HTTP 502 bootstrap_failed`
+`BOOTSTRAP BLOCKER: exact local customer_provisioning row absent`
+`WORKER: NOT INVOKED`
+`MIGHTY MUTATIONS: 0`
+`STRIPE READS: 0`
+`STRIPE MUTATIONS: 0`
+`WELCOME EMAIL: 0`
+`MIGHTY SCHEDULER: DISABLED`
+`PHASE A: BLOCKED`
+`NEXT GATE: OWNER-AUTHORIZED REPAIR OF EXACT WESTHOEK LOCAL ENTITLEMENT IDENTITY, THEN A FRESH CANARY`
+
+The exact-member Mighty baseline returned member `41580317` with Plan
+`2000039` present and no target purchase. The one authorized bootstrap stopped
+before Stripe retrieval because the exact production
+`customer_provisioning` row for `westhoek@hotmail.com` is absent. No queue row
+was created, no worker was invoked, no welcome email was sent, and no other
+identity or population endpoint was accessed. The scheduled worker check was
+skipped and the scheduler remains disabled.
+
 ## CURRENT PHASE: PHASE A BOOTSTRAP RUNTIME — DEPLOYED + INERT — 2026-09-14
 
 `PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`

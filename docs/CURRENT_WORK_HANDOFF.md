@@ -2,6 +2,37 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: PHASE A WESTHOEK LIVE CANARY — BLOCKED — 2026-09-15
+
+`PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
+`AUTHORIZED ACCOUNT: westhoek@hotmail.com ONLY`
+`EXPECTED MIGHTY MEMBER ID: 41580317`
+`TARGET PLAN: 2000039`
+`MIGHTY BASELINE: member 41580317, target Plan present, target purchases 0`
+`PRE-CANARY QUEUE ROW: ABSENT`
+`BOOTSTRAP: INVOKED ONCE — HTTP 502 bootstrap_failed`
+`BOOTSTRAP QUEUE WRITE: 0`
+`BOOTSTRAP BLOCKER: exact local customer_provisioning row absent`
+`INFERRED SAFE STOP: mighty_bootstrap_identity_missing`
+`WORKER: NOT INVOKED`
+`MIGHTY MUTATIONS: 0`
+`STRIPE READS: 0`
+`STRIPE MUTATIONS: 0`
+`WELCOME EMAIL: 0`
+`MIGHTY SCHEDULER: DISABLED`
+`PHASE A: BLOCKED`
+`NEXT GATE: OWNER-AUTHORIZED REPAIR OF EXACT WESTHOEK LOCAL ENTITLEMENT IDENTITY, THEN A FRESH CANARY`
+
+The authorized one-shot bootstrap stopped before Stripe retrieval because the
+exact production `customer_provisioning` lookup for
+`westhoek@hotmail.com` returned no row. The exact queue row remained absent
+after the failure, so the worker was not eligible and was not invoked. The
+Mighty baseline read was exact-member-only: member `41580317`, target Plan
+`2000039` present, no target purchases, provider role null, and five member
+Spaces. No other identity, population, queue row, Stripe object, or provider
+mutation was accessed. The scheduled worker check remained skipped while the
+scheduler stayed disabled.
+
 ## CURRENT PHASE: PHASE A BOOTSTRAP RUNTIME — DEPLOYED + INERT — 2026-09-14
 
 `PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
