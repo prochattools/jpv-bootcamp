@@ -5,9 +5,32 @@
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
 
 Production is running hardened inert code at
-`1555bab05df64a173737080f0b6988a6789434a4`. This runbook describes a future
+`dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`. This runbook describes a future
 owner-authorized operation only. It is not authorization to inspect, enumerate,
 reconcile, or migrate real members.
+
+## Phase A authoritative queue bootstrap
+
+The exact-account bootstrap is a queue-only operator path for the first Phase A
+canary. It accepts exactly `{ "email": "westhoek@hotmail.com" }` through
+`POST /api/admin/bootstrap-mighty-access-sync`, authenticated with the existing
+server-side `MIGHTY_ACCESS_SYNC_WORKER_SECRET`. It is production-only and also
+requires the exact configured test email and Plan `2000039`.
+
+The path resolves one exact local `CustomerProvisioning` identity, reads only
+that stored Stripe customer and subscription from Stripe, and reuses
+`deriveMightyDesiredAccess`. It persists one `mighty_access_sync` row and does
+not call Mighty, mutate Stripe, send email, fabricate a Stripe event, enumerate
+members, or run the worker. Steve, Info, unknown identities, extra request
+fields, missing identity data, mismatched Stripe identities, read failures, and
+unsupported subscription states fail closed.
+
+Bootstrap rows record `state_source=operator_bootstrap`, the provider-state
+observation timestamp, and `welcome_required=false`; Stripe event fields remain
+null. Repeating the same observation is idempotent. A newer genuine Stripe
+event may supersede bootstrap state, while an older webhook cannot regress it.
+The existing worker consumes the row only through its separately authenticated,
+explicitly scoped invocation. This goal does not authorize invoking this path.
 
 ## Preconditions
 

@@ -1,17 +1,30 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
+## CURRENT PHASE: PHASE A AUTHORITATIVE QUEUE BOOTSTRAP — RC READY FOR OWNER REVIEW — 2026-09-14
 
-`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
+`PRODUCTION REVISION: dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`
 `PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
 `PRODUCTION HEALTH: PASS`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
-`PRODUCTION PREFLIGHT: BLOCKED`
-`MIGRATIONS APPLIED: 0`
+`PHASE A AUTHORITATIVE QUEUE BOOTSTRAP RC: READY FOR OWNER REVIEW`
+`REAL BOOTSTRAP: NOT EXECUTED`
 `LIVE POPULATION: NOT INSPECTED`
 `REAL MIGRATION MANIFEST: NOT CREATED`
-`NEXT GATE: OWNER BACKUP ACTION REQUIRED, THEN OWNER REVIEW/MERGE OF PR #46`
+`NEXT GATE: OWNER REVIEW OF EXACT RC, THEN SEPARATE AUTHORIZATION FOR ANY LIVE BOOTSTRAP`
+
+The clean RC is based exactly on the deployed production lineage and adds only
+the bounded Phase A queue-bootstrap safety path. It accepts one explicitly
+authorized email (`westhoek@hotmail.com`), reads that exact local/Stripe
+identity only when explicitly invoked, derives access through the existing
+entitlement logic, and persists operator provenance without fabricating a
+Stripe event. No live bootstrap, worker execution, Mighty operation, Stripe
+mutation, email, population inspection, or real manifest creation occurred.
+Bootstrap is idempotent, ordered against genuine webhooks, and protected from
+in-flight stale worker finalization. The current goal does not authorize live
+invocation.
+
+## HISTORICAL / SUPERSEDED — PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
 
 Read-only ledger inspection found exactly the two reviewed pending Prisma
 migrations (`20260909090000_add_mighty_access_sync` and
@@ -94,7 +107,7 @@ not deployed. No live Mighty read or mutation, live Stripe operation,
 population inspection, production test data, worker execution, scheduler
 enablement, configuration change, merge, or deployment is authorized. The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
-The final readiness validation is recorded as `pnpm test:release` passed `197/197`; the RC
+The final readiness validation is recorded as `pnpm test:release` passed `198/198`; the RC
 hardening baseline is `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
 
 The zero-touch migration operations gate now passes entirely with synthetic

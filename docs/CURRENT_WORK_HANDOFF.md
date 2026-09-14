@@ -2,10 +2,11 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
+## CURRENT PHASE: PHASE A AUTHORITATIVE QUEUE BOOTSTRAP — RC READY FOR OWNER REVIEW — 2026-09-14
 
-`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
+`PRODUCTION REVISION: dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`
 `PRODUCTION HEALTH: PASS`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
 `LIVE MIGHTY READS: 0`
@@ -13,9 +14,26 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 `LIVE STRIPE READS: 0`
 `LIVE STRIPE MUTATIONS: 0`
 `PRODUCTION DB MUTATIONS: 0`
-`MIGRATIONS APPLIED: 0`
-`PRODUCTION PREFLIGHT: BLOCKED`
-`NEXT GATE: OWNER BACKUP ACTION REQUIRED, THEN OWNER REVIEW/MERGE OF PR #46`
+`REAL BOOTSTRAP: NOT EXECUTED`
+`REAL MANIFEST: NOT CREATED`
+`REAL POPULATION: NOT INSPECTED`
+`PHASE A AUTHORITATIVE QUEUE BOOTSTRAP RC: READY FOR OWNER REVIEW`
+`NEXT GATE: OWNER REVIEW OF EXACT RC, THEN SEPARATE AUTHORIZATION FOR ANY LIVE BOOTSTRAP`
+
+The clean RC is based exactly on current production revision
+`dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`. It adds an exact-account,
+queue-only bootstrap for `westhoek@hotmail.com`; it reads current Stripe truth
+only when explicitly invoked, persists operator provenance rather than a fake
+Stripe event, and performs no Mighty operation, Stripe mutation, email, worker
+execution, or user change. The endpoint rejects Steve, Info, and every other
+identity, and fails closed on identity, Stripe, state, or configuration
+ambiguity. This goal did not invoke the endpoint or any live provider.
+
+Bootstrap state is ordered against genuine Stripe webhooks by an explicit
+observation timestamp. Repeating the same observation is idempotent; a newer
+webhook supersedes it and an older event cannot regress it. Worker finalization
+also checks provenance and observation state so a newer queue update cannot be
+overwritten by an in-flight older row.
 
 The read-only production ledger evidence is stable: the only pending Prisma
 migrations are `20260909090000_add_mighty_access_sync` and
@@ -47,7 +65,7 @@ result is `VERIFIED_WITH_EXPECTED_PENDING_PRISMA` with exactly the two Mighty
 migrations pending, followed by a separate explicitly authorized guarded apply
 goal only after backup evidence is recorded.
 
-## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
+## HISTORICAL / SUPERSEDED — PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
 
 `PHASE A: BLOCKED — PRE-LIVE RUNTIME DEFECT FOUND`
 `PRODUCTION REVISION: 01ac372f1676117451abd2c18a6e0f7d64abd737`

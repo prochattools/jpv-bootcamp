@@ -25,6 +25,10 @@ vi.mock('@/lib/stripe', () => ({
 	getStripe: vi.fn(),
 }))
 
+vi.mock('@/lib/mighty/accessSync', () => ({
+	queueMightyAccessFromStripeEvent: vi.fn(async () => ({ queued: true })),
+}))
+
 vi.mock('@/lib/provisioning', () => ({
 	logProvisioningDecision: vi.fn(),
 	projectInvoicePaymentState: vi.fn(),
@@ -76,6 +80,7 @@ import { atomicClaimProcessing, finalizeProcessed, releaseProcessingClaim } from
 import { isSponsoredRecipientSession, isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
 import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
 import { finalizeSponsoredRecipientCheckout, releaseSponsoredRecipientCheckout } from '@/lib/sponsored-recipient'
+import { queueMightyAccessFromStripeEvent } from '@/lib/mighty/accessSync'
 
 const mockGetStripeConfig = vi.mocked(getStripeConfig)
 const mockGetStripeWebhookSecrets = vi.mocked(getStripeWebhookSecrets)
@@ -91,6 +96,7 @@ const mockUpsertSponsoredSeat = vi.mocked(upsertSponsoredSeatFromSession)
 const mockNotifySponsoredSeatPurchase = vi.mocked(notifySponsoredSeatPurchase)
 const mockFinalizeSponsoredRecipientCheckout = vi.mocked(finalizeSponsoredRecipientCheckout)
 const mockReleaseSponsoredRecipientCheckout = vi.mocked(releaseSponsoredRecipientCheckout)
+const mockQueueMightyAccess = vi.mocked(queueMightyAccessFromStripeEvent)
 
 function makeWebhooksConstructEvent(returnEvent: object | null = null, throwError: Error | null = null) {
 	return {
@@ -370,6 +376,20 @@ describe('handleStripeWebhook — customer.subscription.deleted dispatch', () =>
 })
 
 describe('handleStripeWebhook — idempotency / DB error paths', () => {
+	it('does not queue Mighty access when an old Stripe delivery is already processed', async () => {
+		const event = fakeCheckoutEvent()
+		const fakeStripe = { webhooks: makeWebhooksConstructEvent(event) }
+		mockGetStripe.mockReturnValue(fakeStripe as unknown as ReturnType<typeof getStripe>)
+		mockAtomicClaim.mockResolvedValueOnce({ claimed: false, alreadyProcessed: true } as Awaited<ReturnType<typeof atomicClaimProcessing>>)
+		const { handleStripeWebhook } = await import('@/lib/stripe-webhook-handler')
+
+		const req = buildFakeRequest({ signature: 'valid-sig', body: JSON.stringify(event) })
+		const res = await handleStripeWebhook(req)
+
+		expect(res.status).toBe(200)
+		expect(mockQueueMightyAccess).not.toHaveBeenCalled()
+	})
+
 	it('returns 500 and releases claim when provisionFromCheckoutSession throws', async () => {
 		const event = fakeCheckoutEvent()
 		const fakeStripe = { webhooks: makeWebhooksConstructEvent(event) }

@@ -112,14 +112,15 @@ function protectedPayloadRows(): Array<{ id: number; name: string; batch: number
 }
 
 function protectedPreflightAdapter(payloadRows = protectedPayloadRows()) {
-  return {
+	const syntheticPending = new Set(EXPECTED_PRODUCTION_PREFLIGHT_PRISMA_PENDING)
+	return {
     async collectMigrationEvidence() {
       return {
         schemaIdentity: 'jpvbootcamp',
         payloadMigrations: payloadRows,
         prismaMigrations: REGISTERED_PRISMA_MIGRATIONS
-          .slice(0, -EXPECTED_PRODUCTION_PREFLIGHT_PRISMA_PENDING.length)
-          .map(appliedPrisma),
+		  .filter((name) => !syntheticPending.has(name))
+		  .map(appliedPrisma),
       }
     },
   }

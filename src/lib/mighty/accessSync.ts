@@ -27,6 +27,7 @@ import {
 } from './mutationPolicy'
 
 export type MightySyncStatus = 'pending' | 'processing' | 'succeeded' | 'failed'
+export type MightyAccessStateSource = 'stripe_webhook' | 'operator_bootstrap'
 
 type AccessSyncRow = {
 	id: string
@@ -37,6 +38,8 @@ type AccessSyncRow = {
 	lastStripeEventId: string | null
 	lastStripeEventCreatedAt: Date | null
 	lastStripeEventType: string | null
+	stateSource: string
+	stateObservedAt: Date | null
 	plan: string | null
 	desiredAccess: string
 	mightyMemberId: string | null
@@ -50,9 +53,11 @@ type QueueParams = {
 	email?: string | null
 	stripeCustomerId?: string | null
 	stripeSubscriptionId?: string | null
-	stripeEventId: string
+	stripeEventId?: string | null
 	stripeEventCreatedAt?: Date | null
 	stripeEventType?: string | null
+	stateSource?: MightyAccessStateSource
+	stateObservedAt?: Date | null
 	plan?: string | null
 	desiredAccess: MightyDesiredAccess
 	welcomeRequired?: boolean
@@ -100,6 +105,8 @@ const accessSyncSelect = {
 	lastStripeEventId: true,
 	lastStripeEventCreatedAt: true,
 	lastStripeEventType: true,
+	stateSource: true,
+	stateObservedAt: true,
 	plan: true,
 	desiredAccess: true,
 	mightyMemberId: true,
@@ -249,6 +256,8 @@ export type MightyStoredEventState = {
 	lastStripeEventId: string | null
 	lastStripeEventCreatedAt: Date | null
 	lastStripeEventType: string | null
+	stateSource?: string
+	stateObservedAt?: Date | null
 	stripeSubscriptionId: string | null
 }
 
@@ -265,7 +274,7 @@ export function shouldApplyMightyStripeEvent(
 	if (!existing) return { apply: true }
 	if (existing.lastStripeEventId === incoming.stripeEventId) return { apply: false, reason: 'duplicate_stripe_event' }
 
-	const currentTime = existing.lastStripeEventCreatedAt?.getTime()
+	const currentTime = (existing.stateObservedAt ?? existing.lastStripeEventCreatedAt)?.getTime()
 	const incomingTime = incoming.stripeEventCreatedAt?.getTime()
 	if (currentTime !== undefined && incomingTime !== undefined) {
 		if (incomingTime < currentTime) return { apply: false, reason: 'stale_stripe_event' }
@@ -296,6 +305,31 @@ export function shouldApplyMightyStripeEvent(
 		}
 	}
 
+	return { apply: true }
+}
+
+export function shouldApplyMightyOperatorBootstrap(
+	existing: MightyStoredEventState | null,
+	incoming: {
+		stateObservedAt: Date
+		desiredAccess: MightyDesiredAccess
+		stripeCustomerId: string | null
+		stripeSubscriptionId: string | null
+		plan: string | null
+	},
+): { apply: boolean; reason?: string } {
+	if (!existing) return { apply: true }
+	const currentTime = (existing.stateObservedAt ?? existing.lastStripeEventCreatedAt)?.getTime()
+	const incomingTime = incoming.stateObservedAt.getTime()
+	if (currentTime !== undefined) {
+		if (incomingTime < currentTime) return { apply: false, reason: 'stale_operator_bootstrap' }
+		if (incomingTime === currentTime) {
+			if (existing.stateSource === 'operator_bootstrap') {
+				return { apply: false, reason: 'duplicate_operator_bootstrap' }
+			}
+			return { apply: false, reason: 'stale_operator_bootstrap' }
+		}
+	}
 	return { apply: true }
 }
 
@@ -350,27 +384,42 @@ async function resolveQueueEmail(params: QueueParams): Promise<string | null> {
 }
 
 /**
- * Persist the Stripe-derived desired state. This function deliberately does
- * not call Mighty; the worker owns all provider I/O and retries.
+ * Persist an authoritative Stripe-derived or operator-bootstrap desired state.
+ * This function deliberately does not call Mighty; worker owns all provider I/O and retries.
  */
 export async function queueMightyAccessSync(params: QueueParams): Promise<{
 	queued: boolean
 	reason?: string
 	rowId?: string
 }> {
+	const stateSource = params.stateSource ?? 'stripe_webhook'
+	const stripeEventId = params.stripeEventId?.trim() || null
+	if (stateSource === 'stripe_webhook' && !stripeEventId) {
+		throw new MightySafetyError('mighty_stripe_event_id_required')
+	}
+	const stateObservedAt = params.stateObservedAt ?? params.stripeEventCreatedAt ?? null
+	if (!stateObservedAt) throw new MightySafetyError('mighty_state_observed_at_required')
 	const directEmail = normalizeEmail(params.email)
 	let existing = await findExistingSyncRow(directEmail, params)
 	const email = directEmail ?? normalizeEmail(existing?.email) ?? await resolveQueueEmail(params)
 	if (!email) return { queued: false, reason: 'missing_member_email' }
 
 	existing ??= await findExistingSyncRow(email, params)
-	const eventDecision = shouldApplyMightyStripeEvent(existing, {
-		stripeEventId: params.stripeEventId,
-		stripeEventCreatedAt: params.stripeEventCreatedAt ?? null,
-		stripeEventType: params.stripeEventType ?? null,
-		desiredAccess: params.desiredAccess,
-		stripeSubscriptionId: params.stripeSubscriptionId?.trim() || null,
-	})
+	const eventDecision = stateSource === 'operator_bootstrap'
+		? shouldApplyMightyOperatorBootstrap(existing, {
+			stateObservedAt,
+			desiredAccess: params.desiredAccess,
+			stripeCustomerId: params.stripeCustomerId?.trim() || null,
+			stripeSubscriptionId: params.stripeSubscriptionId?.trim() || null,
+			plan: params.plan?.trim() || null,
+		})
+		: shouldApplyMightyStripeEvent(existing, {
+			stripeEventId: stripeEventId as string,
+			stripeEventCreatedAt: params.stripeEventCreatedAt ?? stateObservedAt,
+			stripeEventType: params.stripeEventType ?? null,
+			desiredAccess: params.desiredAccess,
+			stripeSubscriptionId: params.stripeSubscriptionId?.trim() || null,
+		})
 	if (!eventDecision.apply) {
 		return { queued: false, reason: eventDecision.reason, rowId: existing?.id }
 	}
@@ -383,9 +432,11 @@ export async function queueMightyAccessSync(params: QueueParams): Promise<{
 		normalizedEmail: email,
 		stripeCustomerId: params.stripeCustomerId?.trim() || undefined,
 		stripeSubscriptionId: params.stripeSubscriptionId?.trim() || undefined,
-		lastStripeEventId: params.stripeEventId,
-		lastStripeEventCreatedAt: params.stripeEventCreatedAt ?? undefined,
-		lastStripeEventType: params.stripeEventType ?? undefined,
+		lastStripeEventId: stateSource === 'operator_bootstrap' ? null : stripeEventId,
+		lastStripeEventCreatedAt: stateSource === 'operator_bootstrap' ? null : params.stripeEventCreatedAt ?? undefined,
+		lastStripeEventType: stateSource === 'operator_bootstrap' ? null : params.stripeEventType ?? undefined,
+		stateSource,
+		stateObservedAt,
 		plan: params.plan ?? undefined,
 		desiredAccess: params.desiredAccess,
 		syncStatus: 'pending',
@@ -400,8 +451,11 @@ export async function queueMightyAccessSync(params: QueueParams): Promise<{
 			const row = await prisma.mightyAccessSync.create({
 				data: {
 					...data,
-					lastStripeEventCreatedAt: params.stripeEventCreatedAt ?? null,
-					lastStripeEventType: params.stripeEventType ?? null,
+					lastStripeEventId: stateSource === 'operator_bootstrap' ? null : stripeEventId,
+					lastStripeEventCreatedAt: stateSource === 'operator_bootstrap' ? null : params.stripeEventCreatedAt ?? null,
+					lastStripeEventType: stateSource === 'operator_bootstrap' ? null : params.stripeEventType ?? null,
+					stateSource,
+					stateObservedAt,
 					stripeCustomerId: params.stripeCustomerId?.trim() ?? null,
 					stripeSubscriptionId: params.stripeSubscriptionId?.trim() ?? null,
 				},
@@ -419,6 +473,8 @@ export async function queueMightyAccessSync(params: QueueParams): Promise<{
 			id: existing.id,
 			lastStripeEventId: existing.lastStripeEventId,
 			lastStripeEventCreatedAt: existing.lastStripeEventCreatedAt,
+			stateSource: existing.stateSource,
+			stateObservedAt: existing.stateObservedAt,
 		},
 		data,
 	})
@@ -443,6 +499,8 @@ export async function queueMightyAccessFromStripeEvent(event: Stripe.Event): Pro
 		stripeEventId: projection.stripeEventId,
 		stripeEventCreatedAt: projection.stripeEventCreatedAt,
 		stripeEventType: projection.stripeEventType,
+		stateSource: 'stripe_webhook',
+		stateObservedAt: projection.stripeEventCreatedAt,
 		plan: projection.plan,
 		desiredAccess: projection.desiredAccess,
 		welcomeRequired: projection.desiredAccess === 'ALLOWED',
@@ -687,6 +745,8 @@ export async function processMightyAccessSync(limit = 25, emails?: readonly stri
 					id: row.id,
 					syncStatus: 'processing',
 					lastStripeEventId: row.lastStripeEventId,
+					stateSource: row.stateSource,
+					stateObservedAt: row.stateObservedAt,
 				},
 				data: {
 					syncStatus: 'succeeded',
@@ -732,6 +792,8 @@ export async function processMightyAccessSync(limit = 25, emails?: readonly stri
 					id: row.id,
 					syncStatus: 'processing',
 					lastStripeEventId: row.lastStripeEventId,
+					stateSource: row.stateSource,
+					stateObservedAt: row.stateObservedAt,
 				},
 				data: {
 					...checkpoint,
