@@ -126,6 +126,69 @@ function protectedPreflightAdapter(payloadRows = protectedPayloadRows()) {
   }
 }
 
+const PROVENANCE_MIGRATION = '20260914140000_add_mighty_bootstrap_provenance'
+const OLD_MIGHTY_MIGRATIONS = [
+  '20260909090000_add_mighty_access_sync',
+  '20260909093000_add_mighty_event_ordering',
+]
+
+function prismaPreflightAdapter(pending: readonly string[]) {
+  const pendingSet = new Set(pending)
+  const unexpectedPendingRows = pending
+    .filter((name) => !REGISTERED_PRISMA_MIGRATIONS.includes(name))
+    .map((name) => ({ ...appliedPrisma(name), finished_at: null }))
+  return {
+    async collectMigrationEvidence() {
+      return {
+        schemaIdentity: 'jpvbootcamp',
+        payloadMigrations: protectedPayloadRows(),
+        prismaMigrations: REGISTERED_PRISMA_MIGRATIONS
+          .filter((name) => !pendingSet.has(name))
+          .map(appliedPrisma)
+          .concat(unexpectedPendingRows),
+      }
+    },
+  }
+}
+
+async function testExactProductionPrismaPreflightStates(): Promise<void> {
+  const expectedPending = await buildProductionMigrationStatus(
+    prismaPreflightAdapter([PROVENANCE_MIGRATION]),
+    'jpvbootcamp',
+    EXPECTED_SHA,
+    async () => validRevision(),
+  )
+  assert.equal(expectedPending.result, 'VERIFIED')
+  assert.equal(expectedPending.verificationState, 'VERIFIED_WITH_EXPECTED_PENDING_PRISMA')
+  assert.deepEqual(expectedPending.migrationLedger.prisma.pending, [PROVENANCE_MIGRATION])
+  assert.equal(expectedPending.migrationLedger.payload.pending.length, 0)
+
+  const clean = await buildProductionMigrationStatus(
+    prismaPreflightAdapter([]),
+    'jpvbootcamp',
+    EXPECTED_SHA,
+    async () => validRevision(),
+  )
+  assert.equal(clean.result, 'VERIFIED')
+  assert.equal(clean.verificationState, 'VERIFIED_CLEAN')
+  assert.deepEqual(clean.migrationLedger.prisma.pending, [])
+
+  for (const pending of [
+    [OLD_MIGHTY_MIGRATIONS[0]],
+    [PROVENANCE_MIGRATION, '20260915000000_unexpected_future_migration'],
+    ['20260915000000_unrelated_pending_migration'],
+  ]) {
+    const mismatch = await buildProductionMigrationStatus(
+      prismaPreflightAdapter(pending),
+      'jpvbootcamp',
+      EXPECTED_SHA,
+      async () => validRevision(),
+    )
+    assert.equal(mismatch.result, 'MISMATCH')
+    assert.equal(mismatch.verificationState, 'MISMATCH')
+  }
+}
+
 function validArgs(): string[] {
   return [
     '--mode=production-read-only',
@@ -264,6 +327,7 @@ async function main(): Promise<void> {
 
   await testDeploymentHealthIdentityContract()
   await testProductionPreflightPolicy()
+  await testExactProductionPrismaPreflightStates()
 
   const client = new RecordingClient()
   const adapter = createProductionReadOnlyAdapter({
@@ -273,6 +337,7 @@ async function main(): Promise<void> {
   })
   const report = await buildProductionMigrationStatus(adapter, 'jpvbootcamp', EXPECTED_SHA, async () => validRevision())
   assert.equal(report.result, 'VERIFIED')
+  assert.equal(report.verificationState, 'VERIFIED_CLEAN')
   assert.deepEqual(report.migrationLedger.payload.pending, [])
   assert.deepEqual(report.migrationLedger.prisma.pending, [])
   assert.equal(report.deployedRevision?.observedCommitSha, EXPECTED_SHA)
