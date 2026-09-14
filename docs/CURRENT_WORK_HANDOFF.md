@@ -2,35 +2,37 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
+## CURRENT PHASE: PHASE A BOOTSTRAP RUNTIME — DEPLOYED + INERT — 2026-09-14
 
-`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
 `PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`RC SOURCE REVISION: d5bb03eece2ae6dd9b848e80137b158d461885c2`
+`PR: #49`
+`PUBLISH WORKFLOW: 34903171716 — PASS`
+`DOKPLOY DEPLOYMENT: DONE`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
-`PROVENANCE MIGRATION: APPLIED AND VERIFIED CLEAN`
-`BOOTSTRAP RUNTIME RC: codex/mighty-phase-a-bootstrap-runtime-rc-v2`
-`BOOTSTRAP RUNTIME RC: NOT DEPLOYED`
-`LIVE MIGHTY ACCESS: 0`
-`LIVE STRIPE ACCOUNT ACCESS: 0`
+`BOOTSTRAP ROUTE: PRESENT BUT NOT INVOKED`
+`PROVIDER I/O: 0`
+`PRODUCTION MIGRATION VERIFIER: VERIFIED_CLEAN`
 `REAL POPULATION: NOT INSPECTED`
 `REAL MANIFEST: NOT CREATED`
-`NEXT GATE: OWNER REVIEW OF THE EXACT PUSHED RC`
+`NEXT GATE: SEPARATE OWNER AUTHORIZATION FOR THE WESTHOEK-ONLY BOOTSTRAP CANARY`
 
-This clean release candidate is based directly on the current migrated
-production revision. It selectively adds the Phase A exact-account bootstrap
-route and worker-queue provenance/runtime hardening while preserving the
-applied migration and `VERIFIED_CLEAN` verifier behavior. The bootstrap is
-restricted to `westhoek@hotmail.com`, reads only exact local Stripe identity
-records, queues `stateSource=operator_bootstrap`, and performs no Mighty or
-email operation. Provider I/O remains worker-only. Newer genuine Stripe
-webhooks supersede bootstrap state, older events cannot regress it, and stale
-worker finalization is guarded.
+The exact reviewed Phase A bootstrap runtime RC was merged through PR #49 and
+deployed by the normal root-domain publish workflow. Production serves the
+merge revision above, all required public/system health checks passed, and the
+read-only production migration verifier reported empty Payload and Prisma
+pending sets with no mutation. The RC keeps the bootstrap restricted to
+`westhoek@hotmail.com`, exact local Stripe identity records, and
+`stateSource=operator_bootstrap`; it performs no Mighty or email operation.
+Provider I/O remains worker-only.
 
-The RC was validated only with synthetic/local tests. No live Stripe or Mighty
-operation, deployment, migration, scheduler execution, worker execution, or
-user/data change occurred. The release suite target is `198/198`; deployment
-and any live Phase A bootstrap remain separately unauthorized.
+The deployment was inert: no bootstrap route, worker, scheduler, migration,
+reconciliation, live Mighty/Stripe operation, population inspection, real
+manifest creation, or user/data change occurred. The release suite was
+`198/198`; deployment is complete, but any live Phase A bootstrap remains a
+separate owner-authorized operation.
 
 ## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
 

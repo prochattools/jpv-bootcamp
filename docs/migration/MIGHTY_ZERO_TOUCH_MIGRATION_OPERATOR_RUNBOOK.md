@@ -1,27 +1,28 @@
 # JPV Mighty zero-touch migration operator runbook
 
-## Phase A bootstrap runtime release candidate — 2026-09-14
+## Phase A bootstrap runtime — deployed + inert — 2026-09-14
 
-The current production lineage is
-`b1e105d3ac855f20a983fb70bcefffb2490c864f`; the provenance migration is already
-applied and the read-only verifier is `VERIFIED_CLEAN`. The non-production
-branch `codex/mighty-phase-a-bootstrap-runtime-rc-v2` contains a bounded,
-synthetically validated bootstrap route for the single authorized operator
-identity `westhoek@hotmail.com`. It performs exact local Stripe identity and
-subscription checks, queues `operator_bootstrap` state with observation time,
-and never calls Mighty or email. Provider I/O remains worker-only.
+Production runs merge revision
+`ca8f1b6516994a72187e13eb1f780e1cb6566c5d`, sourced from the reviewed RC
+`d5bb03eece2ae6dd9b848e80137b158d461885c2` via PR #49. The provenance
+migration is applied, and the read-only production verifier is
+`VERIFIED_CLEAN`. The deployed route is bounded to the single authorized
+operator identity `westhoek@hotmail.com`; it performs exact local Stripe
+identity and subscription checks, queues `operator_bootstrap` state with
+observation time, and never calls Mighty or email. Provider I/O remains
+worker-only.
 
-This RC is not deployed. Do not invoke the bootstrap route, worker, scheduler,
-or any live rehearsal script. No live Stripe/Mighty access, population
-inspection, real manifest creation, migration, or user/data change is permitted
-by this release-candidate review.
+The deployment is inert. Do not invoke the bootstrap route, worker, scheduler,
+or any live rehearsal script without a new explicit owner authorization. No
+live Stripe/Mighty access, population inspection, real manifest creation,
+migration, reconciliation, or user/data change occurred during deployment.
 
 ## Status
 
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
 
 Production is running hardened inert code at
-`1555bab05df64a173737080f0b6988a6789434a4`. This runbook describes a future
+`ca8f1b6516994a72187e13eb1f780e1cb6566c5d`. This runbook describes a future
 owner-authorized operation only. It is not authorization to inspect, enumerate,
 reconcile, or migrate real members.
 

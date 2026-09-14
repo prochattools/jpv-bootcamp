@@ -1,16 +1,20 @@
 # JPV Bootcamp Preview Release Readiness
 
-## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
+## CURRENT PHASE: PHASE A BOOTSTRAP RUNTIME — DEPLOYED + INERT — 2026-09-14
 
-The current production revision is
-`b1e105d3ac855f20a983fb70bcefffb2490c864f`, with the provenance migration
-applied and verified clean. The non-production RC branch
-`codex/mighty-phase-a-bootstrap-runtime-rc-v2` contains only the bounded
-bootstrap runtime/queue hardening and synthetic coverage needed for a future
-owner-authorized Phase A operation. It is not deployed. `pnpm test:release` passed `198/198`;
-no live Stripe/Mighty access, migration, scheduler execution,
-worker execution, population inspection, real manifest, or user/data change
-occurred.
+Production is running merge revision
+`ca8f1b6516994a72187e13eb1f780e1cb6566c5d`, sourced from reviewed RC commit
+`d5bb03eece2ae6dd9b848e80137b158d461885c2` via PR #49. Publish workflow
+`34903171716` passed and Dokploy reports the exact image deployment `done`.
+`pnpm test:release` passed `198/198`; system health and public-route checks
+passed; and the read-only production migration verifier returned
+`VERIFIED_CLEAN` with no pending Payload or Prisma migrations.
+
+The deployed bootstrap remains inert. No live Stripe/Mighty access, bootstrap,
+worker, scheduler, migration, reconciliation, population inspection, real
+manifest, or user/data change occurred. The scheduler remains disabled and
+the next gate is separate owner authorization for the Westhoek-only bootstrap
+canary.
 
 ## CURRENT PRODUCTION-FREEZE SYNTHETIC HARDENING — 2026-09-11
 

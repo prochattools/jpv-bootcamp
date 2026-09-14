@@ -1,14 +1,15 @@
 # Phase A authoritative bootstrap runtime RC v2
 
-## Review status
+## Deployment status
 
-`READY FOR OWNER REVIEW`
+`DEPLOYED + HARDENED + INERT`
 
-This release candidate is based directly on production revision
-`b1e105d3ac855f20a983fb70bcefffb2490c864f` after the
-`20260914140000_add_mighty_bootstrap_provenance` migration was applied and
-verified clean. It is on branch
-`codex/mighty-phase-a-bootstrap-runtime-rc-v2` and is not deployed.
+The reviewed source revision
+`d5bb03eece2ae6dd9b848e80137b158d461885c2` was merged by PR #49 into
+production as merge revision
+`ca8f1b6516994a72187e13eb1f780e1cb6566c5d`. The normal publish workflow
+`34903171716` passed, Dokploy reported the deployment `done`, and both health
+endpoints serve the exact merge image in `production`.
 
 ## Bounded runtime scope
 
@@ -42,11 +43,17 @@ Synthetic/local validation passed:
 - TypeScript, Prisma schemas, production build, and diff check;
 - release suite: 198/198.
 
-The build used non-production placeholder configuration only. No live Stripe or
-Mighty request, deployment, migration, worker execution, scheduler execution,
-population inspection, real manifest creation, or user/data change occurred.
+The build used non-production placeholder configuration only. Post-deployment
+system checks passed: `/`, `/terms`, `/privacy`, and `/cookies` returned HTTP
+200; the read-only production migration verifier returned `VERIFIED_CLEAN`
+with empty Payload and Prisma pending sets; the Mighty scheduler variable was
+not enabled; and no Mighty worker workflow ran after deployment. No bootstrap
+route, worker, scheduler, live Stripe or Mighty request, migration,
+reconciliation, population inspection, real manifest creation, or user/data
+change occurred.
 
 ## Next gate
 
-Owner review of one exact pushed RC commit. Deployment, live bootstrap, and any
-real-member operation require separate explicit authorization.
+Separate owner authorization for the Westhoek-only live bootstrap canary and
+its authenticated worker execution. Do not inspect the population, create a
+real manifest, migrate members, or broaden the identity scope.

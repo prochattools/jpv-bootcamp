@@ -1,32 +1,43 @@
 # Operator Handoff Summary
 
-## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
+## CURRENT PHASE: PHASE A BOOTSTRAP RUNTIME — DEPLOYED + INERT — 2026-09-14
 
-`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
 `PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
-`PROVENANCE MIGRATION: APPLIED AND VERIFIED CLEAN`
-`RC BRANCH: codex/mighty-phase-a-bootstrap-runtime-rc-v2`
-`RC STATUS: NOT DEPLOYED — OWNER REVIEW REQUIRED`
+`RC SOURCE REVISION: d5bb03eece2ae6dd9b848e80137b158d461885c2`
+`PR: #49`
+`PUBLISH WORKFLOW: 34903171716 — PASS`
+`DOKPLOY DEPLOYMENT: DONE`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
-`LIVE MIGHTY ACCESS: 0`
-`LIVE STRIPE ACCOUNT ACCESS: 0`
+`BOOTSTRAP ROUTE: PRESENT BUT NOT INVOKED`
+`PROVIDER I/O: 0`
+`PRODUCTION MIGRATION VERIFIER: VERIFIED_CLEAN`
 `REAL POPULATION: NOT INSPECTED`
 `REAL MANIFEST: NOT CREATED`
+`NEXT GATE: SEPARATE OWNER AUTHORIZATION FOR THE WESTHOEK-ONLY BOOTSTRAP CANARY`
 
-The exact-account bootstrap runtime RC is production-lineage clean and keeps
-provider I/O in the existing worker boundary. Synthetic validation passed the
-bootstrap route/queue/runtime regressions, current hardening suites, both Prisma
-schemas, TypeScript, the production build, and the full release suite at
-`198/198`. Deployment, live provider access, live bootstrap, migration, and
-scheduler enablement remain unauthorized.
+The exact-account bootstrap runtime RC was approved, merged, and deployed
+through the normal production workflow. System health and public-route checks
+passed, and the read-only production verifier confirmed clean Payload and
+Prisma migration state without mutation. The bootstrap is restricted to
+`westhoek@hotmail.com`, uses exact local Stripe identity records, queues
+`operator_bootstrap` provenance, and never calls Mighty or email; provider I/O
+remains worker-only.
 
-## CURRENT RELEASE GATE — PHASE A BOOTSTRAP RUNTIME RC
+The deployment was zero-touch at the data/user level. No bootstrap, worker,
+scheduler, migration, reconciliation, live Mighty/Stripe operation, population
+inspection, real manifest creation, or user/data change occurred. The fresh
+release gate was `198/198`.
 
-Deterministic release gate: `pnpm test:release` (`198/198`). Review the exact
-commit on `codex/mighty-phase-a-bootstrap-runtime-rc-v2` only after it is
-pushed. The applied provenance migration and clean verifier state are preserved;
-no migration file is added or removed by this RC.
+## DEPLOYED RELEASE RECORD — PHASE A BOOTSTRAP RUNTIME
+
+Deterministic release gate: `pnpm test:release` (`198/198`). Source commit
+`d5bb03eece2ae6dd9b848e80137b158d461885c2` was merged as
+`ca8f1b6516994a72187e13eb1f780e1cb6566c5d`. The applied provenance migration
+and clean verifier state are preserved; no migration file was added or removed
+by this RC. The next operation is separately gated and must remain Westhoek-only
+until explicitly authorized.
 
 ## CURRENT PRODUCTION-FREEZE SYNTHETIC HARDENING — 2026-09-11
 

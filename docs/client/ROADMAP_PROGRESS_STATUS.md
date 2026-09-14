@@ -1,29 +1,32 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
+## CURRENT PHASE: PHASE A BOOTSTRAP RUNTIME — DEPLOYED + INERT — 2026-09-14
 
-`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
 `PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
-`PROVENANCE MIGRATION: APPLIED AND VERIFIED CLEAN`
-`BOOTSTRAP RUNTIME RC: codex/mighty-phase-a-bootstrap-runtime-rc-v2`
-`BOOTSTRAP RUNTIME RC: NOT DEPLOYED`
+`RC SOURCE REVISION: d5bb03eece2ae6dd9b848e80137b158d461885c2`
+`PR: #49`
+`PUBLISH WORKFLOW: 34903171716 — PASS`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
-`LIVE MIGHTY ACCESS: 0`
-`LIVE STRIPE ACCOUNT ACCESS: 0`
+`BOOTSTRAP ROUTE: PRESENT BUT NOT INVOKED`
+`PROVIDER I/O: 0`
+`PRODUCTION MIGRATION VERIFIER: VERIFIED_CLEAN`
 `REAL POPULATION: NOT INSPECTED`
 `REAL MANIFEST: NOT CREATED`
-`NEXT GATE: OWNER REVIEW OF THE EXACT PUSHED RC`
+`NEXT GATE: SEPARATE OWNER AUTHORIZATION FOR THE WESTHOEK-ONLY BOOTSTRAP CANARY`
 
-The clean RC is based directly on the current migrated production lineage. It
-selectively adds the exact-account Phase A bootstrap route, queue provenance,
-event ordering, stale-worker guards, and synthetic regression coverage. The
-bootstrap is restricted to `westhoek@hotmail.com`, uses exact local Stripe
-identity records, queues `operator_bootstrap` state, and never calls Mighty or
-email; provider I/O remains worker-only. No live provider operation, deployment,
-migration, scheduler execution, worker execution, population inspection, real
-manifest creation, or user/data change occurred. The fresh release gate is
-`pnpm test:release` passed `198/198`.
+The exact production-lineage RC was merged and deployed through the normal
+root-domain publish workflow. `/api/health` and `/api/health/deployment` serve
+the exact merge revision, the public routes returned HTTP 200, and the
+read-only production migration verifier reported no pending Payload or Prisma
+migrations, no unexpected/duplicate/malformed records, and no mutation.
+
+`pnpm test:release` passed `198/198`. The deployed bootstrap remains inert:
+there was no bootstrap invocation, worker or scheduler execution, migration,
+reconciliation, live Mighty/Stripe operation, population inspection, real
+manifest creation, or user/data change. Live Phase A execution remains a
+separate owner-authorized gate.
 
 ## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
 
