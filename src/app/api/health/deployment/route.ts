@@ -63,6 +63,8 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
+    status: 'live',
+    deploymentEnv: readEnv('DEPLOYMENT_ENV'),
     commitSha: readEnv('VERCEL_GIT_COMMIT_SHA') ?? readEnv('GITHUB_SHA') ?? null,
     imageTag: readEnv('IMAGE_TAG') ?? readEnv('GHCR_IMAGE_TAG') ?? null,
     branch: readEnv('VERCEL_GIT_COMMIT_REF') ?? readEnv('GITHUB_REF_NAME') ?? null,

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { Client } from 'pg'
 
 import {
@@ -22,6 +23,22 @@ import {
 const PRODUCTION = ENVIRONMENT_TOPOLOGY.production
 const FULL_SHA = /^[0-9a-f]{40}$/
 const PRODUCTION_HEALTH_URL = `${PRODUCTION.origin}/api/health/deployment`
+export const EXPECTED_PRODUCTION_PREFLIGHT_PRISMA_PENDING = [
+  '20260909090000_add_mighty_access_sync',
+  '20260909093000_add_mighty_event_ordering',
+] as const
+export const PROTECTED_PRODUCTION_PAYLOAD_ORDERING_ANOMALIES = [
+  '20260826_100000_administrator_member_identity',
+] as const
+export const PROTECTED_PRODUCTION_PAYLOAD_HISTORICAL_FINGERPRINT =
+  '0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c' as const
+const PROTECTED_PAYLOAD_PREFIX_LENGTH = 52
+
+export type ProductionMigrationVerificationState =
+  | 'VERIFIED_CLEAN'
+  | 'VERIFIED_WITH_EXPECTED_PENDING_PRISMA'
+  | 'MISMATCH'
+  | 'OPERATOR_EVIDENCE_REQUIRED'
 
 export type ProductionRevisionEvidence = {
   expectedSha: string
@@ -32,6 +49,7 @@ export type ProductionRevisionEvidence = {
 
 export type ProductionMigrationStatusReport = {
   result: 'VERIFIED' | 'MISMATCH' | 'OPERATOR_EVIDENCE_REQUIRED' | 'ERROR'
+  verificationState: ProductionMigrationVerificationState
   mode: 'production-read-only'
   target: {
     origin: string
@@ -57,6 +75,13 @@ export type ProductionMigrationStatusReport = {
       duplicate: string[]
       statuses: Array<{ name: string; status: string }>
     }
+  }
+  protectedPayload: {
+    historicalFingerprint: string | null
+    fingerprintMatches: boolean
+    orderingAnomalies: string[]
+    orderingAnomaliesMatch: boolean
+    accepted: boolean
   }
   rollbackReadiness: {
     mutationPerformed: false
@@ -166,7 +191,7 @@ export function createProductionReadOnlyAdapter(
         }
 
         const payloadResult = await client.query<PayloadMigrationRow>(
-          `SELECT name, batch FROM ${schemaIdentifier}.payload_migrations ORDER BY id ASC`,
+          `SELECT id, name, batch FROM ${schemaIdentifier}.payload_migrations ORDER BY id ASC`,
         )
         const prismaResult = await client.query<PrismaMigrationRow>(
           `SELECT migration_name, started_at, finished_at, rolled_back_at, applied_steps_count, (logs IS NOT NULL) AS has_logs FROM ${schemaIdentifier}._prisma_migrations ORDER BY started_at ASC`,
@@ -175,6 +200,7 @@ export function createProductionReadOnlyAdapter(
         evidence = {
           schemaIdentity: identity.schema,
           payloadMigrations: payloadResult.rows.map((row) => ({
+            id: row.id,
             name: row.name,
             batch: row.batch,
           })),
@@ -247,6 +273,7 @@ export async function readProductionRevision(expectedSha: string): Promise<Produ
 function blankReport(result: ProductionMigrationStatusReport['result'], blockers: string[]): ProductionMigrationStatusReport {
   return {
     result,
+    verificationState: result === 'OPERATOR_EVIDENCE_REQUIRED' ? 'OPERATOR_EVIDENCE_REQUIRED' : 'MISMATCH',
     mode: 'production-read-only',
     target: {
       origin: PRODUCTION.origin,
@@ -273,6 +300,13 @@ function blankReport(result: ProductionMigrationStatusReport['result'], blockers
         statuses: [],
       },
     },
+    protectedPayload: {
+      historicalFingerprint: null,
+      fingerprintMatches: false,
+      orderingAnomalies: [],
+      orderingAnomaliesMatch: false,
+      accepted: false,
+    },
     rollbackReadiness: {
       mutationPerformed: false,
       readOnlyTransaction: true,
@@ -281,6 +315,39 @@ function blankReport(result: ProductionMigrationStatusReport['result'], blockers
     },
     blockers,
   }
+}
+
+function normalizePayloadHistoricalRows(rows: PayloadMigrationRow[]): Array<{ id: number; name: string; batch: number }> | null {
+  const normalized: Array<{ id: number; name: string; batch: number }> = []
+  for (const row of rows) {
+    const id = typeof row.id === 'number'
+      ? row.id
+      : typeof row.id === 'string' && /^\d+$/.test(row.id)
+        ? Number.parseInt(row.id, 10)
+        : null
+    const batch = typeof row.batch === 'number'
+      ? row.batch
+      : typeof row.batch === 'string' && /^\d+$/.test(row.batch)
+        ? Number.parseInt(row.batch, 10)
+        : null
+    if (!Number.isSafeInteger(id) || id < 1 || !Number.isSafeInteger(batch) || batch < 1 || typeof row.name !== 'string') {
+      return null
+    }
+    normalized.push({ id, name: row.name, batch })
+  }
+  return normalized
+}
+
+function historicalPayloadFingerprint(rows: PayloadMigrationRow[]): string | null {
+  const normalized = normalizePayloadHistoricalRows(rows)
+  if (!normalized || normalized.length < PROTECTED_PAYLOAD_PREFIX_LENGTH) return null
+  return createHash('sha256')
+    .update(JSON.stringify(normalized.slice(0, PROTECTED_PAYLOAD_PREFIX_LENGTH)))
+    .digest('hex')
+}
+
+function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index])
 }
 
 export async function buildProductionMigrationStatus(
@@ -303,8 +370,12 @@ export async function buildProductionMigrationStatus(
 
   const revisionMatches = revision.observedCommitSha === expectedSha || revision.observedImageTag === expectedSha
   let status
+  let evidence: MigrationEvidence
   try {
-    status = await buildStagingMigrationStatus(adapter, safeExpectedSchema)
+    evidence = await adapter.collectMigrationEvidence(safeExpectedSchema)
+    status = await buildStagingMigrationStatus({
+      collectMigrationEvidence: async () => evidence,
+    }, safeExpectedSchema)
   } catch {
     return {
       ...blankReport('ERROR', ['Production migration evidence could not be collected']),
@@ -312,10 +383,32 @@ export async function buildProductionMigrationStatus(
     }
   }
 
-  const blockers = [...status.blockers]
+  const historicalFingerprint = historicalPayloadFingerprint(evidence.payloadMigrations)
+  const fingerprintMatches = historicalFingerprint === PROTECTED_PRODUCTION_PAYLOAD_HISTORICAL_FINGERPRINT
+  const orderingAnomalies = [...status.orderingAnomalies]
+  const orderingAnomaliesMatch = arraysEqual(orderingAnomalies, PROTECTED_PRODUCTION_PAYLOAD_ORDERING_ANOMALIES)
+  const protectedAnomalyAccepted = orderingAnomaliesMatch && fingerprintMatches
+  const pendingPrisma = [...status.missingPrismaMigrations]
+  const cleanPendingPrisma = pendingPrisma.length === 0
+  const expectedPendingPrisma = arraysEqual(pendingPrisma, EXPECTED_PRODUCTION_PREFLIGHT_PRISMA_PENDING)
+  const blockers = status.blockers.filter((blocker) => {
+    if (blocker === 'Registered Prisma migrations are missing from applied-state evidence') {
+      return !(cleanPendingPrisma || expectedPendingPrisma)
+    }
+    if (blocker === 'Payload migration ordering anomalies exist') return !protectedAnomalyAccepted
+    return true
+  })
+  if (!protectedAnomalyAccepted) blockers.push('Payload historical anomaly or protected fingerprint mismatch')
+  if (orderingAnomalies.length > 0 && !orderingAnomaliesMatch) blockers.push('Payload ordering anomaly is not the protected production anomaly')
+  if (!fingerprintMatches && orderingAnomalies.length > 0) blockers.push('Protected Payload historical fingerprint does not match')
+  if (!cleanPendingPrisma && !expectedPendingPrisma) blockers.push('Production Prisma pending migration set is not approved')
   if (!revisionMatches) blockers.unshift('Deployed production revision does not match the expected revision')
+  const verificationState: ProductionMigrationVerificationState = blockers.length === 0
+    ? expectedPendingPrisma ? 'VERIFIED_WITH_EXPECTED_PENDING_PRISMA' : 'VERIFIED_CLEAN'
+    : 'MISMATCH'
   const report: ProductionMigrationStatusReport = {
     result: blockers.length === 0 ? 'VERIFIED' : 'MISMATCH',
+    verificationState,
     mode: 'production-read-only',
     target: {
       origin: PRODUCTION.origin,
@@ -343,6 +436,13 @@ export async function buildProductionMigrationStatus(
           .filter((name, index, names) => names.indexOf(name) !== index),
         statuses: status.prismaMigrations.map((row) => ({ name: row.migrationName, status: row.status })),
       },
+    },
+    protectedPayload: {
+      historicalFingerprint,
+      fingerprintMatches,
+      orderingAnomalies,
+      orderingAnomaliesMatch,
+      accepted: protectedAnomalyAccepted,
     },
     rollbackReadiness: {
       mutationPerformed: false,

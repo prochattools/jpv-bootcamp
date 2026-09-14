@@ -11,6 +11,7 @@ import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 import { throwPrimaryOrCleanupError } from './cleanupErrorPrecedence'
 
 export type PayloadMigrationRow = {
+  id?: number | string
   name: string
   batch: number | string
 }

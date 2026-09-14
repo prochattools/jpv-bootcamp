@@ -10,7 +10,10 @@ import {
 import {
   buildProductionMigrationStatus,
   createProductionReadOnlyAdapter,
+  EXPECTED_PRODUCTION_PREFLIGHT_PRISMA_PENDING,
   parseProductionCliArgs,
+  PROTECTED_PRODUCTION_PAYLOAD_HISTORICAL_FINGERPRINT,
+  PROTECTED_PRODUCTION_PAYLOAD_ORDERING_ANOMALIES,
   readProductionRevision,
   runProductionMigrationStatusCli,
   type ProductionRevisionEvidence,
@@ -57,7 +60,7 @@ class RecordingClient implements PgClientLike {
     }
     if (text.includes('.payload_migrations')) {
       return {
-        rows: PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: '1' })) as unknown as Row[],
+        rows: protectedPayloadRows() as unknown as Row[],
       }
     }
     if (text.includes('._prisma_migrations')) {
@@ -78,6 +81,47 @@ function validRevision(expectedSha = EXPECTED_SHA): ProductionRevisionEvidence {
     observedCommitSha: expectedSha,
     observedImageTag: expectedSha,
     source: 'deployment-health',
+  }
+}
+
+function protectedPayloadRows(): Array<{ id: number; name: string; batch: number }> {
+  const names = [...PAYLOAD_MIGRATION_NAMES]
+  const [administrator, billingPause, portalEngagement] = names.slice(47, 50)
+  names.splice(47, 3, billingPause, portalEngagement, administrator)
+  return names.map((name, index) => {
+    const id = index + 1
+    const batch = id <= 29
+      ? 1
+      : id <= 33
+        ? 2
+        : id <= 35
+          ? 3
+          : id <= 49
+            ? id - 32
+            : id <= 51
+              ? 18
+              : id <= 52
+                ? 19
+                : id === 53
+                  ? 20
+                  : id === 54
+                    ? 21
+                    : 22
+    return { id, name, batch }
+  })
+}
+
+function protectedPreflightAdapter(payloadRows = protectedPayloadRows()) {
+  return {
+    async collectMigrationEvidence() {
+      return {
+        schemaIdentity: 'jpvbootcamp',
+        payloadMigrations: payloadRows,
+        prismaMigrations: REGISTERED_PRISMA_MIGRATIONS
+          .slice(0, -EXPECTED_PRODUCTION_PREFLIGHT_PRISMA_PENDING.length)
+          .map(appliedPrisma),
+      }
+    },
   }
 }
 
@@ -128,13 +172,81 @@ async function testDeploymentHealthIdentityContract(): Promise<void> {
   }
 }
 
+async function testProductionPreflightPolicy(): Promise<void> {
+  const report = await buildProductionMigrationStatus(
+    protectedPreflightAdapter(),
+    'jpvbootcamp',
+    EXPECTED_SHA,
+    async () => validRevision(),
+  )
+  assert.equal(report.result, 'VERIFIED')
+  assert.equal(report.verificationState, 'VERIFIED_WITH_EXPECTED_PENDING_PRISMA')
+  assert.deepEqual(report.migrationLedger.prisma.pending, [...EXPECTED_PRODUCTION_PREFLIGHT_PRISMA_PENDING])
+  assert.deepEqual(report.migrationLedger.payload.pending, [])
+  assert.deepEqual(report.protectedPayload.orderingAnomalies, [...PROTECTED_PRODUCTION_PAYLOAD_ORDERING_ANOMALIES])
+  assert.equal(report.protectedPayload.historicalFingerprint, PROTECTED_PRODUCTION_PAYLOAD_HISTORICAL_FINGERPRINT)
+  assert.equal(report.protectedPayload.fingerprintMatches, true)
+  assert.equal(report.protectedPayload.accepted, true)
+
+  const extraAnomalyRows = protectedPayloadRows()
+  ;[extraAnomalyRows[10], extraAnomalyRows[11]] = [extraAnomalyRows[11], extraAnomalyRows[10]]
+  const extraAnomaly = await buildProductionMigrationStatus(
+    protectedPreflightAdapter(extraAnomalyRows),
+    'jpvbootcamp',
+    EXPECTED_SHA,
+    async () => validRevision(),
+  )
+  assert.equal(extraAnomaly.result, 'MISMATCH')
+  assert.equal(extraAnomaly.protectedPayload.accepted, false)
+
+  const changedHistoryRows = protectedPayloadRows()
+  changedHistoryRows[0] = { ...changedHistoryRows[0], name: 'changed_historical_row' }
+  const changedHistory = await buildProductionMigrationStatus(
+    protectedPreflightAdapter(changedHistoryRows),
+    'jpvbootcamp',
+    EXPECTED_SHA,
+    async () => validRevision(),
+  )
+  assert.equal(changedHistory.result, 'MISMATCH')
+  assert.equal(changedHistory.protectedPayload.fingerprintMatches, false)
+
+  const duplicate = await buildProductionMigrationStatus(
+    protectedPreflightAdapter([...protectedPayloadRows(), protectedPayloadRows()[0]]),
+    'jpvbootcamp',
+    EXPECTED_SHA,
+    async () => validRevision(),
+  )
+  assert.equal(duplicate.result, 'MISMATCH')
+
+  const malformedRows = protectedPayloadRows()
+  malformedRows[20] = { ...malformedRows[20], batch: Number.NaN }
+  const malformed = await buildProductionMigrationStatus(
+    protectedPreflightAdapter(malformedRows),
+    'jpvbootcamp',
+    EXPECTED_SHA,
+    async () => validRevision(),
+  )
+  assert.equal(malformed.result, 'MISMATCH')
+
+  const pendingPayload = await buildProductionMigrationStatus(
+    protectedPreflightAdapter(protectedPayloadRows().slice(0, -1)),
+    'jpvbootcamp',
+    EXPECTED_SHA,
+    async () => validRevision(),
+  )
+  assert.equal(pendingPayload.result, 'MISMATCH')
+}
+
 async function main(): Promise<void> {
   const source = readFileSync('scripts/release/verifyProductionMigrationStatus.ts', 'utf8')
+  const healthRouteSource = readFileSync('src/app/api/health/deployment/route.ts', 'utf8')
 
   assert.match(source, /BEGIN TRANSACTION READ ONLY/)
   assert.match(source, /method: 'GET'/)
   assert.match(source, /PRODUCTION_HEALTH_URL/)
   assert.match(source, /deploymentEnv !== PRODUCTION\.deploymentEnv/)
+  assert.match(healthRouteSource, /status: 'live'/)
+  assert.match(healthRouteSource, /deploymentEnv: readEnv\('DEPLOYMENT_ENV'\)/)
   assert.doesNotMatch(source, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE)\s+/i)
   assert.doesNotMatch(source, /\bprisma\s+migrate\b|\bmigrate\s+deploy\b|\b(?:db|payload):(?:reset|seed|cleanup|init)\b/i)
   assert.doesNotMatch(source, /feature\/member-portal-rooms/)
@@ -150,6 +262,7 @@ async function main(): Promise<void> {
   assert.throws(() => parseProductionCliArgs(['--unknown']))
 
   await testDeploymentHealthIdentityContract()
+  await testProductionPreflightPolicy()
 
   const client = new RecordingClient()
   const adapter = createProductionReadOnlyAdapter({
