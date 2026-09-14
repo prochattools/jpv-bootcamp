@@ -18,7 +18,7 @@ Publish workflow `34840641941` completed successfully. Production health and
 public routes passed, and `/api/health/deployment` now reports `ok: true`,
 `status: live`, `deploymentEnv: production`, and the exact image tag.
 
-## Read-only database evidence
+## Pre-apply read-only database evidence
 
 - Target database: `jpvbootcamp`
 - Target schema: `jpvbootcamp`
@@ -78,11 +78,34 @@ The current supported production recovery evidence is:
 
 The older Rooms backup evidence is historical and was not reused.
 
-## Current decision
+## Post-apply result
 
-Mighty migrations: **NOT APPLIED**
+Guarded workflow: **34844003112 — PASS**
 
-Production preflight: **PASS — VERIFIED_WITH_EXPECTED_PENDING_PRISMA**
+Mighty migrations: **APPLIED — EXACTLY THE TWO REVIEWED PRISMA MIGRATIONS**
 
-Next gate: **separate guarded apply of exactly the two Mighty Prisma
-migrations**
+Effective Payload migrations: **ZERO**
+
+The post-apply read-only verifier returned `VERIFIED` with state
+`VERIFIED_CLEAN`. Pending Prisma and Payload migrations are zero; failed,
+in-progress, rolled-back, duplicate, malformed, and unexpected migration
+states are absent. The protected Payload anomaly remains exactly
+`20260826_100000_administrator_member_identity` and the historical fingerprint
+still matches.
+
+The new `jpvbootcamp.mighty_access_sync` table is present with all reviewed
+columns, including `last_stripe_event_created_at` and
+`last_stripe_event_type`. Its primary key, unique indexes for normalized email,
+Stripe customer, and Stripe subscription, due/status index, and subscription
+index are present. A read-only `COUNT(*)` returned `0`; no rows were
+enumerated.
+
+No existing user/member/content table was changed by the reviewed SQL. No
+Mighty or Stripe operation occurred. `MIGHTY_ACCESS_SYNC_ENABLED=false`, the
+Mighty scheduler is disabled, the worker is dormant, and public health/legal
+routes remained healthy.
+
+Production preflight: **PASS — VERIFIED_CLEAN**
+
+Next gate: **three-account queue inspection and bounded Westhoek worker canary,
+under a separate owner authorization**

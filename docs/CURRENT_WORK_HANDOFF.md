@@ -14,18 +14,17 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 `LIVE MIGHTY MUTATIONS: 0`
 `LIVE STRIPE READS: 0`
 `LIVE STRIPE MUTATIONS: 0`
-`PRODUCTION DB MUTATIONS: 0`
-`MIGRATIONS APPLIED: 0`
-`PRODUCTION PREFLIGHT: VERIFIED_WITH_EXPECTED_PENDING_PRISMA`
-`NEXT GATE: SEPARATE GUARDED APPLY OF EXACTLY THE TWO MIGHTY PRISMA MIGRATIONS`
+`PRODUCTION DB MUTATIONS: SCHEMA-ONLY — AUTHORIZED TWO-MIGRATION APPLY`
+`MIGHTY PRISMA MIGRATIONS: APPLIED`
+`PRODUCTION POST-MIGRATION VERIFIER: VERIFIED_CLEAN`
+`NEXT GATE: THREE-ACCOUNT QUEUE INSPECTION + BOUNDED WESTHOEK WORKER CANARY`
 
-The read-only production ledger evidence is stable: the only pending Prisma
-migrations are `20260909090000_add_mighty_access_sync` and
-`20260909093000_add_mighty_event_ordering`; pending Payload migrations are
-zero; the protected historical Payload ordering anomaly is exactly
-`20260826_100000_administrator_member_identity` with fingerprint
-`0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c`; and
-`jpvbootcamp.mighty_access_sync` is absent. No migration was applied.
+The guarded workflow `34844003112` applied exactly
+`20260909090000_add_mighty_access_sync` and
+`20260909093000_add_mighty_event_ordering`. The new
+`jpvbootcamp.mighty_access_sync` table has all reviewed columns, indexes, and
+the event-ordering fields; its read-only row count is zero. No effective
+Payload migration ran.
 
 PR #46 merged exactly as reviewed at merge SHA
 `dbe0d9180e4233c5d7b58ba23554dafa5cd2333f` and the normal publish workflow
@@ -44,11 +43,13 @@ It targets the current `vm-supabase` production database host. Azure exposes
 content checksum. No restore rehearsal was required by this preflight policy;
 the named rollback owner is `production-release-owner`.
 
-The exact pending Prisma set remains the two reviewed Mighty migrations,
-pending Payload is zero, the protected Payload fingerprint matches, and
-`jpvbootcamp.mighty_access_sync` remains absent. This pass authorizes no
-migration apply or provider access; the next step is a separate guarded apply
-goal.
+The post-apply verifier is `VERIFIED_CLEAN`: pending Prisma and Payload are
+zero, no failed or unexpected migration exists, the protected Payload anomaly
+and fingerprint remain unchanged, and the migration ledger was not rewritten.
+The production application remains healthy at the same revision. No Mighty or
+Stripe operation, worker execution, scheduler enablement, user-data change,
+user-access change, or content change occurred. Phase A remains paused until a
+separate owner-authorized queue inspection and bounded worker canary.
 
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 

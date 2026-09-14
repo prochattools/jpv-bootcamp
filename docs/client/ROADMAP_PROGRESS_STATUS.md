@@ -9,21 +9,18 @@
 `DEPLOYMENT HEALTH CONTRACT: PASS`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
-`PRODUCTION PREFLIGHT: VERIFIED_WITH_EXPECTED_PENDING_PRISMA`
-`MIGRATIONS APPLIED: 0`
+`MIGHTY PRISMA MIGRATIONS: APPLIED`
+`POST-MIGRATION VERIFIER: VERIFIED_CLEAN`
 `LIVE POPULATION: NOT INSPECTED`
 `REAL MIGRATION MANIFEST: NOT CREATED`
-`NEXT GATE: SEPARATE GUARDED APPLY OF EXACTLY THE TWO MIGHTY PRISMA MIGRATIONS`
+`NEXT GATE: THREE-ACCOUNT QUEUE INSPECTION + BOUNDED WESTHOEK WORKER CANARY`
 
-Read-only ledger inspection found exactly the two reviewed pending Prisma
-migrations (`20260909090000_add_mighty_access_sync` and
-`20260909093000_add_mighty_event_ordering`), zero pending Payload migrations,
-the exact protected historical ordering anomaly
-`20260826_100000_administrator_member_identity`, and the matching historical
-fingerprint
-`0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c`.
-`jpvbootcamp.mighty_access_sync` is absent. No migration or provider operation
-was performed.
+The guarded production migration workflow `34844003112` applied exactly
+`20260909090000_add_mighty_access_sync` and
+`20260909093000_add_mighty_event_ordering`. The new
+`jpvbootcamp.mighty_access_sync` table, all reviewed indexes/constraints, and
+both event-ordering columns are present; the read-only row count is zero. No
+effective Payload migration ran.
 
 PR #46 merged exactly as reviewed at `dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`
 and deployed successfully through publish workflow `34840641941`. The
@@ -40,10 +37,12 @@ checksum for this recovery point; the named rollback owner is
 `production-release-owner`. The older Rooms artifact remains historical and
 was not reused.
 
-The protected Payload anomaly and fingerprint remain unchanged, pending
-Payload is zero, the only pending Prisma migrations are the two reviewed
-Mighty migrations, and the Mighty table is absent. No migration apply or
-provider operation occurred. The next gate is a separate guarded apply goal.
+The post-apply verifier is `VERIFIED_CLEAN`: pending Prisma and Payload are
+zero, no failed or unexpected migration exists, and the protected Payload
+anomaly/fingerprint remain unchanged. Scheduler and worker remain dormant;
+no Mighty or Stripe operation, user-data change, access change, or content
+change occurred. The next gate is a separate owner-authorized three-account
+queue inspection and bounded Westhoek worker canary.
 
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 
