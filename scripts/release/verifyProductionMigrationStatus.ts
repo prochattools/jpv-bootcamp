@@ -24,8 +24,7 @@ const PRODUCTION = ENVIRONMENT_TOPOLOGY.production
 const FULL_SHA = /^[0-9a-f]{40}$/
 const PRODUCTION_HEALTH_URL = `${PRODUCTION.origin}/api/health/deployment`
 export const EXPECTED_PRODUCTION_PREFLIGHT_PRISMA_PENDING = [
-  '20260909090000_add_mighty_access_sync',
-  '20260909093000_add_mighty_event_ordering',
+  '20260914140000_add_mighty_bootstrap_provenance',
 ] as const
 export const PROTECTED_PRODUCTION_PAYLOAD_ORDERING_ANOMALIES = [
   '20260826_100000_administrator_member_identity',
