@@ -3,8 +3,34 @@
 ## Scope
 
 This record covers only the read-only preflight and its control-plane
-compatibility fix. It does not authorize or perform a Prisma migration,
-Payload migration, provider operation, worker execution, or scheduler run.
+compatibility fix. The later Phase A gate authorized only exact read-only
+inspection of the three named accounts and a single Westhoek worker canary if
+an eligible genuine queue row existed. It did not authorize a Prisma or Payload
+migration, scheduler run, population inspection, or any provider mutation.
+
+## Phase A result — 2026-09-14
+
+Production revision remained `dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`,
+healthy, with the Mighty scheduler disabled and worker dormant.
+
+The queue was queried in a read-only transaction using explicit columns and
+exact normalized-email predicates for only:
+
+- `westhoek@hotmail.com`
+- `steve@yeshua.academy`
+- `info@prochat.tools`
+
+The result was **zero rows**. No queue row, webhook, manifest, or eligibility
+state was fabricated, and the worker endpoint was not invoked. Exact Stripe and
+Mighty reads were limited to those same three authorized identities; no fourth
+identity or population inventory was accessed. Provider mutations, Stripe
+mutations, user changes, access changes, and content changes were all zero.
+
+Phase A terminal result: **NO SAFE GENUINE QUEUE ROW**.
+
+The live queue-to-worker canary remains unproven and is deferred until a future
+owner-authorized run has a genuine eligible Westhoek queue row. The worker must
+remain dormant until then.
 
 The production lineage inspected is:
 

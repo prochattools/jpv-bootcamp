@@ -2,7 +2,7 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — PASS — 2026-09-14
+## CURRENT PHASE: PHASE A THREE-ACCOUNT QUEUE INSPECTION — NO SAFE GENUINE QUEUE ROW — 2026-09-14
 
 `PRODUCTION REVISION: dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`
 `PRODUCTION HEALTH: PASS`
@@ -10,14 +10,16 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 `DEPLOYMENT HEALTH CONTRACT: PASS`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
-`LIVE MIGHTY READS: 0`
+`LIVE MIGHTY READS: EXACTLY THREE AUTHORIZED ACCOUNT READ SCOPES`
 `LIVE MIGHTY MUTATIONS: 0`
-`LIVE STRIPE READS: 0`
+`LIVE STRIPE READS: EXACTLY THREE AUTHORIZED ACCOUNT READ SCOPES`
 `LIVE STRIPE MUTATIONS: 0`
-`PRODUCTION DB MUTATIONS: SCHEMA-ONLY — AUTHORIZED TWO-MIGRATION APPLY`
+`PRODUCTION DB MUTATIONS: SCHEMA-ONLY — NO DATA MUTATION`
 `MIGHTY PRISMA MIGRATIONS: APPLIED`
 `PRODUCTION POST-MIGRATION VERIFIER: VERIFIED_CLEAN`
-`NEXT GATE: THREE-ACCOUNT QUEUE INSPECTION + BOUNDED WESTHOEK WORKER CANARY`
+`QUEUE ROWS FOR THREE AUTHORIZED EMAILS: 0`
+`WESTHOEK WORKER CANARY: NOT INVOKED — NO SAFE GENUINE QUEUE ROW`
+`NEXT GATE: OWNER DECISION ON A GENUINE, ELIGIBLE WESTHOEK QUEUE STATE`
 
 The guarded workflow `34844003112` applied exactly
 `20260909090000_add_mighty_access_sync` and
@@ -46,10 +48,20 @@ the named rollback owner is `production-release-owner`.
 The post-apply verifier is `VERIFIED_CLEAN`: pending Prisma and Payload are
 zero, no failed or unexpected migration exists, the protected Payload anomaly
 and fingerprint remain unchanged, and the migration ledger was not rewritten.
-The production application remains healthy at the same revision. No Mighty or
-Stripe operation, worker execution, scheduler enablement, user-data change,
-user-access change, or content change occurred. Phase A remains paused until a
-separate owner-authorized queue inspection and bounded worker canary.
+The production application remains healthy at the same revision. The exact
+queue inspection used a read-only transaction and explicit fields, constrained
+only to the three authorized normalized emails: `westhoek@hotmail.com`,
+`steve@yeshua.academy`, and `info@prochat.tools`. It returned zero rows. No
+row was fabricated, no webhook was synthesized, and the worker endpoint was
+not invoked. Exact-account Stripe and Mighty state reads were limited to those
+same three identities; no fourth identity or population inventory was
+accessed, and no provider mutation occurred. Privileged accounts were
+decision-only and received no worker action.
+
+The Westhoek queue-to-worker proof remains pending because there was no genuine
+eligible queue row. Phase A therefore ends safely with
+`NO SAFE GENUINE QUEUE ROW`; a future canary requires a separately authorized,
+genuine eligible queue state.
 
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 
