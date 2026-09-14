@@ -1,6 +1,36 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
+## CURRENT PHASE: MIGHTY BOOTSTRAP PROVENANCE SCHEMA APPLY — PASS — 2026-09-14
+
+`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION HEALTH: PASS`
+`PRODUCTION PREFLIGHT: VERIFIED_WITH_EXPECTED_PENDING_PRISMA`
+`PROVENANCE MIGRATION: 20260914140000_add_mighty_bootstrap_provenance — APPLIED`
+`POST-APPLY VERIFIER: VERIFIED_CLEAN`
+`PENDING PRISMA: 0`
+`PENDING PAYLOAD: 0`
+`MIGHTY SCHEDULER: DISABLED`
+`MIGHTY WORKER: DORMANT`
+`LIVE POPULATION: NOT INSPECTED`
+`REAL MIGRATION MANIFEST: NOT CREATED`
+`NEXT GATE: REBUILD/VERIFY BOOTSTRAP RUNTIME RC ON MIGRATED PRODUCTION BASE`
+
+The exact guarded production workflow applied only the reviewed provenance
+schema migration after the required recovery evidence was recorded. Its
+temporary Dokploy schedule was deleted successfully. The application remains
+on the inert runtime, with no bootstrap deployment, provider operation,
+worker execution, scheduler execution, member/access/content change, or user
+data operation.
+
+Post-apply read-only checks confirm the two provenance columns and their
+expand-only backfill. The single aggregate `mighty_access_sync` row with a
+non-null last Stripe event has a non-null `state_observed_at`. The protected
+Payload anomaly remains accepted with its matching historical fingerprint.
+See `docs/release/PROVENANCE_CONTROL_PLANE_DEPLOYMENT_2026-09-14.md` for the
+exact evidence and boundaries.
+
+## HISTORICAL PREFLIGHT STATE (SUPERSEDED) — 2026-09-14
 
 `PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
 `PRODUCTION MODE: DEPLOYED + HARDENED + INERT`

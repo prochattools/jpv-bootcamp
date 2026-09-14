@@ -2,7 +2,43 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
+## CURRENT PHASE: MIGHTY BOOTSTRAP PROVENANCE SCHEMA APPLY — PASS — 2026-09-14
+
+`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION HEALTH: PASS`
+`PRODUCTION PREFLIGHT: VERIFIED_WITH_EXPECTED_PENDING_PRISMA`
+`PROVENANCE MIGRATION: 20260914140000_add_mighty_bootstrap_provenance — APPLIED`
+`POST-APPLY VERIFIER: VERIFIED_CLEAN`
+`PENDING PRISMA: 0`
+`PENDING PAYLOAD: 0`
+`MIGHTY SCHEDULER: DISABLED`
+`MIGHTY WORKER: DORMANT`
+`LIVE MIGHTY READS: 0`
+`LIVE MIGHTY MUTATIONS: 0`
+`LIVE STRIPE READS: 0`
+`LIVE STRIPE MUTATIONS: 0`
+`PRODUCTION DB DATA MUTATIONS: 0`
+`NEXT GATE: REBUILD/VERIFY BOOTSTRAP RUNTIME RC ON MIGRATED PRODUCTION BASE`
+
+The migration was applied only through the guarded `main` workflow with the
+exact production revision above, owner approval, and the required recovery
+evidence. The temporary Dokploy migration schedule was deleted successfully.
+No runtime bootstrap code was deployed, and no provider, worker, scheduler,
+member, access, content, or user operation was performed.
+
+Read-only post-apply verification confirms `jpvbootcamp.mighty_access_sync`
+has `state_source TEXT NOT NULL DEFAULT 'stripe_webhook'` and
+`state_observed_at TIMESTAMPTZ(3)`. The table has one aggregate row; its one
+row with a non-null Stripe event timestamp is backfilled with a non-null
+`state_observed_at`. The accepted historical Payload ordering anomaly remains
+unchanged and its fingerprint still matches.
+
+The exact evidence package is recorded in
+`docs/release/PROVENANCE_CONTROL_PLANE_DEPLOYMENT_2026-09-14.md`. The next
+separate gate is to rebuild and verify the bootstrap runtime RC against this
+migrated production base; it is not authorized by this schema-apply goal.
+
+## HISTORICAL PREFLIGHT STATE (SUPERSEDED) — 2026-09-14
 
 `PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
 `PRODUCTION HEALTH: PASS`
