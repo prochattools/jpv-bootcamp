@@ -2,6 +2,36 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
+
+`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`MIGHTY SCHEDULER: DISABLED`
+`MIGHTY WORKER: DORMANT`
+`PROVENANCE MIGRATION: APPLIED AND VERIFIED CLEAN`
+`BOOTSTRAP RUNTIME RC: codex/mighty-phase-a-bootstrap-runtime-rc-v2`
+`BOOTSTRAP RUNTIME RC: NOT DEPLOYED`
+`LIVE MIGHTY ACCESS: 0`
+`LIVE STRIPE ACCOUNT ACCESS: 0`
+`REAL POPULATION: NOT INSPECTED`
+`REAL MANIFEST: NOT CREATED`
+`NEXT GATE: OWNER REVIEW OF THE EXACT PUSHED RC`
+
+This clean release candidate is based directly on the current migrated
+production revision. It selectively adds the Phase A exact-account bootstrap
+route and worker-queue provenance/runtime hardening while preserving the
+applied migration and `VERIFIED_CLEAN` verifier behavior. The bootstrap is
+restricted to `westhoek@hotmail.com`, reads only exact local Stripe identity
+records, queues `stateSource=operator_bootstrap`, and performs no Mighty or
+email operation. Provider I/O remains worker-only. Newer genuine Stripe
+webhooks supersede bootstrap state, older events cannot regress it, and stale
+worker finalization is guarded.
+
+The RC was validated only with synthetic/local tests. No live Stripe or Mighty
+operation, deployment, migration, scheduler execution, worker execution, or
+user/data change occurred. The release suite target is `198/198`; deployment
+and any live Phase A bootstrap remain separately unauthorized.
+
 ## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
 
 `PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`

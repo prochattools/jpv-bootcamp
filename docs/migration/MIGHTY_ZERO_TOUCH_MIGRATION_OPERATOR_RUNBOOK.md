@@ -1,5 +1,21 @@
 # JPV Mighty zero-touch migration operator runbook
 
+## Phase A bootstrap runtime release candidate — 2026-09-14
+
+The current production lineage is
+`b1e105d3ac855f20a983fb70bcefffb2490c864f`; the provenance migration is already
+applied and the read-only verifier is `VERIFIED_CLEAN`. The non-production
+branch `codex/mighty-phase-a-bootstrap-runtime-rc-v2` contains a bounded,
+synthetically validated bootstrap route for the single authorized operator
+identity `westhoek@hotmail.com`. It performs exact local Stripe identity and
+subscription checks, queues `operator_bootstrap` state with observation time,
+and never calls Mighty or email. Provider I/O remains worker-only.
+
+This RC is not deployed. Do not invoke the bootstrap route, worker, scheduler,
+or any live rehearsal script. No live Stripe/Mighty access, population
+inspection, real manifest creation, migration, or user/data change is permitted
+by this release-candidate review.
+
 ## Status
 
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
