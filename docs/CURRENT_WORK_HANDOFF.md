@@ -2,6 +2,51 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
+
+`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
+`PRODUCTION HEALTH: PASS`
+`MIGHTY SCHEDULER: DISABLED`
+`MIGHTY WORKER: DORMANT`
+`LIVE MIGHTY READS: 0`
+`LIVE MIGHTY MUTATIONS: 0`
+`LIVE STRIPE READS: 0`
+`LIVE STRIPE MUTATIONS: 0`
+`PRODUCTION DB MUTATIONS: 0`
+`MIGRATIONS APPLIED: 0`
+`PRODUCTION PREFLIGHT: BLOCKED`
+`NEXT GATE: OWNER BACKUP ACTION REQUIRED, THEN OWNER REVIEW/MERGE OF PR #46`
+
+The read-only production ledger evidence is stable: the only pending Prisma
+migrations are `20260909090000_add_mighty_access_sync` and
+`20260909093000_add_mighty_event_ordering`; pending Payload migrations are
+zero; the protected historical Payload ordering anomaly is exactly
+`20260826_100000_administrator_member_identity` with fingerprint
+`0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c`; and
+`jpvbootcamp.mighty_access_sync` is absent. No migration was applied.
+
+The bounded fix is on PR #46,
+`codex/production-migration-preflight-fix` at
+`d666fe9898de311a9c21127ca201b59b5dea25c3`. CI passed, but branch protection
+still requires one human review, so it has not been merged or deployed.
+
+`OWNER BACKUP ACTION REQUIRED`: before any separate migration-apply goal, the
+production database operator must use the supported managed PostgreSQL/Dokploy
+backup or snapshot mechanism for database `jpvbootcamp`, schema
+`jpvbootcamp`, and record the immutable evidence ID, UTC creation time, target
+database identity, checksum/integrity value where supported, restore or
+recovery validation reference where supported, and named rollback owner. The
+older Rooms evidence `rooms-production-rollback-20260830T151139Z` is historical
+and must not be reused. If the supported platform exposes no current backup
+action, the owner must obtain that evidence from the database operator before
+proceeding; do not substitute a repository export or ad-hoc dump.
+
+This goal authorizes neither migration apply nor provider access. After PR #46
+is approved and deployed, rerun the official read-only verifier. The intended
+result is `VERIFIED_WITH_EXPECTED_PENDING_PRISMA` with exactly the two Mighty
+migrations pending, followed by a separate explicitly authorized guarded apply
+goal only after backup evidence is recorded.
+
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 
 `PHASE A: BLOCKED — PRE-LIVE RUNTIME DEFECT FOUND`
