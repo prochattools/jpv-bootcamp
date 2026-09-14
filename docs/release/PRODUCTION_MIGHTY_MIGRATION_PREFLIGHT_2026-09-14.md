@@ -10,6 +10,14 @@ The production lineage inspected is:
 
 `1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
 
+The control-plane fix was merged as PR #46 at:
+
+`dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`
+
+Publish workflow `34840641941` completed successfully. Production health and
+public routes passed, and `/api/health/deployment` now reports `ok: true`,
+`status: live`, `deploymentEnv: production`, and the exact image tag.
+
 ## Read-only database evidence
 
 - Target database: `jpvbootcamp`
@@ -48,18 +56,33 @@ and accepts only these Prisma states:
 Any other pending set, Payload anomaly, malformed row, duplicate, unexpected
 migration, or fingerprint mismatch fails closed.
 
-## Backup boundary
+## Backup / recovery evidence
 
-The older Rooms backup evidence is historical and is not reused for this
-migration window. Current production backup/snapshot evidence, integrity
-information where supported, and rollback ownership must be recorded before a
-separate migration-apply goal can be authorized.
+The current supported production recovery evidence is:
+
+- Vault: `rsv-saas-infra`
+- Protected item: `VM;iaasvmcontainerv2;rg-data-supabase;vm-supabase`
+- Policy: `EnhancedPolicy-Supabase`
+- Protection: `Protected`
+- Backup-item health: `Passed`
+- Recovery point ID: `8016719968922080516`
+- Recovery point timestamp: `2026-09-14T03:03:21.643747Z`
+- Recovery point type: `FileSystemConsistent`
+- Target VM: `vm-supabase` in `rg-data-supabase`, the current production
+  database host
+- Integrity: Azure exposes the recovery-point type and backup-item health but
+  no content checksum
+- Recovery validation: protected-vault recovery-point evidence verified;
+  restore rehearsal is not required by this preflight policy
+- Rollback owner: `production-release-owner`
+
+The older Rooms backup evidence is historical and was not reused.
 
 ## Current decision
 
 Mighty migrations: **NOT APPLIED**
 
-Production preflight: **BLOCKED PENDING CURRENT BACKUP/RECOVERY EVIDENCE**
+Production preflight: **PASS — VERIFIED_WITH_EXPECTED_PENDING_PRISMA**
 
 Next gate: **separate guarded apply of exactly the two Mighty Prisma
-migrations, after backup evidence is recorded**
+migrations**

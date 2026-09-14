@@ -2,10 +2,12 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
+## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — PASS — 2026-09-14
 
-`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
+`PRODUCTION REVISION: dbe0d9180e4233c5d7b58ba23554dafa5cd2333f`
 `PRODUCTION HEALTH: PASS`
+`DEPLOYMENT WORKFLOW: 34840641941 — PASS`
+`DEPLOYMENT HEALTH CONTRACT: PASS`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
 `LIVE MIGHTY READS: 0`
@@ -14,8 +16,8 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 `LIVE STRIPE MUTATIONS: 0`
 `PRODUCTION DB MUTATIONS: 0`
 `MIGRATIONS APPLIED: 0`
-`PRODUCTION PREFLIGHT: BLOCKED`
-`NEXT GATE: OWNER BACKUP ACTION REQUIRED, THEN OWNER REVIEW/MERGE OF PR #46`
+`PRODUCTION PREFLIGHT: VERIFIED_WITH_EXPECTED_PENDING_PRISMA`
+`NEXT GATE: SEPARATE GUARDED APPLY OF EXACTLY THE TWO MIGHTY PRISMA MIGRATIONS`
 
 The read-only production ledger evidence is stable: the only pending Prisma
 migrations are `20260909090000_add_mighty_access_sync` and
@@ -25,27 +27,28 @@ zero; the protected historical Payload ordering anomaly is exactly
 `0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c`; and
 `jpvbootcamp.mighty_access_sync` is absent. No migration was applied.
 
-The bounded fix is on PR #46,
-`codex/production-migration-preflight-fix` at
-`d666fe9898de311a9c21127ca201b59b5dea25c3`. CI passed, but branch protection
-still requires one human review, so it has not been merged or deployed.
+PR #46 merged exactly as reviewed at merge SHA
+`dbe0d9180e4233c5d7b58ba23554dafa5cd2333f` and the normal publish workflow
+deployed it. The official read-only verifier returned `VERIFIED` with state
+`VERIFIED_WITH_EXPECTED_PENDING_PRISMA` against the exact deployed image.
 
-`OWNER BACKUP ACTION REQUIRED`: before any separate migration-apply goal, the
-production database operator must use the supported managed PostgreSQL/Dokploy
-backup or snapshot mechanism for database `jpvbootcamp`, schema
-`jpvbootcamp`, and record the immutable evidence ID, UTC creation time, target
-database identity, checksum/integrity value where supported, restore or
-recovery validation reference where supported, and named rollback owner. The
-older Rooms evidence `rooms-production-rollback-20260830T151139Z` is historical
-and must not be reused. If the supported platform exposes no current backup
-action, the owner must obtain that evidence from the database operator before
-proceeding; do not substitute a repository export or ad-hoc dump.
+Current supported backup evidence is Azure Recovery Services Vault
+`rsv-saas-infra`, protected item
+`VM;iaasvmcontainerv2;rg-data-supabase;vm-supabase`, policy
+`EnhancedPolicy-Supabase`, health `Passed`, protection `Protected`, and
+recovery point `8016719968922080516` created at
+`2026-09-14T03:03:21.643747Z`. The immutable recovery-point resource is
+`/subscriptions/6e99b82d-43e3-41cc-ad94-8733afeb2a7e/resourceGroups/rg-saas-infra/providers/Microsoft.RecoveryServices/vaults/rsv-saas-infra/backupFabrics/Azure/protectionContainers/IaasVMContainer;iaasvmcontainerv2;rg-data-supabase;vm-supabase/protectedItems/VM;iaasvmcontainerv2;rg-data-supabase;vm-supabase/recoveryPoints/8016719968922080516`.
+It targets the current `vm-supabase` production database host. Azure exposes
+`FileSystemConsistent` recovery-point type and backup-item health, but no
+content checksum. No restore rehearsal was required by this preflight policy;
+the named rollback owner is `production-release-owner`.
 
-This goal authorizes neither migration apply nor provider access. After PR #46
-is approved and deployed, rerun the official read-only verifier. The intended
-result is `VERIFIED_WITH_EXPECTED_PENDING_PRISMA` with exactly the two Mighty
-migrations pending, followed by a separate explicitly authorized guarded apply
-goal only after backup evidence is recorded.
+The exact pending Prisma set remains the two reviewed Mighty migrations,
+pending Payload is zero, the protected Payload fingerprint matches, and
+`jpvbootcamp.mighty_access_sync` remains absent. This pass authorizes no
+migration apply or provider access; the next step is a separate guarded apply
+goal.
 
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 
