@@ -6,6 +6,8 @@ import {
 	normalizeMightyAccessSyncScope,
 	projectMightyAccessFromStripeEvent,
 	reconcileAccess,
+	shouldApplyMightyOperatorBootstrap,
+	shouldApplyMightyStripeEvent,
 } from './accessSync'
 import { MightyApiError, type MightyAdminApi, type MightyMember } from './adminApi'
 import type { MightyConfig } from './config'
@@ -88,7 +90,11 @@ function row(overrides: Partial<Parameters<typeof reconcileAccess>[0]['row']> = 
 		normalizedEmail: 'student@example.com',
 		stripeCustomerId: 'cus_1',
 		stripeSubscriptionId: 'sub_1',
-		lastStripeEventId: 'evt_1',
+	lastStripeEventId: 'evt_1',
+	lastStripeEventCreatedAt: new Date(1_000),
+	lastStripeEventType: 'invoice.paid',
+	stateSource: 'stripe_webhook',
+	stateObservedAt: new Date(1_000),
 		plan: 'jpv_bootcamp_membership',
 		desiredAccess: 'ALLOWED',
 		mightyMemberId: null,
@@ -216,6 +222,56 @@ test('worker scope normalization is explicit, unique, and limited to the allowed
 		() => normalizeMightyAccessSyncScope(['outside@example.com'], allowed),
 		(error: unknown) => error instanceof Error && 'code' in error && (error as { code?: string }).code === 'mighty_worker_scope_denied',
 	)
+})
+
+test('operator bootstrap is idempotent at the same observation and cannot regress newer state', () => {
+	const existing = {
+		lastStripeEventId: null,
+		lastStripeEventCreatedAt: null,
+		lastStripeEventType: null,
+		stateSource: 'operator_bootstrap',
+		stateObservedAt: new Date(2_000),
+		stripeSubscriptionId: 'sub_1',
+	}
+	assert.deepEqual(shouldApplyMightyOperatorBootstrap(existing, {
+		stateObservedAt: new Date(2_000),
+		desiredAccess: 'ALLOWED',
+		stripeCustomerId: 'cus_1',
+		stripeSubscriptionId: 'sub_1',
+		plan: 'jpv_bootcamp_membership',
+	}), { apply: false, reason: 'duplicate_operator_bootstrap' })
+	assert.deepEqual(shouldApplyMightyOperatorBootstrap(existing, {
+		stateObservedAt: new Date(1_000),
+		desiredAccess: 'DENIED',
+		stripeCustomerId: 'cus_1',
+		stripeSubscriptionId: 'sub_1',
+		plan: 'jpv_bootcamp_membership',
+	}), { apply: false, reason: 'stale_operator_bootstrap' })
+})
+
+test('a newer genuine Stripe event supersedes bootstrap and an older event cannot regress it', () => {
+	const existing = {
+		lastStripeEventId: null,
+		lastStripeEventCreatedAt: null,
+		lastStripeEventType: null,
+		stateSource: 'operator_bootstrap',
+		stateObservedAt: new Date(2_000),
+		stripeSubscriptionId: 'sub_1',
+	}
+	assert.equal(shouldApplyMightyStripeEvent(existing, {
+		stripeEventId: 'evt_new',
+		stripeEventCreatedAt: new Date(3_000),
+		stripeEventType: 'customer.subscription.updated',
+		desiredAccess: 'DENIED',
+		stripeSubscriptionId: 'sub_1',
+	}).apply, true)
+	assert.deepEqual(shouldApplyMightyStripeEvent(existing, {
+		stripeEventId: 'evt_old',
+		stripeEventCreatedAt: new Date(1_000),
+		stripeEventType: 'invoice.payment_failed',
+		desiredAccess: 'DENIED',
+		stripeSubscriptionId: 'sub_1',
+	}), { apply: false, reason: 'stale_stripe_event' })
 })
 
 test('allowed recovery re-provisions the stored Mighty identity after Plan removal', async () => {

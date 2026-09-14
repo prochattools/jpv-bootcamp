@@ -1,5 +1,33 @@
 # Operator Handoff Summary
 
+## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
+
+`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`PROVENANCE MIGRATION: APPLIED AND VERIFIED CLEAN`
+`RC BRANCH: codex/mighty-phase-a-bootstrap-runtime-rc-v2`
+`RC STATUS: NOT DEPLOYED — OWNER REVIEW REQUIRED`
+`MIGHTY SCHEDULER: DISABLED`
+`MIGHTY WORKER: DORMANT`
+`LIVE MIGHTY ACCESS: 0`
+`LIVE STRIPE ACCOUNT ACCESS: 0`
+`REAL POPULATION: NOT INSPECTED`
+`REAL MANIFEST: NOT CREATED`
+
+The exact-account bootstrap runtime RC is production-lineage clean and keeps
+provider I/O in the existing worker boundary. Synthetic validation passed the
+bootstrap route/queue/runtime regressions, current hardening suites, both Prisma
+schemas, TypeScript, the production build, and the full release suite at
+`198/198`. Deployment, live provider access, live bootstrap, migration, and
+scheduler enablement remain unauthorized.
+
+## CURRENT RELEASE GATE — PHASE A BOOTSTRAP RUNTIME RC
+
+Deterministic release gate: `pnpm test:release` (`198/198`). Review the exact
+commit on `codex/mighty-phase-a-bootstrap-runtime-rc-v2` only after it is
+pushed. The applied provenance migration and clean verifier state are preserved;
+no migration file is added or removed by this RC.
+
 ## CURRENT PRODUCTION-FREEZE SYNTHETIC HARDENING — 2026-09-11
 
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`

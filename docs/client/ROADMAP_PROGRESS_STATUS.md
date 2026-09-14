@@ -1,5 +1,30 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
+
+`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`PROVENANCE MIGRATION: APPLIED AND VERIFIED CLEAN`
+`BOOTSTRAP RUNTIME RC: codex/mighty-phase-a-bootstrap-runtime-rc-v2`
+`BOOTSTRAP RUNTIME RC: NOT DEPLOYED`
+`MIGHTY SCHEDULER: DISABLED`
+`MIGHTY WORKER: DORMANT`
+`LIVE MIGHTY ACCESS: 0`
+`LIVE STRIPE ACCOUNT ACCESS: 0`
+`REAL POPULATION: NOT INSPECTED`
+`REAL MANIFEST: NOT CREATED`
+`NEXT GATE: OWNER REVIEW OF THE EXACT PUSHED RC`
+
+The clean RC is based directly on the current migrated production lineage. It
+selectively adds the exact-account Phase A bootstrap route, queue provenance,
+event ordering, stale-worker guards, and synthetic regression coverage. The
+bootstrap is restricted to `westhoek@hotmail.com`, uses exact local Stripe
+identity records, queues `operator_bootstrap` state, and never calls Mighty or
+email; provider I/O remains worker-only. No live provider operation, deployment,
+migration, scheduler execution, worker execution, population inspection, real
+manifest creation, or user/data change occurred. The fresh release gate is
+`pnpm test:release` passed `198/198`.
+
 ## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
 
 `PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
