@@ -2,6 +2,46 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## PHASE A RESUME ATTEMPT — BLOCKED BY PRODUCTION PRECONDITIONS — 2026-09-14
+
+`PHASE A: BLOCKED — NO SAFE EXISTING WORKER ROW`
+`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
+`AUTHORIZED IDENTITIES ACCESSED: westhoek@hotmail.com, steve@yeshua.academy, info@prochat.tools`
+`FOURTH IDENTITY: NO`
+`POPULATION ENUMERATION: NO`
+`LIVE STRIPE MUTATIONS: 0`
+`LIVE MIGHTY MUTATIONS: 0`
+`WESTHOEK WORKER CANARY: NOT INVOKED`
+`REAL MANIFEST: NOT CREATED`
+`SCHEDULER: DISABLED`
+
+The exact three-account read-only preflight was performed against the deployed
+production configuration. Stripe and Mighty were queried only for the three
+owner-authorized identities and only through exact-account lookups. The target
+Plan was `2000039`; no provider write, queue write, email, worker execution,
+or lifecycle simulation occurred.
+
+The canary is blocked by two independent production preconditions:
+
+1. The production `jpvbootcamp` schema does not contain
+   `mighty_access_sync`, so the deployed worker cannot claim or inspect a
+   genuine queue row. The migration files
+   `20260909090000_add_mighty_access_sync` and
+   `20260909093000_add_mighty_event_ordering` exist in source but are not
+   applied in production.
+2. The deployed production mutation scope does not include
+   `westhoek@hotmail.com` in `MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST`. An exact
+   westhoek worker request would therefore fail closed before claiming a row.
+
+The JPV projection also has no exact `westhoek@hotmail.com` billing row. No
+row was fabricated and no desired state or Stripe event was rewritten. Steve
+and Info remain read-only protected identities. Do not apply schema changes,
+change production configuration, create a queue row, invoke the worker, or
+resume Phase A without separate explicit authorization for those actions.
+
+Next gate: owner authorization for the production schema/configuration
+preconditions, followed by a fresh exact three-account preflight.
+
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 
 `PHASE A: BLOCKED — PRE-LIVE RUNTIME DEFECT FOUND`
