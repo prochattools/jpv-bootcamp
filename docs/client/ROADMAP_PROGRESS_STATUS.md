@@ -1,38 +1,33 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
+## CURRENT PHASE: PROVENANCE CONTROL-PLANE DEPLOYMENT — PASS — 2026-09-14
 
-`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
-`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
+`PRODUCTION MODE: DEPLOYED + HARDENED + ZERO-TOUCH CONTROL PLANE + INERT`
 `PRODUCTION HEALTH: PASS`
+`PROVENANCE CONTROL-PLANE DEPLOYMENT: PASS`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
-`PRODUCTION PREFLIGHT: BLOCKED`
-`MIGRATIONS APPLIED: 0`
+`PENDING PAYLOAD: 0`
+`PENDING PRISMA: 20260914140000_add_mighty_bootstrap_provenance`
+`MIGHTY MIGRATIONS APPLIED: 0`
 `LIVE POPULATION: NOT INSPECTED`
 `REAL MIGRATION MANIFEST: NOT CREATED`
-`NEXT GATE: OWNER BACKUP ACTION REQUIRED, THEN OWNER REVIEW/MERGE OF PR #46`
+`NEXT GATE: SEPARATELY AUTHORIZED GUARDED PROVENANCE MIGRATION APPLY`
 
-Read-only ledger inspection found exactly the two reviewed pending Prisma
-migrations (`20260909090000_add_mighty_access_sync` and
-`20260909093000_add_mighty_event_ordering`), zero pending Payload migrations,
-the exact protected historical ordering anomaly
-`20260826_100000_administrator_member_identity`, and the matching historical
-fingerprint
-`0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c`.
-`jpvbootcamp.mighty_access_sync` is absent. No migration or provider operation
-was performed.
+Approved deployment run `34877921951` completed and production serves the exact
+target SHA. System health and public routes passed with no observed downtime.
+The corrected exact-deployment verifier returned
+`VERIFIED_WITH_EXPECTED_PENDING_PRISMA`; the protected Payload anomaly and its
+historical fingerprint matched, while pending and unexpected Payload sets and
+unexpected Prisma sets were empty. Current Azure recovery evidence is recorded
+in `docs/release/PROVENANCE_CONTROL_PLANE_DEPLOYMENT_2026-09-14.md`.
 
-The health/verifier contract fix is CI-green on PR #46 at
-`d666fe9898de311a9c21127ca201b59b5dea25c3`, but branch protection still
-requires human review and the fix is not deployed. Before any separate
-migration-apply authorization, the production database operator must use the
-supported managed PostgreSQL/Dokploy backup or snapshot mechanism for
-`jpvbootcamp` and record immutable backup ID, UTC timestamp, target database,
-checksum/integrity where supported, recovery-validation reference where
-supported, and rollback owner. The historical Rooms artifact is not current
-enough and must not be reused. If no supported current mechanism is available,
-the exact state remains `OWNER BACKUP ACTION REQUIRED`.
+This deployment changed control-plane code only. The bootstrap runtime remains
+undeployed and inert; no provider, worker, scheduler, population, user, access,
+content, or database migration operation occurred. The provenance migration is
+intentionally still pending and requires a separate explicit guarded-apply
+authorization.
 
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 

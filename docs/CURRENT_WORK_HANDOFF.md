@@ -2,50 +2,47 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
+## CURRENT PHASE: PROVENANCE CONTROL-PLANE DEPLOYMENT — PASS — 2026-09-14
 
-`PRODUCTION REVISION: 1b5e216ced853f61d2742c8fe9a4bd8814dd8c8b`
+`PRODUCTION REVISION: b1e105d3ac855f20a983fb70bcefffb2490c864f`
 `PRODUCTION HEALTH: PASS`
+`PROVENANCE CONTROL-PLANE DEPLOYMENT: PASS`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
 `LIVE MIGHTY READS: 0`
 `LIVE MIGHTY MUTATIONS: 0`
 `LIVE STRIPE READS: 0`
 `LIVE STRIPE MUTATIONS: 0`
-`PRODUCTION DB MUTATIONS: 0`
-`MIGRATIONS APPLIED: 0`
-`PRODUCTION PREFLIGHT: BLOCKED`
-`NEXT GATE: OWNER BACKUP ACTION REQUIRED, THEN OWNER REVIEW/MERGE OF PR #46`
+`PRODUCTION DB MIGRATIONS APPLIED: 0`
+`PROVENANCE MIGRATION: PENDING`
+`NEXT GATE: SEPARATELY AUTHORIZED GUARDED PROVENANCE MIGRATION APPLY`
 
-The read-only production ledger evidence is stable: the only pending Prisma
-migrations are `20260909090000_add_mighty_access_sync` and
-`20260909093000_add_mighty_event_ordering`; pending Payload migrations are
-zero; the protected historical Payload ordering anomaly is exactly
-`20260826_100000_administrator_member_identity` with fingerprint
-`0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c`; and
-`jpvbootcamp.mighty_access_sync` is absent. No migration was applied.
+Approved deployment run `34877921951` completed successfully and serves the
+exact target SHA `b1e105d3ac855f20a983fb70bcefffb2490c864f`. The public health
+and deployment-health endpoints, plus `/`, `/terms`, `/privacy`, and `/cookies`,
+returned HTTP 200; no downtime or restart loop was observed. The stale run
+`34870616841` remains cancelled.
 
-The bounded fix is on PR #46,
-`codex/production-migration-preflight-fix` at
-`d666fe9898de311a9c21127ca201b59b5dea25c3`. CI passed, but branch protection
-still requires one human review, so it has not been merged or deployed.
+The exact deployed verifier reported `VERIFIED` with
+`VERIFIED_WITH_EXPECTED_PENDING_PRISMA`: pending Payload migrations are empty,
+unexpected migration sets are empty, and the sole pending Prisma migration is
+`20260914140000_add_mighty_bootstrap_provenance`. The protected Payload anomaly
+`20260826_100000_administrator_member_identity` and fingerprint
+`0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c` matched
+policy. The verifier used a read-only transaction and reported no blockers.
 
-`OWNER BACKUP ACTION REQUIRED`: before any separate migration-apply goal, the
-production database operator must use the supported managed PostgreSQL/Dokploy
-backup or snapshot mechanism for database `jpvbootcamp`, schema
-`jpvbootcamp`, and record the immutable evidence ID, UTC creation time, target
-database identity, checksum/integrity value where supported, restore or
-recovery validation reference where supported, and named rollback owner. The
-older Rooms evidence `rooms-production-rollback-20260830T151139Z` is historical
-and must not be reused. If the supported platform exposes no current backup
-action, the owner must obtain that evidence from the database operator before
-proceeding; do not substitute a repository export or ad-hoc dump.
+Current Azure recovery evidence was revalidated: vault `rsv-saas-infra`,
+recovery point `8016719968922080516`, created
+`2026-09-14T03:03:21.643747+00:00`, FileSystemConsistent, protected item health
+`Passed`, with rollback owner `production-release-owner`. No restore or
+application migration was performed.
 
-This goal authorizes neither migration apply nor provider access. After PR #46
-is approved and deployed, rerun the official read-only verifier. The intended
-result is `VERIFIED_WITH_EXPECTED_PENDING_PRISMA` with exactly the two Mighty
-migrations pending, followed by a separate explicitly authorized guarded apply
-goal only after backup evidence is recorded.
+The bootstrap runtime remains undeployed; `MIGHTY_ACCESS_SYNC_ENABLED` is not
+true, and no worker, bootstrap, cutover, migration, reconciliation, Mighty, or
+Stripe operation ran. The exact evidence record is
+`docs/release/PROVENANCE_CONTROL_PLANE_DEPLOYMENT_2026-09-14.md`. Do not apply
+the pending provenance migration until a new, separately authorized guarded
+goal explicitly permits it.
 
 ## CURRENT PHASE: PHASE A CONTROLLED REAL PREPARATION — BLOCKED BEFORE LIVE ACCESS — 2026-09-13
 
