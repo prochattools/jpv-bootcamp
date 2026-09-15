@@ -1,8 +1,9 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — OWNER REVIEW — 2026-09-15
+## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — DEPLOYED INERTLY — 2026-09-15
 
-`PRODUCTION REVISION: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
+`PRODUCTION REVISION BEFORE: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
+`PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
 `PRODUCTION MODE: DEPLOYED + HARDENED + IDENTITY-BINDING FAIL-CLOSED + INERT`
 `AUTHORIZED IDENTITY: westhoek@hotmail.com`
 `KNOWN MIGHTY MEMBER ID: 41580317`
@@ -12,17 +13,22 @@
 `MIGHTY WORKER: DORMANT`
 `REAL POPULATION: NOT INSPECTED`
 `REAL MANIFEST: NOT CREATED`
+`V2 RC COMMIT: 734900e46df052a302dca3527ab4369ff0f411de`
+`V2 MERGE COMMIT: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`V2 DEPLOYMENT: PASS`
+`WESTHOEK EXACT LOOKUP: 41580317 / EMPTY-MASKED EMAIL / VALID EXACT LOOKUP BINDING`
 `V2 RC BRANCH: codex/mighty-exact-lookup-identity-binding-v2`
-`V2 RC COMMIT: f879cab5`
-`NEXT GATE: OWNER REVIEW OF THE EXACT V2 RC`
+`NEXT GATE: FRESH WESTHOEK END-TO-END CANARY`
 
 The authorized exact `by_email` lookup returned the known member ID but an
 empty provider email field. V2 models this as a masked provider response:
 exact lookup evidence may bind the identity, while arbitrary empty/missing
 email objects remain rejected. Non-empty mismatches and changed locked member
-IDs remain fail-closed. No provider, Stripe, database, user, access, content,
-bootstrap, or worker operation was performed. The canary remains stopped
-pending review and a future separately authorized retry.
+IDs remain fail-closed. The exact V2 merge is deployed and system health plus
+read-only migration verification passed. The single authorized post-deploy
+lookup returned ID `41580317` with an empty/masked email; no Plan, Space,
+purchase, Stripe, bootstrap, worker, or mutation operation was performed. The
+fresh canary remains stopped until separately authorized.
 
 ## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
 

@@ -1,8 +1,9 @@
 # JPV Mighty zero-touch migration operator runbook
 
-## Exact-lookup identity binding V2 — owner review — 2026-09-15
+## Exact-lookup identity binding V2 — deployed inertly — 2026-09-15
 
-Production is currently `4d1dd2fc867258ecde6b194b1ecb57a29592977f` and remains
+Production was `4d1dd2fc867258ecde6b194b1ecb57a29592977f` and is now
+`03b78c550d09d5b155ddaf68b826869dc64973bb`, remaining
 `DEPLOYED + HARDENED + IDENTITY-BINDING FAIL-CLOSED + INERT`. The authorized
 diagnostic for
 `westhoek@hotmail.com` used only the exact `by_email` endpoint and returned the
@@ -27,9 +28,15 @@ source. Stop and review before any Plan read, bootstrap, worker, canary retry,
 or provider data correction. This goal has not read Plans, Spaces, or
 purchases and has performed no provider or Stripe mutation.
 
-The V2 release candidate is `codex/mighty-exact-lookup-identity-binding-v2` at
-`f879cab5`, based directly on the deployed production revision. It adds no
-database migration and remains inert until separately deployed and reviewed.
+The V2 release candidate was `codex/mighty-exact-lookup-identity-binding-v2` at
+`734900e46df052a302dca3527ab4369ff0f411de`, merged as
+`03b78c550d09d5b155ddaf68b826869dc64973bb`, and deployed through the protected
+root-domain workflow. Health and read-only migration verification passed; the
+Mighty scheduler remains disabled and the worker/bootstrap remain dormant.
+The one authorized post-deploy exact lookup returned ID `41580317` with an
+empty/masked provider email and valid exact-lookup evidence. No Plan, Space,
+purchase, Stripe, bootstrap, worker, or provider mutation operation was
+performed. Stop before the fresh Westhoek canary.
 
 ## Phase A bootstrap runtime release candidate — 2026-09-14
 

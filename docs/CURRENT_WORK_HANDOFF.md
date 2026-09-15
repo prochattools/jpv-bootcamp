@@ -2,9 +2,10 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — OWNER REVIEW — 2026-09-15
+## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — DEPLOYED INERTLY — 2026-09-15
 
-`PRODUCTION REVISION: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
+`PRODUCTION REVISION BEFORE: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
+`PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
 `PRODUCTION MODE: DEPLOYED + HARDENED + IDENTITY-BINDING FAIL-CLOSED + INERT`
 `AUTHORIZED IDENTITY: westhoek@hotmail.com`
 `KNOWN MIGHTY MEMBER ID: 41580317`
@@ -13,13 +14,15 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 `MIGHTY IDENTITY DIAGNOSTIC: EXACT by_email READ ONLY`
 `MISMATCH CLASSIFICATION: B — EMAIL FIELD PRESENT BUT EMPTY`
 `V2 RC BRANCH: codex/mighty-exact-lookup-identity-binding-v2`
-`V2 RC COMMIT: f879cab5`
+`V2 RC COMMIT: 734900e46df052a302dca3527ab4369ff0f411de`
+`V2 MERGE COMMIT: 03b78c550d09d5b155ddaf68b826869dc64973bb`
 `IDENTITY EVIDENCE: provider_email_match OR exact_by_email_lookup`
+`V2 DEPLOYMENT: PASS`
 `LIVE MIGHTY MUTATIONS: 0`
 `LIVE STRIPE MUTATIONS: 0`
 `PLANS / SPACES / PURCHASES: NOT READ`
 `BOOTSTRAP / WORKER: NOT INVOKED`
-`NEXT GATE: OWNER REVIEW AND NORMAL APPROVAL OF THE V2 RC`
+`NEXT GATE: FRESH WESTHOEK END-TO-END CANARY`
 
 The production exact lookup returned member ID `41580317` with an empty
 provider `email` field. This is provider masking, not evidence of a different
@@ -30,11 +33,16 @@ mismatches and locked member-ID conflicts remain fail-closed. Create and 422
 recovery paths perform exact post-create/recovery lookup and require the same
 ID before any Plan operation.
 
-No provider data was changed and the live canary was not retried. The V2 RC is
-based directly on the deployed production revision and is limited to explicit
-identity evidence, masked-email handling, fail-closed tests, and bounded
-documentation. Deployment, bootstrap, worker execution, Plan reads, and the
-single post-deploy identity check remain separate gates.
+The exact V2 merge was deployed through the protected root-domain workflow.
+System health and migration verification passed; the scheduler remains
+disabled and the worker/bootstrap remain dormant. The one authorized
+post-deploy exact `by_email` read returned member ID `41580317` for
+`westhoek@hotmail.com` with an empty/masked provider email. Runtime
+classification is `VALID EXACT_BY_EMAIL_LOOKUP BINDING`.
+
+No provider data was changed. No Plan, Space, purchase, Stripe, bootstrap, or
+worker operation was performed. Stop here: a fresh end-to-end Westhoek canary
+is the next separately authorized gate.
 
 ## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
 
