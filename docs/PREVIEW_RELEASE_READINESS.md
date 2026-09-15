@@ -1,5 +1,19 @@
 # JPV Bootcamp Preview Release Readiness
 
+## CURRENT PRODUCTION STATE — STRIPE→MIGHTY LIFECYCLE READINESS
+
+`PRODUCTION MERGE: b00f212e6dd456dff60a7465d6458d1705b68932`
+`SYSTEM HEALTH: PASS`
+`MIGRATION VERIFIER: VERIFIED_CLEAN`
+`MIGHTY_ACCESS_SYNC_ENABLED: false`
+`SCHEDULER: DISABLED`
+`WORKER: DORMANT`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+
+The lifecycle controls are deployed inertly. The next gate is a separately
+authorized, controlled real-population manifest regeneration with explicit
+lifecycle cohorts.
+
 ## CURRENT PRODUCTION-FREEZE SYNTHETIC HARDENING — 2026-09-11
 
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`

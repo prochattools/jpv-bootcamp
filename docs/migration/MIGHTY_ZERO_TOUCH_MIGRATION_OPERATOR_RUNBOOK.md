@@ -4,12 +4,15 @@
 
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
 
-`STRIPE→MIGHTY LIFECYCLE READINESS: PASS`
-`LIFECYCLE SAFETY RC: READY FOR OWNER REVIEW`
-`RC BRANCH: codex/mighty-lifecycle-readiness-rc`
+`STRIPE→MIGHTY LIFECYCLE READINESS: DEPLOYED INERTLY`
+`RC SOURCE: 5dcba90c2fe43beaa0ed41dc9a4f1efe7a46d930`
+`PRODUCTION MERGE: b00f212e6dd456dff60a7465d6458d1705b68932`
+`SCHEDULER: DISABLED`
+`WORKER: DORMANT`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
 
 The lifecycle control path remains inert in production at
-`03b78c550d09d5b155ddaf68b826869dc64973bb`. The ordinary production scope is
+`b00f212e6dd456dff60a7465d6458d1705b68932`. The ordinary production scope is
 opt-in only: it requires the existing mutation guard plus
 `MIGHTY_ACCESS_SYNC_PRODUCTION_SCOPE=ordinary-lifecycle-v1`, stored Stripe
 customer/subscription IDs, and the latest Stripe event identity. New Mighty

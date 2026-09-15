@@ -2,6 +2,27 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: STRIPE→MIGHTY LIFECYCLE READINESS — DEPLOYED INERTLY — 2026-09-15
+
+`JPV STRIPE→MIGHTY LIFECYCLE READINESS INERT DEPLOYMENT: PASS`
+`RC SOURCE: 5dcba90c2fe43beaa0ed41dc9a4f1efe7a46d930`
+`PRODUCTION MERGE: b00f212e6dd456dff60a7465d6458d1705b68932`
+`PRODUCTION: DEPLOYED + HARDENED + LIFECYCLE CONTROLS INERT`
+`SYSTEM HEALTH: PASS`
+`MIGRATION VERIFIER: VERIFIED_CLEAN`
+`MIGHTY_ACCESS_SYNC_ENABLED: false`
+`SCHEDULER: DISABLED`
+`WORKER: DORMANT`
+`REAL POPULATION: NOT INSPECTED`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`NEXT GATE: REGENERATE CONTROLLED REAL-POPULATION MANIFEST WITH EXPLICIT LIFECYCLE COHORTS`
+
+The exact approved lifecycle-readiness RC was merged and deployed through the
+normal root-domain publish workflow. Production health and public routes are
+healthy, the read-only migration verifier reports zero pending/unexpected
+migrations, and no live Mighty/Stripe operation, worker, scheduler, manifest
+regeneration, member mutation, or real email was performed.
+
 ## CURRENT PHASE: STRIPE→MIGHTY LIFECYCLE READINESS — OWNER REVIEW — 2026-09-15
 
 `JPV STRIPE→MIGHTY LIFECYCLE READINESS: PASS`
