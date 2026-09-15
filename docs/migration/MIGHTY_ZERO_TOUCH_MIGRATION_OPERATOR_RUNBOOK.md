@@ -1,9 +1,11 @@
 # JPV Mighty zero-touch migration operator runbook
 
-## Exact-email identity binding hardening — 2026-09-15
+## Exact-email identity binding hardening — deployed inert — 2026-09-15
 
-Production is currently `ca8f1b6516994a72187e13eb1f780e1cb6566c5d` and remains
-`DEPLOYED + HARDENED + INERT`. The one authorized diagnostic for
+Production is currently `4d1dd2fc867258ecde6b194b1ecb57a29592977f` (PR #50
+merge revision) and remains `DEPLOYED + HARDENED + IDENTITY-BINDING
+FAIL-CLOSED + INERT`. The pre-deploy diagnostic and the one permitted
+post-deploy verification for
 `westhoek@hotmail.com` used only the exact `by_email` endpoint and returned the
 known member ID `41580317` with an empty `email` field. Classify this as
 provider identity ambiguity (`B`), not as an email match.
@@ -17,10 +19,12 @@ reconciliation classification, grant, revoke, and finalization paths. A stored
 member ID or exact lookup request cannot mask an email conflict. No broad
 member search is an allowed fallback.
 
-The provider's empty email response is not treated as proof of identity. Stop
-and review before any Plan read, bootstrap, worker, canary retry, or provider
-data correction. This diagnostic did not read Plans, Spaces, or purchases and
-performed no provider or Stripe mutation.
+The provider's empty email response is not treated as proof of identity. The
+deployed production verifier returned `VERIFIED_CLEAN` using a read-only
+transaction, with no production migration applied. Stop and review before any
+Plan read, bootstrap, worker, canary retry, or provider data correction. These
+two exact lookups did not read Plans, Spaces, or purchases and performed no
+provider or Stripe mutation.
 
 ## Phase A bootstrap runtime release candidate — 2026-09-14
 

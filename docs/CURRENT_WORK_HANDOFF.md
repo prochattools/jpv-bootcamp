@@ -2,36 +2,41 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: MIGHTY EXACT-EMAIL IDENTITY BINDING HARDENING — OWNER REVIEW — 2026-09-15
+## CURRENT PHASE: MIGHTY EXACT-EMAIL IDENTITY BINDING HARDENING — DEPLOYED INERT — 2026-09-15
 
-`PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
-`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION REVISION: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
+`PRODUCTION MODE: DEPLOYED + HARDENED + IDENTITY-BINDING FAIL-CLOSED + INERT`
 `AUTHORIZED IDENTITY: westhoek@hotmail.com`
 `KNOWN MIGHTY MEMBER ID: 41580317`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
 `MIGHTY IDENTITY DIAGNOSTIC: EXACT by_email READ ONLY`
 `MISMATCH CLASSIFICATION: B — EMAIL FIELD PRESENT BUT EMPTY`
+`IDENTITY HARDENING SOURCE: bb02f99852046e15085c453c6901e08884c0ece1`
+`PR #50 MERGE REVISION: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
+`LIVE MIGHTY READS IN THIS GOAL: 2 EXACT by_email LOOKUPS`
 `LIVE MIGHTY MUTATIONS: 0`
 `LIVE STRIPE MUTATIONS: 0`
 `PLANS / SPACES / PURCHASES: NOT READ`
 `BOOTSTRAP / WORKER: NOT INVOKED`
-`NEXT GATE: OWNER REVIEW AND NORMAL APPROVAL OF THE IDENTITY-HARDENING RC`
+`CANARY: NOT RETRIED; FRESH EXPLICIT AUTHORIZATION REQUIRED`
+`NEXT GATE: SEPARATE OWNER AUTHORIZATION FOR A FRESH WESTHOEK CANARY`
 
-The one authorized exact Westhoek lookup returned member ID `41580317`, with
-an empty provider `email` field. This is provider response ambiguity, not a
-case/whitespace normalization difference and not evidence of a different
-address. The hardening RC rejects absent, empty, or mismatched provider email
-before any Plan read, identity classification, grant, revoke, restore,
-recovery, or finalization. A stored member ID cannot mask an email conflict.
-The exact lookup endpoint and stable ID are not treated as sufficient proof
-when the provider email is absent.
+The pre-deploy diagnostic and the one permitted post-deploy verification each
+returned member ID `41580317` with an empty provider `email` field. This is
+provider response ambiguity, not a case/whitespace normalization difference
+and not evidence of a different address. The deployed hardening rejects
+absent, empty, or mismatched provider email before any Plan read, identity
+classification, grant, revoke, restore, recovery, or finalization. A stored
+member ID cannot mask an email conflict. The exact lookup endpoint and stable
+ID are not treated as sufficient proof when the provider email is absent.
 
-No provider data was changed and the live canary was not retried. The clean
-hardening branch is based directly on the deployed production revision and is
-limited to identity binding, fail-closed tests, and bounded documentation.
-Deployment, bootstrap, worker execution, Plan reads, and any further live
-canary remain separate gates.
+No provider data was changed and the live canary was not retried. PR #50 was
+merged normally and deployed as the exact production image at
+`4d1dd2fc867258ecde6b194b1ecb57a29592977f`. The read-only production verifier
+returned `VERIFIED_CLEAN`; no production migration was applied. Deployment,
+bootstrap, worker execution, Plan reads, and any further live canary remain
+separate gates.
 
 ## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
 
