@@ -1,5 +1,37 @@
 # JPV Mighty zero-touch migration operator runbook
 
+## Phase A Westhoek canary — complete with accepted idempotent replay — 2026-09-15
+
+The owner-authorized canary used only `westhoek@hotmail.com`, Mighty member
+`41580317`, and target Plan `2000039` on production revision
+`03b78c550d09d5b155ddaf68b826869dc64973bb`. Production remained healthy,
+`VERIFIED_CLEAN`, and scheduler-disabled.
+
+Two bootstrap HTTP attempts occurred. The first response stdout was lost after
+shell command substitution, but the durable row proves creation. The second
+attempt returned HTTP 200 with `duplicate_operator_bootstrap` and
+`queued=false`. The owner accepted this as an idempotent replay; no third
+bootstrap was attempted. Exactly one durable row existed, with
+`stateSource=operator_bootstrap`, desired access `ALLOWED`,
+`welcomeRequired=false`, the stored exact Stripe IDs, an observation time,
+`syncStatus=pending` before the worker, and no event or lease fields.
+
+Fresh live Stripe reads matched the stored customer/subscription IDs, exact
+email, live mode, and active subscription. Exact Mighty `by_email` evidence
+bound member `41580317`; Plan `2000039` was already present and effective.
+Exactly one worker invocation used `limit=1` and the exact Westhoek email. It
+returned `processed=1`, `succeeded=1`, `failed=0`, `superseded=0`. The final
+row was `succeeded` on member `41580317`; Plan access remained effective and
+all Mighty mutations, welcome email, and unrelated-identity changes were
+zero.
+
+`PHASE A — WESTHOEK LIVE END-TO-END CANARY: PASS WITH ACCEPTED IDEMPOTENT
+BOOTSTRAP REPLAY`
+
+This is not authorization for population inspection, reconciliation, or real
+member migration. The next gate is controlled real-population preparation and
+requires a new explicit owner authorization.
+
 ## Exact-lookup identity binding V2 — deployed inertly — 2026-09-15
 
 Production was `4d1dd2fc867258ecde6b194b1ecb57a29592977f` and is now

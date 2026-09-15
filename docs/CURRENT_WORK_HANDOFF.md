@@ -2,6 +2,54 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: PHASE A WESTHOEK LIVE END-TO-END CANARY — PASS WITH ACCEPTED IDEMPOTENT BOOTSTRAP REPLAY — 2026-09-15
+
+`PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`AUTHORIZED IDENTITY: westhoek@hotmail.com`
+`MIGHTY MEMBER ID: 41580317`
+`TARGET PLAN: 2000039`
+`MIGHTY SCHEDULER: DISABLED`
+`MIGHTY WORKER: ONE EXPLICIT INVOCATION`
+`PHASE A STATUS: PASS WITH ACCEPTED IDEMPOTENT BOOTSTRAP REPLAY`
+`BOOTSTRAP INVOCATIONS: 2`
+`THIRD BOOTSTRAP INVOCATION: 0`
+`BOOTSTRAP OWNER ACCEPTANCE: YES`
+`QUEUE ROW COUNT: 1`
+`QUEUE ROW ID: ecbb3038-e9f0-4fa9-a276-932605fe4c99`
+`FINAL QUEUE STATUS: succeeded`
+`FINAL MEMBER ID: 41580317`
+`MIGHTY MUTATIONS: 0`
+`STRIPE MUTATIONS: 0`
+`WELCOME EMAILS: 0`
+`UNRELATED IDENTITIES TOUCHED: 0`
+`REAL POPULATION: NOT INSPECTED`
+`REAL MANIFEST: NOT CREATED`
+`NEXT GATE: CONTROLLED REAL-POPULATION PREPARATION`
+
+The owner accepted the duplicate bootstrap attempt as an idempotent replay.
+The first attempt's response stdout was lost because the shell assignment
+failed after command substitution; the durable queue state proves the row was
+created, and the second attempt returned HTTP 200 with
+`reason=duplicate_operator_bootstrap`, `queued=false`, desired access
+`ALLOWED`, `stateSource=operator_bootstrap`, and a present observation time.
+No third bootstrap was made.
+
+The single durable row was pending before the worker and contained the exact
+stored live Stripe customer/subscription IDs, `welcomeRequired=false`, and no
+Stripe event or lease fields. Fresh live Stripe reads using those stored IDs
+matched `westhoek@hotmail.com`, live mode, and an active subscription. The
+exact Mighty lookup bound ID `41580317` through `exact_by_email_lookup`; Plan
+`2000039` was already present and effective before the worker. Therefore the
+one authorized worker request (`limit=1`, exact email) performed no Mighty
+mutation and returned `processed=1`, `succeeded=1`, `failed=0`, and
+`superseded=0`. Final access remained effective on the same member, with no
+welcome email and no unrelated identity changes.
+
+Phase A is complete. The next gate is controlled real-population preparation,
+which requires a new explicit owner authorization. Do not inspect, enumerate,
+reconcile, or migrate the real population in this handoff.
+
 ## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — DEPLOYED INERTLY — 2026-09-15
 
 `PRODUCTION REVISION BEFORE: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`

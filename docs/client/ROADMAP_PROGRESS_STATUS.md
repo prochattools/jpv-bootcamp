@@ -1,5 +1,49 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT PHASE: PHASE A WESTHOEK LIVE END-TO-END CANARY — PASS WITH ACCEPTED IDEMPOTENT BOOTSTRAP REPLAY — 2026-09-15
+
+`PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`AUTHORIZED IDENTITY: westhoek@hotmail.com`
+`MIGHTY MEMBER ID: 41580317`
+`TARGET PLAN: 2000039`
+`PHASE A STATUS: PASS WITH ACCEPTED IDEMPOTENT BOOTSTRAP REPLAY`
+`BOOTSTRAP INVOCATIONS: 2`
+`OWNER ACCEPTED: YES`
+`THIRD BOOTSTRAP INVOCATION: 0`
+`QUEUE ROW COUNT: 1`
+`FINAL QUEUE STATUS: succeeded`
+`FINAL MEMBER ID: 41580317`
+`MIGHTY MUTATIONS: 0`
+`STRIPE MUTATIONS: 0`
+`WELCOME EMAILS: 0`
+`MIGHTY SCHEDULER: DISABLED`
+`MIGHTY WORKER: ONE EXPLICIT INVOCATION`
+`REAL POPULATION: NOT INSPECTED`
+`REAL MANIFEST: NOT CREATED`
+`PHASE A COMPLETE: YES`
+`NEXT GATE: CONTROLLED REAL-POPULATION PREPARATION`
+
+The first bootstrap response was not captured because a shell assignment
+failed after its command substitution, but the durable queue row proves the
+initial creation. The second exact request returned HTTP 200 with
+`duplicate_operator_bootstrap` and `queued=false`; the owner explicitly
+accepted this as an idempotent replay. No third bootstrap occurred.
+
+Fresh live Stripe reads using only the stored customer/subscription IDs matched
+the exact authorized identity, live mode, and active/`ALLOWED` entitlement.
+The exact Mighty lookup bound member `41580317` using
+`exact_by_email_lookup`, and Plan `2000039` was already present/effective.
+The one worker invocation was scoped to `westhoek@hotmail.com` with limit 1 and
+returned `processed=1`, `succeeded=1`, `failed=0`, `superseded=0`. Since access
+was already effective, Mighty grant/revoke/create/delete/profile/email/welcome
+mutations were all zero. The final queue row is `succeeded` on the same member
+with access restored/effective and no unrelated identity changes.
+
+Phase A is complete. Controlled real-population preparation is not started and
+requires a new explicit owner authorization. Do not inspect, enumerate,
+reconcile, or migrate real members from this roadmap state.
+
 ## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — DEPLOYED INERTLY — 2026-09-15
 
 `PRODUCTION REVISION BEFORE: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
