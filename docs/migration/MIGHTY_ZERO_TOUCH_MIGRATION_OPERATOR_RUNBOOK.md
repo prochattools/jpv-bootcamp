@@ -1,5 +1,34 @@
 # JPV Mighty zero-touch migration operator runbook
 
+## Controlled real-population preparation — read-only manifest complete — 2026-09-15
+
+Production revision `03b78c550d09d5b155ddaf68b826869dc64973bb` remained healthy,
+`VERIFIED_CLEAN`, and scheduler-disabled. The owner-authorized preparation used
+the active canonical `customer_provisioning` projection only: 9 candidates from
+13 records, unique normalized identities, and exact stored Stripe customer and
+subscription IDs. It performed exact Stripe reads only and exact Mighty
+`by_email`/minimum-state reads only. Provider population enumeration was not
+used.
+
+The immutable manifest is `mighty-jpv-v1`, target Plan `2000039`, SHA-256
+`2103d5eb95a045c053d57502492969056ae8eee63eed4989719c1d4596755974`. Two
+generations from the frozen evidence produced the same canonical serialization
+and hash. Local owner-review artifacts are outside Git at
+`/private/tmp/jpv-mighty-population-prep-20260915/`.
+
+Counts: 6 Stripe `ALLOWED`, 0 Stripe `DENIED`, 3 Stripe review; actions are
+`MIGRATE_EXISTING=0`, `ALREADY_PLAN_CONTROLLED=0`,
+`CREATE_NEW_AT_CUTOVER=2`, `PRIVILEGED_EXCLUDED=1`,
+`OVERLAP_REVIEW_REQUIRED=0`, `IDENTITY_REVIEW_REQUIRED=6`, `NO_ACTION=0`,
+`BLOCKED=0`. The proposed first batch is empty because no row satisfies every
+clean ordinary existing-member condition. New-member creation and all review
+rows require separate owner decisions.
+
+This preparation performed zero Stripe mutations and zero Mighty mutations.
+Do not run the worker, grant/revoke Plans, create members, enable the scheduler,
+or execute cutover until the owner approves the manifest, exceptions, and a
+non-empty bounded first batch.
+
 ## Phase A Westhoek canary — complete with accepted idempotent replay — 2026-09-15
 
 The owner-authorized canary used only `westhoek@hotmail.com`, Mighty member

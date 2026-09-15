@@ -2,6 +2,45 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: CONTROLLED REAL-POPULATION PREPARATION — READ-ONLY MANIFEST COMPLETE — 2026-09-15
+
+`PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`PRODUCTION HEALTH: PASS`
+`PRODUCTION MIGRATION VERIFIER: VERIFIED_CLEAN`
+`MIGHTY SCHEDULER: DISABLED`
+`TARGET PLAN: 2000039 — JPV Member Access`
+`SOURCE POPULATION: 9 active canonical customer_provisioning candidates`
+`MANIFEST VERSION: mighty-jpv-v1`
+`MANIFEST SHA256: 2103d5eb95a045c053d57502492969056ae8eee63eed4989719c1d4596755974`
+`MANIFEST DETERMINISM: PASS — two generations from frozen evidence identical`
+`STRIPE MUTATIONS: 0`
+`MIGHTY MUTATIONS: 0`
+`PROPOSED FIRST CUTOVER BATCH: 0`
+`NEXT GATE: OWNER REVIEW OF MANIFEST + EXCEPTIONS`
+
+The authorized read-only capture used only the canonical production JPV/Payload
+projection: 13 provisioning records were present, 9 were active candidates,
+and all active candidates had unique normalized identities and stored Stripe
+customer/subscription IDs. It performed 18 exact Stripe object reads (one
+customer and one subscription per candidate) and exact Mighty `by_email`
+lookups, with minimum Plan/purchase/Space reads only for bound identities. No
+provider population enumeration or mutation occurred.
+
+Manifest action counts: `MIGRATE_EXISTING=0`, `ALREADY_PLAN_CONTROLLED=0`,
+`CREATE_NEW_AT_CUTOVER=2`, `PRIVILEGED_EXCLUDED=1`,
+`OVERLAP_REVIEW_REQUIRED=0`, `IDENTITY_REVIEW_REQUIRED=6`, `NO_ACTION=0`,
+`BLOCKED=0`. Two members already showed target Plan access, but one is
+privileged and the other has a Stripe identity review, so neither is a clean
+ordinary migration row. The two new-member rows remain future creation work
+and are excluded from any first batch.
+
+The immutable local artifacts are retained outside Git for owner review:
+`/private/tmp/jpv-mighty-population-prep-20260915/manifest.json`,
+`exceptions.json`, and `summary.json`. They contain the minimum identity,
+provider-ID, entitlement, and exception fields required for review; no secrets
+are included. No cutover, worker, Plan grant/revoke, member creation, or
+Stripe change is authorized by this preparation result.
+
 ## CURRENT PHASE: PHASE A WESTHOEK LIVE END-TO-END CANARY — PASS WITH ACCEPTED IDEMPOTENT BOOTSTRAP REPLAY — 2026-09-15
 
 `PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`

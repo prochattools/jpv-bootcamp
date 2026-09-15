@@ -1,5 +1,35 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT PHASE: CONTROLLED REAL-POPULATION PREPARATION — READ-ONLY MANIFEST COMPLETE — 2026-09-15
+
+`PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION MIGRATION VERIFIER: VERIFIED_CLEAN`
+`MIGHTY SCHEDULER: DISABLED`
+`TARGET PLAN: 2000039 — JPV Member Access`
+`CANDIDATES: 9 active canonical JPV billing identities`
+`MANIFEST: mighty-jpv-v1`
+`MANIFEST SHA256: 2103d5eb95a045c053d57502492969056ae8eee63eed4989719c1d4596755974`
+`DETERMINISM: PASS`
+`STRIPE MUTATIONS: 0`
+`MIGHTY MUTATIONS: 0`
+`FIRST PROPOSED CUTOVER BATCH: 0`
+`NEXT GATE: OWNER REVIEW OF MANIFEST + EXCEPTIONS`
+
+The read-only production preparation captured the full active canonical
+population without broad Stripe or Mighty enumeration. Six candidates are
+Stripe `ALLOWED`; three require Stripe identity review. Current action counts
+are: `MIGRATE_EXISTING=0`, `ALREADY_PLAN_CONTROLLED=0`,
+`CREATE_NEW_AT_CUTOVER=2`, `PRIVILEGED_EXCLUDED=1`,
+`OVERLAP_REVIEW_REQUIRED=0`, `IDENTITY_REVIEW_REQUIRED=6`, `NO_ACTION=0`,
+`BLOCKED=0`. The target Plan is already present for two rows, but neither is a
+clean ordinary migration row. There is therefore no safe first mutation batch.
+
+Owner-review artifacts are local and uncommitted at
+`/private/tmp/jpv-mighty-population-prep-20260915/`. No Stripe or Mighty
+mutation, worker execution, cutover, scheduler enablement, or user-data change
+occurred. Real cutover remains separately unauthorized.
+
 ## CURRENT PHASE: PHASE A WESTHOEK LIVE END-TO-END CANARY — PASS WITH ACCEPTED IDEMPOTENT BOOTSTRAP REPLAY — 2026-09-15
 
 `PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
