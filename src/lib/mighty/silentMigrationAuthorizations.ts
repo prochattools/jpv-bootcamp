@@ -30,7 +30,8 @@ export type SilentExistingMemberGrantAuthorization = {
 
 /**
  * Deliberately empty. Real entries may only be added by a reviewed source
- * change that binds one owner-attested identity to one exact evidence packet.
+ * change that binds one positive owner-attestation artifact (not the unresolved
+ * role-review packet) to one exact evidence packet.
  * Environment variables are never consulted by this registry.
  */
 export const SILENT_EXISTING_MEMBER_GRANT_AUTHORIZATIONS: readonly SilentExistingMemberGrantAuthorization[] = []
@@ -145,7 +146,13 @@ function assertCurrentStateEligible(
 ): void {
 	assertMightyMemberMatchesExpectedEmail(state.member, authorization.email)
 	if (String(state.member.id) !== authorization.mightyMemberId) fail('silent_migration_current_member_id_mismatch')
-	if (!['member', 'contributor', 'student'].includes(normalized(state.member.role))) fail('silent_migration_current_role_not_ordinary')
+	const providerRole = normalized(state.member.role)
+	if (['host', 'owner', 'admin', 'administrator', 'staff'].includes(providerRole)) {
+		fail('silent_migration_current_role_privileged')
+	}
+	if (providerRole && !['member', 'contributor', 'student'].includes(providerRole)) {
+		fail('silent_migration_current_role_unknown')
+	}
 	if (state.planIds.includes(SILENT_MIGRATION_TARGET_PLAN_ID)) fail('silent_migration_target_plan_already_present')
 	if (state.planIds.length > 0 || state.purchasePlanIds.length > 0 || state.extraSpaceNames.length > 0) fail('silent_migration_current_overlap_detected')
 }

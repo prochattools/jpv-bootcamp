@@ -10,7 +10,8 @@ add exactly one owner-attested existing-member authorization, bound to:
 
 - normalized email and exact Mighty member ID;
 - the exact immutable manifest SHA-256;
-- the exact role-attestation SHA-256;
+- the exact SHA-256 of a positive owner-attestation artifact (the unresolved
+  role-review artifact is never sufficient);
 - role `ORDINARY`;
 - Plan `2000039`;
 - action `GRANT_PLAN_ONLY` and batch size `1`.

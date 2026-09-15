@@ -52,9 +52,9 @@ function row(overrides: Partial<CutoverManifestRow> = {}): CutoverManifestRow {
 	}
 }
 
-function state(planIds: string[] = []): SilentExistingMemberState {
+function state(planIds: string[] = [], role: string | null = 'contributor'): SilentExistingMemberState {
 	return {
-		member: { id: memberId, email, role: 'contributor', member_type: 'full' },
+		member: { id: memberId, email, role, member_type: 'full' },
 		planIds,
 		purchasePlanIds: [],
 		extraSpaceNames: [],
@@ -64,13 +64,14 @@ function state(planIds: string[] = []): SilentExistingMemberState {
 	}
 }
 
-function adapter(options: { onGrant?: () => void; states?: SilentExistingMemberState[] } = {}) {
+function adapter(options: { onGrant?: () => void; states?: SilentExistingMemberState[]; role?: string | null } = {}) {
 	let reads = 0
 	let grants = 0
 	const states = options.states ?? [state()]
+	const role = options.role ?? 'contributor'
 	return {
 		get grants() { return grants },
-		findMemberByEmail: async () => state().member,
+		findMemberByEmail: async () => state([], role).member,
 		readState: async () => states[Math.min(reads++, states.length - 1)],
 		grantPlan: async (_memberId: string, planId: string) => {
 			assert.equal(planId, SILENT_MIGRATION_TARGET_PLAN_ID)
@@ -137,6 +138,45 @@ test('synthetic exact success grants only Plan 2000039, sends no email, and expo
 	assert.equal(entitlementChecks, 2)
 })
 
+test('null provider role is accepted only through exact owner attestation', async () => {
+	const calls: string[] = []
+	const nullRoleAdapter = adapter({
+		role: null,
+		states: [state([], null), state([SILENT_MIGRATION_TARGET_PLAN_ID], null)],
+		onGrant: () => calls.push('grant'),
+	})
+	const result = await runSilentExistingMemberGrant({ row: row(), manifestSha256, roleAttestationSha256, authorizations: [authorization], currentEntitlement: async () => 'ALLOWED', adapter: nullRoleAdapter })
+	assert.equal(result.status, 'GRANTED_AND_VERIFIED')
+	assert.deepEqual(calls, ['grant'])
+	assert.equal(nullRoleAdapter.grants, 1)
+	await assert.rejects(
+		() => runSilentExistingMemberGrant({ row: row(), manifestSha256, roleAttestationSha256, currentEntitlement: async () => 'ALLOWED', adapter: nullRoleAdapter }),
+		/silent_migration_authorization_not_found/,
+	)
+})
+
+test('explicit ordinary provider roles remain accepted', async () => {
+	for (const role of ['member', 'contributor', 'student']) {
+		const calls: string[] = []
+		const roleAdapter = adapter({ role, states: [state([], role), state([SILENT_MIGRATION_TARGET_PLAN_ID], role)], onGrant: () => calls.push(role) })
+		const result = await runSilentExistingMemberGrant({ row: row(), manifestSha256, roleAttestationSha256, authorizations: [authorization], currentEntitlement: async () => 'ALLOWED', adapter: roleAdapter })
+		assert.equal(result.status, 'GRANTED_AND_VERIFIED')
+		assert.deepEqual(calls, [role])
+	}
+})
+
+test('explicit privileged and unknown provider roles cannot be overridden', async () => {
+	for (const role of ['host', 'owner', 'admin', 'administrator', 'staff', 'custom-role']) {
+		let grants = 0
+		const roleAdapter = adapter({ role, states: [state([], role)], onGrant: () => { grants += 1 } })
+		await assert.rejects(
+			() => runSilentExistingMemberGrant({ row: row(), manifestSha256, roleAttestationSha256, authorizations: [authorization], currentEntitlement: async () => 'ALLOWED', adapter: roleAdapter }),
+			role === 'custom-role' ? /silent_migration_current_role_unknown/ : /silent_migration_current_role_privileged/,
+		)
+		assert.equal(grants, 0)
+	}
+})
+
 test('replay is already converged and performs no second grant', async () => {
 	const grantAdapter = adapter({ states: [state(), state([SILENT_MIGRATION_TARGET_PLAN_ID])] })
 	const first = await runSilentExistingMemberGrant({ row: row(), manifestSha256, roleAttestationSha256, authorizations: [authorization], currentEntitlement: async () => 'ALLOWED', adapter: grantAdapter })
@@ -156,6 +196,17 @@ test('entitlement, identity, overlap, and post-grant drift fail closed without r
 	let uncertainGrantCalls = 0
 	await assert.rejects(() => runSilentExistingMemberGrant({ row: row(), manifestSha256, roleAttestationSha256, authorizations: [authorization], currentEntitlement: async () => 'ALLOWED', adapter: { ...adapter(), grantPlan: async () => { uncertainGrantCalls += 1; throw new Error('uncertain provider result') } } }), /uncertain provider result/)
 	assert.equal(uncertainGrantCalls, 1)
+})
+
+test('null-role authorization rejects privileged or unknown post-grant role drift without rollback', async () => {
+	for (const role of ['admin', 'host', 'administrator', 'owner', 'staff', 'custom-role']) {
+		const driftAdapter = adapter({ states: [state([], null), state([SILENT_MIGRATION_TARGET_PLAN_ID], role)] })
+		await assert.rejects(
+			() => runSilentExistingMemberGrant({ row: row(), manifestSha256, roleAttestationSha256, authorizations: [authorization], currentEntitlement: async () => 'ALLOWED', adapter: driftAdapter }),
+			/post_grant_role_changed/,
+		)
+		assert.equal(driftAdapter.grants, 1)
+	}
 })
 
 console.log('silentMigrationAuthorizations.test.ts passed')
