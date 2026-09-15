@@ -1,5 +1,15 @@
 # JPV Bootcamp Preview Release Readiness
 
+## Silent-migration guard production deployment — 2026-09-15
+
+The exact reviewed PR #55 merge `6ff599e9145c5154856ddecbd3305a17bb4e703b`
+is deployed to production through workflow `35021554708`. Health is PASS and
+the guarded read-only migration verifier reports zero pending and zero
+unexpected migrations. No real member/provider mutation, email, population
+inspection, manifest creation, or migration occurred. Future cutover remains
+separately authorized and begins, if approved, with one ordinary existing
+member only.
+
 ## Current silent-migration guard RC — 2026-09-15
 
 The repository-only candidate `codex/mighty-silent-migration-guard-rc` has a

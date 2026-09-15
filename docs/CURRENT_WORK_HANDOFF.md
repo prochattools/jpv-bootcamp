@@ -2,6 +2,47 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: SILENT-MIGRATION GUARD DEPLOYED — 2026-09-15
+
+`JPV SILENT MIGRATION GUARD INERT DEPLOYMENT: PASS`
+`PRODUCTION BEFORE: b00f212e6dd456dff60a7465d6458d1705b68932`
+`RC: b3d28e0e893a83a03f91c8160efde82f854fd856`
+`MERGE SHA: 6ff599e9145c5154856ddecbd3305a17bb4e703b`
+`PRODUCTION AFTER: 6ff599e9145c5154856ddecbd3305a17bb4e703b`
+`DEPLOY RUN: 35021554708`
+`SYSTEM HEALTH: PASS`
+`MIGRATION VERIFIER: VERIFIED — pending 0, unexpected 0`
+`SCHEDULER: DISABLED`
+`WORKER/CUTOVER/MIGRATION: DORMANT`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+
+The exact reviewed PR #55 was merged and deployed through the guarded
+root-domain workflow. The hard-coded migration-mail allowlist remains exactly
+`westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`.
+Unauthorized migration mail is suppressed before outbox insertion and again
+before any provider send. No real email, Mighty mutation, Stripe mutation,
+member/access/content change, Plan grant/revoke, or population inspection was
+performed. Plan `2000039` remains documented as hidden, non-paid, externally
+managed, and member-invisible; CREATE_NEW remains `HARD_CUTOVER_ONLY`.
+
+## Next gradual cutover roadmap — preparation only
+
+1. Silent existing-member canary: exactly one ordinary member only after a
+   fresh read-only identity/entitlement check proves exact identity, ordinary
+   privilege, no overlap, target Plan absent, and zero-email behavior.
+2. Verify the canary and stop; confirm only Plan `2000039` changed.
+3. Repeat in batches of 2–3, then expand only after each batch is verified.
+4. Resolve identity-review rows read-only before any mutation.
+5. Handle CREATE_NEW users only in a separately authorized hard-cutover wave.
+6. Perform any content/Space cutover as a separate approval and verification
+   gate, preserving legacy access until the Plan path is proven.
+7. Enable ongoing Stripe→Mighty automation only under a separate approval.
+
+Every future batch must preserve member ID, profile, role, existing Plans,
+Spaces, content visibility, login ability, and zero migration email. Stop on
+identity mismatch, provider uncertainty, unexpected email, access/content
+change, overlap, entitlement change, or changed member ID.
+
 ## CURRENT PHASE: MIGHTY SILENT-MIGRATION COMMUNICATION GUARD — OWNER REVIEW — 2026-09-15
 
 `PRODUCTION REVISION: b00f212e6dd456dff60a7465d6458d1705b68932`
