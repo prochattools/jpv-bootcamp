@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { isDuplicatePlanAssignmentError, MightyAdminApi, MightyApiError, type MightyConfig } from './adminApi'
+import { assertMightyMemberMatchesExpectedEmail, isDuplicatePlanAssignmentError, MightyAdminApi, MightyApiError, MightyMemberIdentityError, type MightyConfig } from './adminApi'
 
 const config: MightyConfig = {
 	apiBaseUrl: 'https://api.mn.co/admin/v1',
@@ -58,6 +58,34 @@ test('findMemberByEmail uses Mighty exact-email lookup and treats absent members
 	assert.match(requestUrl, /\/members\/by_email\?email=student%40example\.com$/)
 })
 
+test('member identity binding accepts only the normalized expected email', () => {
+	assert.doesNotThrow(() => assertMightyMemberMatchesExpectedEmail({ id: 1, email: '  STUDENT@Example.com ' }, 'student@example.com'))
+	assert.throws(
+		() => assertMightyMemberMatchesExpectedEmail({ id: 1, email: 'other@example.com' }, 'student@example.com'),
+		(error: unknown) => error instanceof MightyMemberIdentityError && error.code === 'mighty_member_email_conflict',
+	)
+	for (const email of ['', '   ', null, undefined]) {
+		assert.throws(
+			() => assertMightyMemberMatchesExpectedEmail({ id: 1, email }, 'student@example.com'),
+			(error: unknown) => error instanceof MightyMemberIdentityError && error.code === 'mighty_member_email_conflict',
+		)
+	}
+})
+
+test('findMember rejects a provider member whose email is different or absent', async () => {
+	for (const providerMember of [
+		{ id: 44, email: 'other@example.com', member_type: 'full' },
+		{ id: 44, email: '', member_type: 'full' },
+		{ id: 44, member_type: 'full' },
+	]) {
+		const api = new MightyAdminApi(config, async () => response(providerMember))
+		await assert.rejects(
+			() => api.findMember('student@example.com'),
+			(error: unknown) => error instanceof MightyMemberIdentityError && error.code === 'mighty_member_email_conflict',
+		)
+	}
+})
+
 test('provider requests include the required User-Agent header', async () => {
 	let headers: HeadersInit | undefined
 	const api = new MightyAdminApi(config, async (_input, init) => {
@@ -85,6 +113,18 @@ test('createMember disables Mighty welcome email and grant uses the documented q
 	assert.match(calls[0].body ?? '', /"member_type":"full"/)
 	assert.match(calls[0].body ?? '', /"send_welcome_email":false/)
 	assert.match(calls[1].url, /\/plans\/678\/members\?user_id=11$/)
+})
+
+test('createMember rejects an identity-mismatched provider response before any later grant', async () => {
+	let grantCalls = 0
+	const api = new MightyAdminApi(config, async (_input, init) => {
+		if (init?.method === 'POST' && String(_input).includes('/members')) return response({ id: 11, email: 'other@example.com' }, 201)
+		grantCalls += 1
+		return response({ id: 678 })
+	})
+
+	await assert.rejects(() => api.createMember({ email: 'student@example.com' }), /mighty_member_email_conflict/)
+	assert.equal(grantCalls, 0)
 })
 
 test('revokeAccess is immediate and treats an already absent purchase as idempotent', async () => {

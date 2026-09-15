@@ -1,4 +1,4 @@
-import type { MightyMember, MightyPlan, MightySpace } from './adminApi'
+import { assertMightyMemberMatchesExpectedEmail, type MightyMember, type MightyPlan, type MightySpace } from './adminApi'
 import { classifyMightyIdentity, type MightyIdentityClass, type MightyMutationScope } from './mutationPolicy'
 
 export type MightyReconciliationClassification =
@@ -44,6 +44,7 @@ export function classifyMightyReconciliation(
 			reason: !row.email ? 'missing_email' : !row.desiredAccess ? 'missing_entitlement' : 'exact_mighty_member_not_found',
 		}
 	}
+	assertMightyMemberMatchesExpectedEmail(row.member, row.email)
 
 	const identityClass = classifyMightyIdentity({
 		email: row.email,

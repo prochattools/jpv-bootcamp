@@ -6,6 +6,7 @@ import { buildMemberForgotPasswordUrl } from '@/lib/memberAuthUrls'
 import { MIGHTY_STUDENT_LOGIN_URL } from './studentLogin'
 
 import {
+	assertMightyMemberMatchesExpectedEmail,
 	createMightyAdminApi,
 	MightyAdminApi,
 	MightyApiError,
@@ -536,18 +537,23 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 				member = typeof api.findMember === 'function'
 					? await api.findMember(params.row.email)
 					: { id: memberId, email: params.row.email }
-				if (member && String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
+				if (!member) throw new Error('mighty_member_identity_not_found')
+				assertMightyMemberMatchesExpectedEmail(member, params.row.email)
+				if (String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
 			} else {
 				member = await api.findMember(params.row.email)
+				if (member) assertMightyMemberMatchesExpectedEmail(member, params.row.email)
 				if (!member) {
 					assertMightyMutationRuntimeReady(mutationScope)
 					assertMightyMemberCreationAllowed(mutationScope, params.row.email)
 					try {
 						member = await api.createMember({ email: params.row.email })
+						assertMightyMemberMatchesExpectedEmail(member, params.row.email)
 					} catch (error) {
 						if (!(error instanceof MightyApiError) || error.status !== 422) throw error
 						member = await api.findMember(params.row.email)
 						if (!member) throw error
+						assertMightyMemberMatchesExpectedEmail(member, params.row.email)
 					}
 				}
 				memberId = String(member.id)
@@ -575,6 +581,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 					if (error instanceof MightyApiError && error.status === 404) {
 						assertMightyRecoveryAllowed(mutationScope, params.row.email)
 						const recoveredMember = await api.createMember({ email: params.row.email })
+						assertMightyMemberMatchesExpectedEmail(recoveredMember, params.row.email)
 						if (String(recoveredMember.id) !== memberId) throw new Error('mighty_member_identity_changed')
 						await api.restoreAccess(memberId, config.accessPlanId)
 					} else if (isDuplicatePlanAssignmentError(error)) {
@@ -601,18 +608,24 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 		}
 	}
 
-	if (!memberId && !purchaseId) {
-		const member = await api.findMember(params.row.email)
-		if (!member) return { mightyMemberId: null, mightyPurchaseId: null, welcomeSent: false }
-		memberId = String(member.id)
+	let member: MightyMember | null = null
+	if (typeof api.findMember === 'function') {
+		member = await api.findMember(params.row.email)
+		if (!member) {
+			if (!memberId && !purchaseId) return { mightyMemberId: null, mightyPurchaseId: null, welcomeSent: false }
+			throw new Error('mighty_member_identity_not_found')
+		}
+		assertMightyMemberMatchesExpectedEmail(member, params.row.email)
+		if (memberId && String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
+		memberId = memberId ?? String(member.id)
+	} else if (!memberId) {
+		return { mightyMemberId: null, mightyPurchaseId: purchaseId, welcomeSent: false }
+	} else {
+		member = { id: memberId, email: params.row.email }
 	}
 
 	const currentState = await api.getAccessState(memberId as string, config.accessPlanId)
 	if (!currentState.hasAccess) return { mightyMemberId: memberId, mightyPurchaseId: null, welcomeSent: false }
-	const member = typeof api.findMember === 'function'
-		? await api.findMember(params.row.email)
-		: { id: memberId, email: params.row.email }
-	if (member && String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
 	const spaces = typeof api.listMemberSpaces === 'function' ? await api.listMemberSpaces(memberId as string) : []
 	const identityClass = classifyMightyIdentity({
 		email: params.row.email,

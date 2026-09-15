@@ -137,6 +137,80 @@ test('allowed reconciliation reuses an existing Mighty member, grants once, then
 	assert.equal(result.mightyPurchaseId, 'purchase-1')
 })
 
+test('stored member ID cannot mask a returned email mismatch and no Plan read or mutation follows', async () => {
+	const state: FakeState = {
+		member: { id: 22, email: 'other@example.com' },
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ mightyMemberId: '22', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: syntheticMutationScope }),
+		(error: unknown) => error instanceof MightyAccessSyncCheckpointError && error.code === 'mighty_member_email_conflict',
+	)
+	assert.equal(state.createMemberCalls, 0)
+	assert.equal(state.grantCalls, 0)
+})
+
+test('new-member email mismatch stops before Plan grant', async () => {
+	let grantCalls = 0
+	const api = {
+		findMember: async () => null,
+		createMember: async () => ({ id: 22, email: 'other@example.com' }),
+		getAccessState: async () => { throw new Error('Plan state must not be read after identity mismatch') },
+		restoreAccess: async () => { grantCalls += 1; return { id: 678 } },
+	} as unknown as MightyAdminApi
+
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api, mutationScope: syntheticMutationScope }),
+		(error: unknown) => error instanceof MightyAccessSyncCheckpointError && error.code === 'mighty_member_email_conflict',
+	)
+	assert.equal(grantCalls, 0)
+})
+
+test('422 recovery email mismatch stops before Plan grant', async () => {
+	let findCalls = 0
+	let grantCalls = 0
+	const api = {
+		findMember: async () => {
+			findCalls += 1
+			return findCalls === 1 ? null : { id: 22, email: 'other@example.com' }
+		},
+		createMember: async () => { throw new MightyApiError(422, { code: 'duplicate_assignment' }) },
+		getAccessState: async () => { throw new Error('Plan state must not be read after recovery identity mismatch') },
+		restoreAccess: async () => { grantCalls += 1; return { id: 678 } },
+	} as unknown as MightyAdminApi
+
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api, mutationScope: syntheticMutationScope }),
+		(error: unknown) => error instanceof MightyAccessSyncCheckpointError && error.code === 'mighty_member_email_conflict',
+	)
+	assert.equal(grantCalls, 0)
+})
+
+test('denied reconciliation rejects an email mismatch before access reads or revocation', async () => {
+	const state: FakeState = {
+		member: { id: 22, email: 'other@example.com' },
+		purchases: [{ purchase: { id: 'purchase-1' } }],
+		memberPlanAccess: true,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ desiredAccess: 'DENIED', mightyMemberId: '22', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: syntheticMutationScope }),
+		/error|mighty_member_email_conflict/,
+	)
+	assert.deepEqual(state.revokeCalls, [])
+	assert.deepEqual(state.revokePlanCalls, [])
+})
+
 test('allowed reconciliation creates an absent member before granting access', async () => {
 	const state: FakeState = {
 		member: null,

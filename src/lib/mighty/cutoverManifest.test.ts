@@ -32,6 +32,17 @@ test('manifest fails closed for missing identities, overlaps, and provider uncer
 	assert.equal(buildCutoverManifestRow(input({ providerError: 'provider_timeout' })).proposedCutoverAction, 'BLOCKED')
 })
 
+test('manifest rejects a provider member whose email does not bind to the manifest identity', () => {
+	assert.throws(
+		() => buildCutoverManifestRow(input({ member: { id: 41, email: 'other@example.com', role: 'contributor' } })),
+		/mighty_member_email_conflict/,
+	)
+	assert.throws(
+		() => buildCutoverManifestRow(input({ member: { id: 41, email: '', role: 'contributor' } })),
+		/mighty_member_email_conflict/,
+	)
+})
+
 test('manifest summary is deterministic and explicitly read-only', () => {
 	const summary = summarizeCutoverManifest([
 		buildCutoverManifestRow(input()),
