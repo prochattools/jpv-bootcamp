@@ -1,5 +1,34 @@
 # JPV Mighty zero-touch migration operator runbook
 
+## Current production state after silent-guard deployment
+
+`JPV SILENT MIGRATION GUARD INERT DEPLOYMENT: PASS`
+`PRODUCTION REVISION: 6ff599e9145c5154856ddecbd3305a17bb4e703b`
+`DEPLOY RUN: 35021554708`
+`MIGRATION VERIFIER: VERIFIED_CLEAN — pending 0, unexpected 0`
+`SCHEDULER: DISABLED`
+`WORKER/CUTOVER/MIGRATION: DORMANT`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+
+The deployed code is ready for a future, separately authorized gradual
+cutover. This runbook does not authorize a real canary, population inspection,
+manifest regeneration, Plan mutation, or member migration.
+
+## Gradual cutover roadmap
+
+The approved future order is: (1) one ordinary existing-member silent canary;
+(2) verify exact identity, entitlement, and Plan-only state; (3) repeat with
+2–3-member batches, stopping after each batch; (4) resolve identity-review
+rows read-only; (5) handle CREATE_NEW users only in a separately authorized
+hard-cutover wave; (6) perform content/Space cutover separately; and (7) enable
+ongoing Stripe→Mighty automation only after a new approval.
+
+For every silent existing-member batch, preserve the same Mighty member ID,
+profile, role, existing Plans, Spaces, content visibility, and login ability.
+The only permitted staging mutation is adding Plan `2000039`; migration email
+must remain zero. Stop immediately on identity, role, provider, entitlement,
+email, overlap, access, content, or member-ID drift.
+
 ## Silent communication contract
 
 This runbook applies an additional hard stop to every future Mighty migration
