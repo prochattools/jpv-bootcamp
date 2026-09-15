@@ -1,5 +1,14 @@
 # Operator Handoff Summary
 
+## Current silent-migration guard RC — 2026-09-15
+
+The exact production-lineage candidate `codex/mighty-silent-migration-guard-rc`
+is validated locally with the hard-coded migration email suppression policy.
+Deterministic release gate: `pnpm test:release` (`200/200`). Production remains
+at `b00f212e6dd456dff60a7465d6458d1705b68932`, inert, and untouched. No live
+Mighty/Stripe access, real email, population inspection, manifest creation,
+deployment, or migration occurred. The candidate is awaiting human review.
+
 ## CURRENT PRODUCTION-FREEZE SYNTHETIC HARDENING — 2026-09-11
 
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`

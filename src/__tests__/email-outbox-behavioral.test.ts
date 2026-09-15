@@ -354,4 +354,66 @@ describe('email outbox behavioral tests', () => {
 			expect(updateCall.data.errorMessage).toBeNull()
 		})
 	})
+
+	// ── Migration communication hard stop ───────────────────────────────────
+
+	describe('Mighty migration communication policy', () => {
+		it('suppresses unauthorized migration mail before creating an outbox row', async () => {
+			const id = await queueEmail({
+				type: 'welcome',
+				recipient: 'kem.okupa@gmail.com',
+				payload: { plan: 'jpv_bootcamp_membership' },
+				idempotencyKey: 'migration-kem-001',
+				communicationContext: 'mighty_migration',
+			})
+
+			expect(id).toBeNull()
+			expect(mockEmailEventCreate).not.toHaveBeenCalled()
+		})
+
+		it('suppresses an unauthorized migration row at the final provider boundary', async () => {
+			const event = makePendingEvent({
+				recipient: 'samuel.roy.edward.hill@gmail.com',
+				payload: {
+					plan: 'jpv_bootcamp_membership',
+					resetUrl: 'https://jpvbootcamp.com/reset',
+					communicationContext: 'mighty_migration',
+				},
+			})
+			mockEmailEventFindMany.mockResolvedValueOnce([event])
+			mockEmailEventUpdate.mockResolvedValue({})
+
+			const result = await processEmailQueue()
+
+			expect(result.suppressed).toBe(1)
+			expect(mockResendSend).not.toHaveBeenCalled()
+			expect(mockEmailEventUpdate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						status: 'suppressed',
+						errorMessage: 'migration_email_suppressed',
+					}),
+				}),
+			)
+		})
+
+		it('keeps the exact three authorized migration recipients available', async () => {
+			for (const [index, recipient] of [
+				'westhoek@hotmail.com',
+				'steve@yeshua.academy',
+				'info@prochat.tools',
+			] .entries()) {
+				mockEmailEventCreate.mockResolvedValueOnce({ id: `migration-authorized-${index}` })
+				const id = await queueEmail({
+					type: 'welcome',
+					recipient,
+					payload: { plan: 'jpv_bootcamp_membership' },
+					idempotencyKey: `migration-authorized-${index}`,
+					communicationContext: 'mighty_migration',
+				})
+				expect(id).toBe(`migration-authorized-${index}`)
+			}
+			expect(mockEmailEventCreate).toHaveBeenCalledTimes(3)
+		})
+	})
 })

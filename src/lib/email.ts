@@ -13,6 +13,11 @@ import crypto from 'crypto'
 import { redactEmail } from '@/lib/log-redact'
 import { assertStagingRecipientAllowed as canonicalStagingGuard } from '@/lib/staging-email-guard'
 import { buildMightyAccessReadyEmailContent } from '@/lib/mighty/accessReadyEmail'
+import {
+	isAuthorizedMightyMigrationRecipient,
+	isMightyMigrationContext,
+	type EmailCommunicationContext,
+} from '@/lib/mighty/migrationCommunicationPolicy'
 
 // Canonical Resend helpers live in this module; server routes call these functions to send email.
 let resendClient: Resend | null = null
@@ -49,6 +54,7 @@ type EmailAttemptMeta = {
 	stackHint?: string
 	loginUrl?: string | null
 	mightyAccessReady?: boolean
+	communicationContext?: EmailCommunicationContext
 }
 
 function logEmailAttempt(params: {
@@ -104,14 +110,27 @@ export type QueueEmailParams = {
 	 * email address. Example: sha256(stripeEventId + ':' + type).
 	 */
 	idempotencyKey: string
+	/** Migration mail is subject to the hard-coded recipient policy. */
+	communicationContext?: EmailCommunicationContext
 }
 
 /**
  * Enqueue an email_event for deferred sending via processEmailQueue().
  * Staging recipient guard fires before insertion.
  */
-export async function queueEmail(params: QueueEmailParams): Promise<string> {
+export async function queueEmail(params: QueueEmailParams): Promise<string | null> {
 	assertStagingRecipientAllowed(params.recipient)
+	if (
+		params.communicationContext === 'mighty_migration' &&
+		!isAuthorizedMightyMigrationRecipient(params.recipient)
+	) {
+		console.info('migration_email_suppressed_before_enqueue', {
+			type: params.type,
+			recipient: redactEmail(params.recipient),
+			reason: 'recipient_not_authorized',
+		})
+		return null
+	}
 
 	try {
 
@@ -119,7 +138,12 @@ export async function queueEmail(params: QueueEmailParams): Promise<string> {
 			data: {
 				type: params.type,
 				recipient: params.recipient,
-				payload: params.payload,
+			payload: {
+				...params.payload,
+				...(params.communicationContext
+					? { communicationContext: params.communicationContext }
+					: {}),
+			},
 				idempotencyKey: params.idempotencyKey,
 				status: 'pending',
 			},
@@ -238,6 +262,7 @@ type ProcessResult = {
 	sent: number
 	failed: number
 	skipped: number
+	suppressed: number
 }
 
 /**
@@ -260,7 +285,7 @@ type ProcessResult = {
  *   - Max retries exceeded → status = 'dead_letter'
  */
 export async function processEmailQueue(eventId?: string): Promise<ProcessResult> {
-	const result: ProcessResult = { processed: 0, sent: 0, failed: 0, skipped: 0 }
+	const result: ProcessResult = { processed: 0, sent: 0, failed: 0, skipped: 0, suppressed: 0 }
 
 
 	const prismaAny = prisma as any
@@ -329,11 +354,32 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 			continue
 		}
 
-		const resend = getResendClient()
-		const { email: emailConfig } = getServerConfig()
-
 		// Build the email from payload
 		const payload = event.payload as Record<string, unknown>
+		if (
+			isMightyMigrationContext(payload.communicationContext) &&
+			!isAuthorizedMightyMigrationRecipient(event.recipient)
+		) {
+			// Defense in depth for rows inserted by an older caller or directly in
+			// the database: suppress before client construction or any Resend call.
+			await prismaAny.emailEvent.update({
+				where: { id: event.id },
+				data: {
+					status: 'suppressed',
+					errorMessage: 'migration_email_suppressed',
+				},
+			})
+			result.suppressed++
+			console.info('migration_email_suppressed_before_provider_send', {
+				eventId: event.id,
+				type: event.type,
+				recipient: redactEmail(event.recipient),
+			})
+			continue
+		}
+
+		const resend = getResendClient()
+		const { email: emailConfig } = getServerConfig()
 		let sendParams: Parameters<typeof resend.emails.send>[0]
 
 		try {
@@ -643,9 +689,14 @@ export async function sendWelcomeEmail({
 			credentials: credentials ?? null,
 			loginUrl: meta?.loginUrl ?? null,
 			mightyAccessReady: meta?.mightyAccessReady === true,
+			...(meta?.communicationContext
+				? { communicationContext: meta.communicationContext }
+				: {}),
 		},
 		idempotencyKey,
+		communicationContext: meta?.communicationContext,
 	})
+	if (!eventDbId) return
 
 	// Process synchronously (inline) so callers get the same throw-on-failure
 	// semantics as the previous direct-send approach. A background worker can

@@ -1,5 +1,13 @@
 # JPV Bootcamp Preview Release Readiness
 
+## Current silent-migration guard RC — 2026-09-15
+
+The repository-only candidate `codex/mighty-silent-migration-guard-rc` has a
+deterministic release gate of `pnpm test:release` passed `200/200`. Production
+remains at `b00f212e6dd456dff60a7465d6458d1705b68932`; no live provider access,
+real email, population inspection, manifest creation, deployment, or migration
+occurred. This candidate is awaiting human review.
+
 ## CURRENT PRODUCTION-FREEZE SYNTHETIC HARDENING — 2026-09-11
 
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`

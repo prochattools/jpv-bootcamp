@@ -2,6 +2,34 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: MIGHTY SILENT-MIGRATION COMMUNICATION GUARD — OWNER REVIEW — 2026-09-15
+
+`PRODUCTION REVISION: b00f212e6dd456dff60a7465d6458d1705b68932`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`SILENT-MIGRATION GUARD RC: codex/mighty-silent-migration-guard-rc`
+`REAL POPULATION: NOT TOUCHED`
+`LIVE MIGHTY/STRIPE ACCESS: NOT AUTHORIZED`
+
+This RC adds a hard-coded migration communication policy. Migration/cutover
+mail is allowed only for `westhoek@hotmail.com`, `steve@yeshua.academy`, and
+`info@prochat.tools`; environment configuration cannot broaden that list.
+Unauthorized migration mail is suppressed before an outbox row is created and
+again at the final provider boundary, where it becomes a terminal suppressed
+event with zero Resend calls. Ordinary non-migration lifecycle email remains
+unchanged. Mighty member creation continues to send no welcome email and Plan
+enrollment remains a direct access operation, not an invitation.
+
+The read-only Plan check confirmed Plan `2000039` (`JPV Member Access`) is
+hidden, non-paid, externally managed, and not visible to members. The provider
+endpoint did not expose every gate field; the owner-confirmed access-only
+configuration remains the authoritative record. CREATE_NEW therefore remains
+HARD_CUTOVER_ONLY until a separately authorized silent-provider proof exists.
+
+`SILENT-MIGRATION GUARD RC: READY FOR HUMAN REVIEW`
+`pnpm test:release` passed `200/200`
+`DEPLOYMENT: NOT AUTHORIZED BY THIS HANDOFF`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+
 ## CURRENT PHASE: STRIPE→MIGHTY LIFECYCLE READINESS — OWNER REVIEW — 2026-09-15
 
 `JPV STRIPE→MIGHTY LIFECYCLE READINESS: PASS`
