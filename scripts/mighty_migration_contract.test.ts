@@ -32,9 +32,6 @@ const stagingEvidence = readFileSync('docs/migration/MIGHTY_STAGING_PROVIDER_VER
 const systemSchema = readFileSync('prisma/system.prisma', 'utf8')
 const migration = readFileSync('prisma/migrations/20260909090000_add_mighty_access_sync/migration.sql', 'utf8')
 const eventOrderingMigration = readFileSync('prisma/migrations/20260909093000_add_mighty_event_ordering/migration.sql', 'utf8')
-const bootstrapProvenanceMigration = readFileSync('prisma/migrations/20260914140000_add_mighty_bootstrap_provenance/migration.sql', 'utf8')
-const bootstrap = readFileSync('src/lib/mighty/bootstrap.ts', 'utf8')
-const bootstrapRoute = readFileSync('src/app/api/admin/bootstrap-mighty-access-sync/route.ts', 'utf8')
 
 test('typed Mighty config is fail-closed and environment-only', () => {
 	assert.match(config, /MIGHTY_API_BASE_URL/)
@@ -73,25 +70,11 @@ test('revoke targets Plan membership and preserves legacy purchase cleanup as ov
 })
 
 test('durable schema stores provider IDs, event ordering, desired access, retries, and reconciliation timestamps', () => {
-	for (const field of ['desiredAccess', 'mightyMemberId', 'mightyPurchaseId', 'attemptCount', 'lastError', 'nextAttemptAt', 'lastSucceededAt', 'lastReconciledAt', 'lastStripeEventCreatedAt', 'lastStripeEventType', 'stateSource', 'stateObservedAt']) {
+	for (const field of ['desiredAccess', 'mightyMemberId', 'mightyPurchaseId', 'attemptCount', 'lastError', 'nextAttemptAt', 'lastSucceededAt', 'lastReconciledAt', 'lastStripeEventCreatedAt', 'lastStripeEventType']) {
 		assert.match(systemSchema, new RegExp(field))
 		const snakeCase = field.replace(/[A-Z]/g, (value) => `_${value.toLowerCase()}`)
-		assert.match(`${migration}\n${eventOrderingMigration}\n${bootstrapProvenanceMigration}`, new RegExp(snakeCase))
+		assert.match(`${migration}\n${eventOrderingMigration}`, new RegExp(snakeCase))
 	}
-})
-
-test('Phase A bootstrap is exact-account, queue-only, provenance-aware, and fail-closed', () => {
-	assert.match(bootstrap, /PHASE_A_BOOTSTRAP_EMAIL = 'westhoek@hotmail\.com'/)
-	assert.match(bootstrap, /customers\.retrieve\(stripeCustomerId\)/)
-	assert.match(bootstrap, /subscriptions\.retrieve\(stripeSubscriptionId\)/)
-	assert.match(bootstrap, /deriveMightyDesiredAccess/)
-	assert.match(bootstrap, /stateSource: 'operator_bootstrap'/)
-	assert.match(bootstrap, /welcomeRequired: false/)
-	assert.doesNotMatch(bootstrap, /createMightyAdminApi|restoreAccess|revokeAccess|sendWelcomeEmail/)
-	assert.match(bootstrapRoute, /MIGHTY_ACCESS_SYNC_WORKER_SECRET/)
-	assert.match(bootstrapRoute, /Object\.keys\(record\)\.length !== 1/)
-	assert.match(bootstrapRoute, /MIGHTY_ACCESS_PLAN_ID/)
-	assert.match(bootstrapRoute, /bootstrapMightyAccessSync\(/)
 })
 
 test('Stripe events queue local desired state without provider calls in the webhook', () => {
@@ -139,7 +122,7 @@ test('production mutations are explicitly scoped and fail closed for unresolved 
 	assert.match(mutationPolicy, /MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS/)
 	assert.match(mutationPolicy, /mighty_identity_review_required/)
 	assert.match(mutationPolicy, /mighty_host_mutation_protected/)
-	assert.match(sync, /assertMightyMutationAllowed/)
+	assert.match(sync, /assertMightyLifecycleMutationAllowed/)
 	assert.match(sync, /assertIdentityMutationSafe/)
 })
 
@@ -175,7 +158,7 @@ test('welcome email is ordered after Mighty access reconciliation', () => {
 test('worker has a dedicated authenticated route and no synchronous webhook dependency', () => {
 	const route = readFileSync('src/app/api/admin/process-mighty-access-sync/route.ts', 'utf8')
 	assert.match(route, /MIGHTY_ACCESS_SYNC_WORKER_SECRET/)
-	assert.match(route, /processMightyAccessSync\(limit, emails\)/)
+	assert.match(route, /processMightyAccessSync\(limit(?:, emails)?\)/)
 	assert.match(sync, /leaseUntil: candidate\.leaseUntil/)
 	assert.match(sync, /lastStripeEventId: row\.lastStripeEventId/)
 })

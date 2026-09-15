@@ -1,5 +1,23 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT GATE: STRIPE→MIGHTY LIFECYCLE READINESS — OWNER REVIEW — 2026-09-15
+
+`LIFECYCLE READINESS: PASS`
+`LIFECYCLE SAFETY RC: READY FOR OWNER REVIEW`
+`RC BRANCH: codex/mighty-lifecycle-readiness-rc`
+`PRODUCTION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`PRODUCTION CHANGED: NO`
+`SCHEDULER: DISABLED`
+`REAL POPULATION INSPECTION: NOT AUTHORIZED`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`NEXT GATE: OWNER REVIEW AND APPROVAL OF THE EXACT LIFECYCLE RC`
+
+The lifecycle controls are validated using synthetic/provider-mocked data only.
+They protect privileged identities, treat active/trialing subscriptions and
+discounted or zero-due subscriptions according to Stripe truth, and cover
+new-member onboarding, payment failure, recovery, cancellation, idempotency,
+and safe email rendering. The RC is not deployed.
+
 ## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — OWNER REVIEW — 2026-09-15
 
 `PRODUCTION REVISION: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
@@ -47,7 +65,7 @@ identity records, queues `operator_bootstrap` state, and never calls Mighty or
 email; provider I/O remains worker-only. No live provider operation, deployment,
 migration, scheduler execution, worker execution, population inspection, real
 manifest creation, or user/data change occurred. The fresh release gate is
-`pnpm test:release` passed `198/198`.
+`pnpm test:release` passed `199/199`.
 
 ## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14
 

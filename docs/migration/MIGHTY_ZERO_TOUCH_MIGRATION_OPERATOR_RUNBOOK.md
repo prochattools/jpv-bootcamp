@@ -1,55 +1,30 @@
 # JPV Mighty zero-touch migration operator runbook
 
-## Exact-lookup identity binding V2 — owner review — 2026-09-15
-
-Production is currently `4d1dd2fc867258ecde6b194b1ecb57a29592977f` and remains
-`DEPLOYED + HARDENED + IDENTITY-BINDING FAIL-CLOSED + INERT`. The authorized
-diagnostic for
-`westhoek@hotmail.com` used only the exact `by_email` endpoint and returned the
-known member ID `41580317` with an empty `email` field. Classify this as
-provider email masking (`B`), then bind it only through explicit
-`exact_by_email_lookup` evidence.
-
-The runtime identity contract has two explicit sources: `provider_email_match`
-for a non-empty matching provider email, and `exact_by_email_lookup` for a
-member returned by the exact normalized `by_email` request. A masked email is
-accepted only with the latter evidence bound to the same normalized request.
-Arbitrary empty/missing email objects still produce
-`mighty_member_email_conflict`; different non-empty emails do too. Create and
-422 recovery paths perform exact post-create/recovery lookup and require the
-same member ID. Cutover apply rechecks exact lookup identity against the
-locked manifest ID before any Plan mutation. No broad member search is an
-allowed fallback.
-
-No provider email is fabricated or rewritten. The provider payload remains
-masked/absent while the separate identity evidence records the exact lookup
-source. Stop and review before any Plan read, bootstrap, worker, canary retry,
-or provider data correction. This goal has not read Plans, Spaces, or
-purchases and has performed no provider or Stripe mutation.
-
-The V2 release candidate is `codex/mighty-exact-lookup-identity-binding-v2` at
-`f879cab5`, based directly on the deployed production revision. It adds no
-database migration and remains inert until separately deployed and reviewed.
-
-## Phase A bootstrap runtime release candidate — 2026-09-14
-
-The current production lineage is
-`b1e105d3ac855f20a983fb70bcefffb2490c864f`; the provenance migration is already
-applied and the read-only verifier is `VERIFIED_CLEAN`. The non-production
-branch `codex/mighty-phase-a-bootstrap-runtime-rc-v2` contains a bounded,
-synthetically validated bootstrap route for the single authorized operator
-identity `westhoek@hotmail.com`. It performs exact local Stripe identity and
-subscription checks, queues `operator_bootstrap` state with observation time,
-and never calls Mighty or email. Provider I/O remains worker-only.
-
-This RC is not deployed. Do not invoke the bootstrap route, worker, scheduler,
-or any live rehearsal script. No live Stripe/Mighty access, population
-inspection, real manifest creation, migration, or user/data change is permitted
-by this release-candidate review.
-
 ## Status
 
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
+
+`STRIPE→MIGHTY LIFECYCLE READINESS: PASS`
+`LIFECYCLE SAFETY RC: READY FOR OWNER REVIEW`
+`RC BRANCH: codex/mighty-lifecycle-readiness-rc`
+
+The lifecycle control path remains inert in production at
+`03b78c550d09d5b155ddaf68b826869dc64973bb`. The ordinary production scope is
+opt-in only: it requires the existing mutation guard plus
+`MIGHTY_ACCESS_SYNC_PRODUCTION_SCOPE=ordinary-lifecycle-v1`, stored Stripe
+customer/subscription IDs, and the latest Stripe event identity. New Mighty
+member creation additionally requires `MIGHTY_ALLOW_NEW_MEMBER_CREATION=true`.
+These controls are not enabled or changed by this readiness work.
+
+Privileged provider roles (`host`, `owner`, `admin`, `administrator`, and
+`staff`) are protected from ordinary billing grants and revokes. Unknown roles,
+missing identity proof, and provider uncertainty fail closed. Discounted,
+100%-coupon, `no_payment_required`, and trialing subscriptions use the same
+Stripe subscription truth as full-price subscriptions; payment failure is
+`DENIED` immediately and a confirmed payment restores the same Mighty member.
+The new-member email points only to Mighty sign-in and does not expose the old
+JPV password-reset onboarding path. Payment-failure notices state that access
+is paused and use the hosted Stripe invoice recovery URL when available.
 
 Production is running hardened inert code at
 `1555bab05df64a173737080f0b6988a6789434a4`. This runbook describes a future

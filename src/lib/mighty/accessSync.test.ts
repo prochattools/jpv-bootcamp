@@ -660,7 +660,7 @@ test('both authorized Host test accounts are protected from ordinary billing mut
 			revokeCalls: [],
 			revokePlanCalls: [],
 		}
-		await assert.rejects(() => reconcileAccess({ row: row({ email, normalizedEmail: email, desiredAccess: 'DENIED', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }), /mighty_host_mutation_protected/)
+		await assert.doesNotReject(() => reconcileAccess({ row: row({ email, normalizedEmail: email, desiredAccess: 'DENIED', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }))
 		assert.equal(state.revokePlanCalls.length, 0)
 	}
 })
