@@ -122,7 +122,7 @@ test('production mutations are explicitly scoped and fail closed for unresolved 
 	assert.match(mutationPolicy, /MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS/)
 	assert.match(mutationPolicy, /mighty_identity_review_required/)
 	assert.match(mutationPolicy, /mighty_host_mutation_protected/)
-	assert.match(sync, /assertMightyMutationAllowed/)
+	assert.match(sync, /assertMightyLifecycleMutationAllowed/)
 	assert.match(sync, /assertIdentityMutationSafe/)
 })
 

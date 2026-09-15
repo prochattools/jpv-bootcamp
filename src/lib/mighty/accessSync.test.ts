@@ -83,7 +83,9 @@ function row(overrides: Partial<Parameters<typeof reconcileAccess>[0]['row']> = 
 		normalizedEmail: 'student@example.com',
 		stripeCustomerId: 'cus_1',
 		stripeSubscriptionId: 'sub_1',
-		lastStripeEventId: 'evt_1',
+	lastStripeEventId: 'evt_1',
+	lastStripeEventCreatedAt: new Date(),
+	lastStripeEventType: 'customer.subscription.created',
 		plan: 'jpv_bootcamp_membership',
 		desiredAccess: 'ALLOWED',
 		mightyMemberId: null,
@@ -380,7 +382,84 @@ test('both authorized Host test accounts are protected from ordinary billing mut
 			revokeCalls: [],
 			revokePlanCalls: [],
 		}
-		await assert.rejects(() => reconcileAccess({ row: row({ email, normalizedEmail: email, desiredAccess: 'DENIED', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }), /mighty_host_mutation_protected/)
+		await assert.doesNotReject(() => reconcileAccess({ row: row({ email, normalizedEmail: email, desiredAccess: 'DENIED', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: scope }))
 		assert.equal(state.revokePlanCalls.length, 0)
 	}
+})
+
+test('administrator, staff, and owner roles cannot be granted or revoked by billing events', async () => {
+	for (const role of ['administrator', 'staff', 'owner'] as const) {
+		for (const desiredAccess of ['ALLOWED', 'DENIED'] as const) {
+			const email = `${role}-${desiredAccess.toLowerCase()}@example.com`
+			const scope = getMightyMutationScope({
+				MIGHTY_PROVIDER_ENV: 'staging',
+				MIGHTY_STAGING_ALLOW_API_MUTATIONS: 'true',
+				MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST: email,
+			})
+			const state: FakeState = {
+				member: { id: 22, email, role },
+				purchases: [],
+				memberPlanAccess: desiredAccess === 'DENIED',
+				findMemberCalls: 0,
+				createMemberCalls: 0,
+				grantCalls: 0,
+				revokeCalls: [],
+				revokePlanCalls: [],
+			}
+
+			await assert.doesNotReject(
+				() => reconcileAccess({
+					row: row({ email, normalizedEmail: email, desiredAccess, welcomeRequired: false }),
+					api: fakeApi(state),
+					config,
+					mutationScope: scope,
+				}),
+			)
+			assert.equal(state.grantCalls, 0)
+			assert.equal(state.revokeCalls.length, 0)
+			assert.equal(state.revokePlanCalls.length, 0)
+		}
+	}
+})
+
+test('ordinary production lifecycle scope accepts only webhook-backed Stripe identities', async () => {
+	const scope = getMightyMutationScope({
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
+		MIGHTY_ACCESS_SYNC_PRODUCTION_SCOPE: 'ordinary-lifecycle-v1',
+		MIGHTY_ALLOW_NEW_MEMBER_CREATION: 'true',
+	})
+	const state: FakeState = {
+		member: { id: 22, email: 'subscriber@example.com', role: 'contributor' },
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+
+	await assert.doesNotReject(() => reconcileAccess({
+		row: row({ email: 'subscriber@example.com', normalizedEmail: 'subscriber@example.com', welcomeRequired: false }),
+		api: fakeApi(state),
+		config,
+		mutationScope: scope,
+	}))
+	assert.equal(state.grantCalls, 1)
+
+	const missingProofState = { ...state, purchases: [], memberPlanAccess: false, grantCalls: 0, revokeCalls: [], revokePlanCalls: [] }
+	await assert.rejects(() => reconcileAccess({
+		row: row({
+			email: 'subscriber@example.com',
+			normalizedEmail: 'subscriber@example.com',
+			stripeCustomerId: null,
+			stripeSubscriptionId: null,
+			welcomeRequired: false,
+		}),
+		api: fakeApi(missingProofState),
+		config,
+		mutationScope: scope,
+	}), /mighty_authoritative_stripe_identity_required/)
+	assert.equal(missingProofState.grantCalls, 0)
 })

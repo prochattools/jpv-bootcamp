@@ -7,7 +7,7 @@
 The live production platform is frozen. No live Mighty read or mutation, live
 Stripe operation, population inspection, production test data, worker
 execution, scheduler enablement, configuration change, or deployment is
-authorized in this goal. Deterministic release gate: `pnpm test:release` (`197/197`). The controlling evidence is
+authorized in this goal. Deterministic release gate: `pnpm test:release` (`198/198`). The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 
 ## Historical Rooms production release — 2026-08-30 (audit record)

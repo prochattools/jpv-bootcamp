@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assertMightyMutationAllowed, assertMightyMutationRuntimeReady, AUTHORIZED_MIGHTY_HOST_TEST_EMAILS, AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS, classifyMightyIdentity, getMightyMutationScope } from './mutationPolicy'
+import { assertIdentityMutationSafe, assertMightyMutationAllowed, assertMightyMutationRuntimeReady, AUTHORIZED_MIGHTY_HOST_TEST_EMAILS, AUTHORIZED_MIGHTY_LIVE_TEST_EMAILS, classifyMightyIdentity, getMightyMutationScope } from './mutationPolicy'
 
 test('production scope fails closed without an explicit allowlist', () => {
 	const scope = getMightyMutationScope({ MIGHTY_PROVIDER_ENV: 'production' })
@@ -42,6 +42,23 @@ test('production mutation scope requires the explicit mutation guard', () => {
 		MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST: 'westhoek@hotmail.com',
 	})
 	assert.equal(scope.allowedEmails.size, 0)
+})
+
+test('ordinary production lifecycle scope is explicit and still requires the mutation guard', () => {
+	const scope = getMightyMutationScope({
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_PRODUCTION_ALLOW_API_MUTATIONS: 'true',
+		MIGHTY_ACCESS_SYNC_PRODUCTION_SCOPE: 'ordinary-lifecycle-v1',
+	})
+	assert.equal(scope.ordinaryLifecycleEnabled, true)
+	assert.doesNotThrow(() => assertMightyMutationRuntimeReady(scope))
+
+	const disabled = getMightyMutationScope({
+		MIGHTY_PROVIDER_ENV: 'production',
+		MIGHTY_ACCESS_SYNC_PRODUCTION_SCOPE: 'ordinary-lifecycle-v1',
+	})
+	assert.equal(disabled.ordinaryLifecycleEnabled, false)
+	assert.throws(() => assertMightyMutationRuntimeReady(disabled), /mighty_live_mutation_guard_disabled/)
 })
 
 test('live mutation runtime fails closed for missing, false, zero, and invalid controls', () => {
@@ -99,4 +116,45 @@ test('missing provider role is review, not inferred ordinary access', () => {
 		plans: [],
 		scope,
 	}), 'review')
+})
+
+test('administrator and staff identities are explicit privileged classifications', () => {
+	const scope = getMightyMutationScope({})
+	for (const role of ['admin', 'administrator', 'staff']) {
+		assert.equal(classifyMightyIdentity({
+			email: `${role}@example.com`,
+			member: { id: role, email: `${role}@example.com`, role },
+			spaces: [],
+			plans: [],
+			scope,
+		}), 'administrator', role)
+	}
+	assert.equal(classifyMightyIdentity({
+		email: 'owner@example.com',
+		member: { id: 'owner', email: 'owner@example.com', role: 'owner' },
+		spaces: [],
+		plans: [],
+		scope,
+	}), 'host')
+})
+
+test('ordinary billing cannot mutate administrator, staff, or owner identities', () => {
+	for (const identityClass of ['administrator', 'host'] as const) {
+		for (const desiredAccess of ['ALLOWED', 'DENIED'] as const) {
+			assert.throws(
+				() => assertIdentityMutationSafe({ identityClass, desiredAccess, mutationRequired: true }),
+				(error: unknown) => error instanceof Error && 'code' in error && [
+					'mighty_privileged_mutation_protected',
+					'mighty_host_mutation_protected',
+				].includes((error as { code?: string }).code ?? ''),
+			)
+		}
+	}
+})
+
+test('unknown privilege remains fail-closed for billing mutation', () => {
+	assert.throws(
+		() => assertIdentityMutationSafe({ identityClass: 'review', desiredAccess: 'DENIED', mutationRequired: true }),
+		/mighty_identity_review_required/,
+	)
 })

@@ -1,5 +1,28 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT GATE: STRIPE→MIGHTY LIFECYCLE READINESS — 2026-09-15
+
+`LIFECYCLE READINESS: PASS`
+`LIFECYCLE SAFETY RC: READY FOR OWNER REVIEW`
+`RC BRANCH: codex/mighty-lifecycle-readiness`
+`PRODUCTION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`SCHEDULER: DISABLED`
+`REAL POPULATION INSPECTION: NOT AUTHORIZED`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`DEPLOYMENT OF LIFECYCLE RC: NOT AUTHORIZED`
+
+The lifecycle work is synthetic-only and remains off the live platform. It
+protects privileged Mighty identities from ordinary billing revocation,
+requires an explicit ordinary-lifecycle production scope with stored Stripe
+identity/event proof, treats active/trialing subscriptions—including
+discounted and zero-due subscriptions—as Stripe-authoritative ALLOWED, and
+covers new-member onboarding, payment failure, recovery, cancellation,
+idempotency, and safe email rendering. No live account, provider, Stripe
+customer, population, scheduler, worker, or migration was touched.
+
+`NEXT GATE: OWNER REVIEW AND APPROVAL OF THE EXACT LIFECYCLE RC`
+
 ## CURRENT PHASE: DEPLOYED + HARDENED + INERT — 2026-09-13
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
@@ -36,7 +59,7 @@ population inspection, production test data, worker execution, scheduler
 enablement, configuration change, or migration was performed. The controlling
 evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
-The final readiness validation is recorded as `pnpm test:release` passed `197/197`; the RC
+The final readiness validation is recorded as `pnpm test:release` passed `198/198`; the RC
 hardening baseline is `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
 
 The zero-touch migration operations gate now passes entirely with synthetic

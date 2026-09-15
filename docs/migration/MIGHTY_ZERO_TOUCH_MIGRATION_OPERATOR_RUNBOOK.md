@@ -4,6 +4,28 @@
 
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
 
+`STRIPE→MIGHTY LIFECYCLE READINESS: PASS`
+`LIFECYCLE SAFETY RC: READY FOR OWNER REVIEW`
+`RC BRANCH: codex/mighty-lifecycle-readiness`
+
+The lifecycle control path remains inert in production at
+`03b78c550d09d5b155ddaf68b826869dc64973bb`. The ordinary production scope is
+opt-in only: it requires the existing mutation guard plus
+`MIGHTY_ACCESS_SYNC_PRODUCTION_SCOPE=ordinary-lifecycle-v1`, stored Stripe
+customer/subscription IDs, and the latest Stripe event identity. New Mighty
+member creation additionally requires `MIGHTY_ALLOW_NEW_MEMBER_CREATION=true`.
+These controls are not enabled or changed by this readiness work.
+
+Privileged provider roles (`host`, `owner`, `admin`, `administrator`, and
+`staff`) are protected from ordinary billing grants and revokes. Unknown roles,
+missing identity proof, and provider uncertainty fail closed. Discounted,
+100%-coupon, `no_payment_required`, and trialing subscriptions use the same
+Stripe subscription truth as full-price subscriptions; payment failure is
+`DENIED` immediately and a confirmed payment restores the same Mighty member.
+The new-member email points only to Mighty sign-in and does not expose the old
+JPV password-reset onboarding path. Payment-failure notices state that access
+is paused and use the hosted Stripe invoice recovery URL when available.
+
 Production is running hardened inert code at
 `1555bab05df64a173737080f0b6988a6789434a4`. This runbook describes a future
 owner-authorized operation only. It is not authorization to inspect, enumerate,

@@ -20,6 +20,7 @@ import {
 import { redactEmail } from '@/lib/log-redact'
 import { paymentGraceEnd } from '@/lib/billing/commitmentPolicy'
 import { mirrorMembershipSupportWebhookToPayload } from '@/lib/membership-support/webhookReconciliation'
+import { getPublicBaseUrl } from '@/lib/public-base-url'
 
 type Plan = 'jpv_bootcamp_membership'
 
@@ -94,6 +95,12 @@ type BillingSubject = {
   billingAccount: PayloadDocument
   stripeCustomerId: string
   previousBillingStatus: PayloadBillingStatus | null
+}
+
+export function getPaymentRecoveryUrl(invoice: Pick<Stripe.Invoice, 'hosted_invoice_url'>): string {
+	const hostedUrl = invoice.hosted_invoice_url?.trim()
+	if (hostedUrl) return hostedUrl
+	return `${getPublicBaseUrl().replace(/\/$/, '')}/portal/billing`
 }
 
 type SubscriptionProjection = {
@@ -1313,6 +1320,7 @@ async function syncInvoice(
         memberId: String(subject.member.id),
         eventId: event.id,
         paymentState: paymentAttentionRequired ? paymentStatus : 'recovered',
+        billingUrl: getPaymentRecoveryUrl(invoice),
       },
     })
     if (queuedNotice.created) {

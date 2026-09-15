@@ -8,6 +8,7 @@ export type MightyRoleOverride = Exclude<MightyIdentityClass, 'review' | 'except
 export type MightyMutationScope = {
 	enforce: boolean
 	liveTestOnly: boolean
+	ordinaryLifecycleEnabled: boolean
 	allowedEmails: ReadonlySet<string>
 	allowNewMemberCreation: boolean
 	roleOverrides: ReadonlyMap<string, MightyRoleOverride>
@@ -54,6 +55,8 @@ export function getMightyMutationScope(env: Record<string, string | undefined> =
 			? env.MIGHTY_STAGING_ALLOW_API_MUTATIONS?.trim() === 'true'
 			: false
 	const allowedEmails = new Set(guardEnabled ? listValues(env.MIGHTY_ACCESS_SYNC_MUTATION_ALLOWLIST) : [])
+	const ordinaryLifecycleEnabled = providerEnv === 'production' && guardEnabled &&
+		env.MIGHTY_ACCESS_SYNC_PRODUCTION_SCOPE?.trim() === 'ordinary-lifecycle-v1'
 	if (guardEnabled) {
 		const testEmail = normalizeEmail(
 			providerEnv === 'production' ? env.MIGHTY_PRODUCTION_TEST_EMAIL : env.MIGHTY_STAGING_TEST_EMAIL,
@@ -77,6 +80,7 @@ export function getMightyMutationScope(env: Record<string, string | undefined> =
 	return {
 		enforce,
 		liveTestOnly,
+		ordinaryLifecycleEnabled,
 		allowedEmails,
 		allowNewMemberCreation: env.MIGHTY_ALLOW_NEW_MEMBER_CREATION?.trim() === 'true',
 		roleOverrides,
@@ -87,7 +91,7 @@ export function assertMightyMutationRuntimeReady(scope: MightyMutationScope): vo
 	if (!scope.enforce) {
 		throw new MightySafetyError('mighty_provider_environment_not_configured')
 	}
-	if (scope.allowedEmails.size === 0) {
+	if (scope.allowedEmails.size === 0 && !scope.ordinaryLifecycleEnabled) {
 		throw new MightySafetyError('mighty_live_mutation_guard_disabled')
 	}
 }
@@ -107,17 +111,59 @@ export function assertMightyMutationAllowed(
 	}
 }
 
-export function assertMightyMemberCreationAllowed(scope: MightyMutationScope, email: string): void {
+export function assertMightyMemberCreationAllowed(
+	scope: MightyMutationScope,
+	email: string,
+	authoritativeStripeIdentity = false,
+): void {
+	if (scope.ordinaryLifecycleEnabled && authoritativeStripeIdentity) {
+		if (scope.enforce && !scope.allowNewMemberCreation) {
+			throw new MightySafetyError('mighty_member_creation_disabled', 'new_member_creation_disabled')
+		}
+		return
+	}
 	assertMightyMutationAllowed(scope, email, 'create_member')
 	if (scope.enforce && !scope.allowNewMemberCreation) {
 		throw new MightySafetyError('mighty_member_creation_disabled', 'new_member_creation_disabled')
 	}
-	if (scope.enforce && scope.roleOverrides.get(normalizeEmail(email)) !== 'ordinary') {
+	if (scope.enforce && !scope.ordinaryLifecycleEnabled && scope.roleOverrides.get(normalizeEmail(email)) !== 'ordinary') {
 		throw new MightySafetyError('mighty_new_member_identity_review_required')
 	}
 }
 
-export function assertMightyRecoveryAllowed(scope: MightyMutationScope, email: string): void {
+export function assertMightyLifecycleMutationAllowed(params: {
+	scope: MightyMutationScope
+	email: string
+	action: string
+	stripeCustomerId?: string | null
+	stripeSubscriptionId?: string | null
+	lastStripeEventId?: string | null
+	lastStripeEventType?: string | null
+}): void {
+	if (!params.scope.ordinaryLifecycleEnabled) {
+		assertMightyMutationAllowed(params.scope, params.email, params.action)
+		return
+	}
+
+	if (!normalizeEmail(params.email)) {
+		throw new MightySafetyError('mighty_authoritative_identity_missing')
+	}
+	if (!params.stripeCustomerId?.trim() || !params.stripeSubscriptionId?.trim()) {
+		throw new MightySafetyError('mighty_authoritative_stripe_identity_required')
+	}
+	if (!params.lastStripeEventId?.trim() || !params.lastStripeEventType?.trim()) {
+		throw new MightySafetyError('mighty_authoritative_stripe_event_required')
+	}
+}
+
+export function assertMightyRecoveryAllowed(
+	scope: MightyMutationScope,
+	email: string,
+	authoritativeStripeIdentity = false,
+): void {
+	if (scope.ordinaryLifecycleEnabled && authoritativeStripeIdentity) {
+		return
+	}
 	assertMightyMutationAllowed(scope, email, 'recover_member')
 }
 
@@ -167,6 +213,9 @@ export function assertIdentityMutationSafe(params: {
 	if (!params.mutationRequired) return
 	if (params.identityClass === 'host') {
 		throw new MightySafetyError('mighty_host_mutation_protected')
+	}
+	if (params.identityClass === 'administrator') {
+		throw new MightySafetyError('mighty_privileged_mutation_protected')
 	}
 	if (params.identityClass === 'review') {
 		throw new MightySafetyError('mighty_identity_review_required')

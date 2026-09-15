@@ -2,6 +2,33 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: STRIPE→MIGHTY LIFECYCLE READINESS — 2026-09-15
+
+`JPV STRIPE→MIGHTY LIFECYCLE READINESS: PASS`
+`LIFECYCLE SAFETY RC: READY FOR OWNER REVIEW`
+`RC BRANCH: codex/mighty-lifecycle-readiness`
+`PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`PRODUCTION CHANGED: NO`
+`SCHEDULER: DISABLED`
+`REAL POPULATION: NOT TOUCHED`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+`LIVE NEW-USER CANARY: NOT AUTHORIZED`
+
+The lifecycle-readiness branch adds and tests the missing safety required
+before population cutover: administrator/staff/owner billing protection,
+explicit webhook-backed ordinary-production scope, Stripe-authoritative paid
+and coupon entitlement, one Mighty access-ready onboarding email, hosted
+invoice recovery links for payment-failure notices, payment recovery on the
+same Mighty identity, and cancellation handling. All new lifecycle evidence is
+synthetic/provider-mocked. No live Mighty or Stripe account was accessed and no
+production scheduler, worker, migration, or provider mutation was run.
+
+The lifecycle candidate is validated but not deployed. The release suite and
+synthetic lifecycle evidence pass; the next gate is owner review and normal
+approval of the exact RC. Keep
+`MIGHTY_ACCESS_SYNC_ENABLED=false`; do not regenerate or mutate the real
+population in this phase.
+
 ## CURRENT PHASE: DEPLOYED + HARDENED + INERT — 2026-09-13
 
 `THREE-ACCOUNT INTEGRATION GATE: PASS`
@@ -38,7 +65,7 @@ enablement, configuration change, or migration was authorized or performed in
 this deployment. The zero-touch operator gate is now complete using synthetic
 fixtures only. The controlling evidence is
 `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
-The release suite passed `197/197` after the synthetic readiness gate was
+The release suite passed `198/198` after the synthetic readiness gate was
 added. The approved RC source
 revision is `d393371ad5e737794e145da4959f67f3b85af0a1`; its hardening baseline
 is `bc176a1ec9e9d029d013a2d909d5969a37e1e337`.
