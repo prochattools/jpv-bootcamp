@@ -1,26 +1,35 @@
 # JPV Mighty zero-touch migration operator runbook
 
-## Exact-email identity binding hardening — 2026-09-15
+## Exact-lookup identity binding V2 — owner review — 2026-09-15
 
-Production is currently `ca8f1b6516994a72187e13eb1f780e1cb6566c5d` and remains
-`DEPLOYED + HARDENED + INERT`. The one authorized diagnostic for
+Production is currently `4d1dd2fc867258ecde6b194b1ecb57a29592977f` and remains
+`DEPLOYED + HARDENED + IDENTITY-BINDING FAIL-CLOSED + INERT`. The authorized
+diagnostic for
 `westhoek@hotmail.com` used only the exact `by_email` endpoint and returned the
 known member ID `41580317` with an empty `email` field. Classify this as
-provider identity ambiguity (`B`), not as an email match.
+provider email masking (`B`), then bind it only through explicit
+`exact_by_email_lookup` evidence.
 
-The runtime identity contract is fail-closed. A returned member is accepted
-only when `normalizeEmail(returned.email)` equals the exact expected email.
-Missing, null, empty, or different email values produce
-`mighty_member_email_conflict`. This assertion applies to exact lookup,
-creation responses, 422 recovery, restore/recovery, cutover manifest input,
-reconciliation classification, grant, revoke, and finalization paths. A stored
-member ID or exact lookup request cannot mask an email conflict. No broad
-member search is an allowed fallback.
+The runtime identity contract has two explicit sources: `provider_email_match`
+for a non-empty matching provider email, and `exact_by_email_lookup` for a
+member returned by the exact normalized `by_email` request. A masked email is
+accepted only with the latter evidence bound to the same normalized request.
+Arbitrary empty/missing email objects still produce
+`mighty_member_email_conflict`; different non-empty emails do too. Create and
+422 recovery paths perform exact post-create/recovery lookup and require the
+same member ID. Cutover apply rechecks exact lookup identity against the
+locked manifest ID before any Plan mutation. No broad member search is an
+allowed fallback.
 
-The provider's empty email response is not treated as proof of identity. Stop
-and review before any Plan read, bootstrap, worker, canary retry, or provider
-data correction. This diagnostic did not read Plans, Spaces, or purchases and
-performed no provider or Stripe mutation.
+No provider email is fabricated or rewritten. The provider payload remains
+masked/absent while the separate identity evidence records the exact lookup
+source. Stop and review before any Plan read, bootstrap, worker, canary retry,
+or provider data correction. This goal has not read Plans, Spaces, or
+purchases and has performed no provider or Stripe mutation.
+
+The V2 release candidate is `codex/mighty-exact-lookup-identity-binding-v2` at
+`f879cab5`, based directly on the deployed production revision. It adds no
+database migration and remains inert until separately deployed and reviewed.
 
 ## Phase A bootstrap runtime release candidate — 2026-09-14
 

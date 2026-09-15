@@ -1,26 +1,28 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PHASE: MIGHTY EXACT-EMAIL IDENTITY BINDING HARDENING — OWNER REVIEW — 2026-09-15
+## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — OWNER REVIEW — 2026-09-15
 
-`PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
-`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION REVISION: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
+`PRODUCTION MODE: DEPLOYED + HARDENED + IDENTITY-BINDING FAIL-CLOSED + INERT`
 `AUTHORIZED IDENTITY: westhoek@hotmail.com`
 `KNOWN MIGHTY MEMBER ID: 41580317`
 `MIGHTY IDENTITY DIAGNOSTIC: B — EMAIL FIELD PRESENT BUT EMPTY`
-`RUNTIME HARDENING: FAIL-CLOSED EMAIL BINDING`
+`RUNTIME HARDENING: EXPLICIT IDENTITY EVIDENCE + FAIL-CLOSED EMAIL BINDING`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
 `REAL POPULATION: NOT INSPECTED`
 `REAL MANIFEST: NOT CREATED`
-`NEXT GATE: OWNER REVIEW OF THE EXACT IDENTITY-HARDENING RC`
+`V2 RC BRANCH: codex/mighty-exact-lookup-identity-binding-v2`
+`V2 RC COMMIT: f879cab5`
+`NEXT GATE: OWNER REVIEW OF THE EXACT V2 RC`
 
 The authorized exact `by_email` lookup returned the known member ID but an
-empty provider email field. This is an ambiguous provider response. The
-identity hardening rejects empty, missing, or different returned emails before
-any Plan read or mutation; member-ID equality cannot override that failure.
-No provider, Stripe, database, user, access, content, bootstrap, or worker
-operation was performed. The canary remains stopped pending review and a
-future separately authorized retry.
+empty provider email field. V2 models this as a masked provider response:
+exact lookup evidence may bind the identity, while arbitrary empty/missing
+email objects remain rejected. Non-empty mismatches and changed locked member
+IDs remain fail-closed. No provider, Stripe, database, user, access, content,
+bootstrap, or worker operation was performed. The canary remains stopped
+pending review and a future separately authorized retry.
 
 ## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
 

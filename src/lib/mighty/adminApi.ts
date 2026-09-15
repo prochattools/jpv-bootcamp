@@ -6,12 +6,23 @@ import { MightySafetyError } from './mutationPolicy'
 export type MightyMember = {
 	id: number | string
 	email?: string | null
+	identityEvidence?: MightyIdentityEvidence
 	member_type?: string | null
 	role?: string | null
 	first_name?: string | null
 	last_name?: string | null
 	permalink?: string | null
 }
+
+export type MightyIdentityEvidence =
+	| {
+		source: 'provider_email_match'
+		expectedEmail: string
+	}
+	| {
+		source: 'exact_by_email_lookup'
+		requestedEmail: string
+	}
 
 export type MightySpace = {
 	id: number | string
@@ -67,12 +78,27 @@ export class MightyMemberIdentityError extends MightySafetyError {
 	}
 }
 
+export class MightyMemberIdentityConflictError extends MightySafetyError {
+	constructor() {
+		super('mighty_member_identity_conflict')
+		this.name = 'MightyMemberIdentityConflictError'
+	}
+}
+
+function bindIdentityEvidence(member: MightyMember, evidence: MightyIdentityEvidence): MightyMember {
+	const { identityEvidence: _providerEvidence, ...providerMember } = member
+	return {
+		...providerMember,
+		identityEvidence: Object.freeze(evidence),
+	}
+}
+
 /**
  * A provider member is safe to use only when its returned email binds to the
- * exact email that initiated the lookup or creation. An absent, empty, or
- * malformed email is ambiguity, not proof of identity. The exact by_email
- * endpoint and a stable member ID are useful evidence, but are not by
- * themselves sufficient to authorize a Plan read or mutation.
+ * exact email that initiated the lookup or creation. A masked email is
+ * acceptable only when the adapter attached evidence from the exact by_email
+ * request for the same normalized email. Arbitrary member objects cannot
+ * manufacture that evidence by omitting their email.
  */
 export function assertMightyMemberMatchesExpectedEmail(
 	member: MightyMember,
@@ -80,8 +106,16 @@ export function assertMightyMemberMatchesExpectedEmail(
 ): MightyMember {
 	const expected = normalizeEmail(expectedEmail)
 	const actual = normalizeEmail(member.email)
-	if (!expected || !actual || actual !== expected) throw new MightyMemberIdentityError()
-	return member
+	if (!expected) throw new MightyMemberIdentityError()
+	if (actual) {
+		if (actual !== expected) throw new MightyMemberIdentityError()
+		return member
+	}
+	if (
+		member.identityEvidence?.source === 'exact_by_email_lookup' &&
+		member.identityEvidence.requestedEmail === expected
+	) return member
+	throw new MightyMemberIdentityError()
 }
 
 type FetchLike = typeof fetch
@@ -195,7 +229,11 @@ export class MightyAdminApi {
 			undefined,
 			true,
 		)
-		return result ? assertMightyMemberMatchesExpectedEmail(result, normalizedEmail) : null
+		if (!result) return null
+		return assertMightyMemberMatchesExpectedEmail(
+			bindIdentityEvidence(result, { source: 'exact_by_email_lookup', requestedEmail: normalizedEmail }),
+			normalizedEmail,
+		)
 	}
 
 	async createMember(params: {
@@ -219,7 +257,18 @@ export class MightyAdminApi {
 			},
 		)
 		if (!result) throw new Error('Mighty member creation returned no member')
-		return assertMightyMemberMatchesExpectedEmail(result, email)
+		const providerMember = normalizeEmail(result.email)
+		if (providerMember) {
+			return assertMightyMemberMatchesExpectedEmail(
+				bindIdentityEvidence(result, { source: 'provider_email_match', expectedEmail: email }),
+				email,
+			)
+		}
+
+		const verifiedMember = await this.findMemberByEmail(email)
+		if (!verifiedMember) throw new MightyMemberIdentityError()
+		if (String(verifiedMember.id) !== String(result.id)) throw new MightyMemberIdentityConflictError()
+		return verifiedMember
 	}
 
 	async findPurchases(memberId: number | string, planId: number | string = this.config.accessPlanId): Promise<MightyPurchase[]> {

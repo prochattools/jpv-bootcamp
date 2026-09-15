@@ -43,6 +43,28 @@ test('manifest rejects a provider member whose email does not bind to the manife
 	)
 })
 
+test('manifest accepts a masked member only with exact by_email evidence and locks the ID', () => {
+	const row = buildCutoverManifestRow(input({
+		email: 'westhoek@hotmail.com',
+		member: {
+			id: 41580317,
+			email: '',
+			role: 'contributor',
+			identityEvidence: { source: 'exact_by_email_lookup', requestedEmail: 'westhoek@hotmail.com' },
+		},
+	}))
+	assert.equal(row.proposedCutoverAction, 'MIGRATE_EXISTING')
+	assert.equal(row.mightyMemberId, '41580317')
+	assert.deepEqual(row.identityEvidence, {
+		source: 'exact_by_email_lookup',
+		requestedEmail: 'westhoek@hotmail.com',
+	})
+	assert.throws(
+		() => buildCutoverManifestRow(input({ email: 'westhoek@hotmail.com', member: { id: 41580317, email: '', role: 'contributor' } })),
+		/mighty_member_email_conflict/,
+	)
+})
+
 test('manifest summary is deterministic and explicitly read-only', () => {
 	const summary = summarizeCutoverManifest([
 		buildCutoverManifestRow(input()),

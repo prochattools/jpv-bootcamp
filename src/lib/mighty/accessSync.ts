@@ -10,6 +10,7 @@ import {
 	createMightyAdminApi,
 	MightyAdminApi,
 	MightyApiError,
+	MightyMemberIdentityConflictError,
 	isDuplicatePlanAssignmentError,
 	type MightyMember,
 } from './adminApi'
@@ -539,7 +540,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 					: { id: memberId, email: params.row.email }
 				if (!member) throw new Error('mighty_member_identity_not_found')
 				assertMightyMemberMatchesExpectedEmail(member, params.row.email)
-				if (String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
+				if (String(member.id) !== String(memberId)) throw new MightyMemberIdentityConflictError()
 			} else {
 				member = await api.findMember(params.row.email)
 				if (member) assertMightyMemberMatchesExpectedEmail(member, params.row.email)
@@ -582,7 +583,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 						assertMightyRecoveryAllowed(mutationScope, params.row.email)
 						const recoveredMember = await api.createMember({ email: params.row.email })
 						assertMightyMemberMatchesExpectedEmail(recoveredMember, params.row.email)
-						if (String(recoveredMember.id) !== memberId) throw new Error('mighty_member_identity_changed')
+						if (String(recoveredMember.id) !== memberId) throw new MightyMemberIdentityConflictError()
 						await api.restoreAccess(memberId, config.accessPlanId)
 					} else if (isDuplicatePlanAssignmentError(error)) {
 						const duplicateVerification = await api.getAccessState(memberId, config.accessPlanId)
@@ -616,7 +617,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 			throw new Error('mighty_member_identity_not_found')
 		}
 		assertMightyMemberMatchesExpectedEmail(member, params.row.email)
-		if (memberId && String(member.id) !== String(memberId)) throw new Error('mighty_member_identity_conflict')
+		if (memberId && String(member.id) !== String(memberId)) throw new MightyMemberIdentityConflictError()
 		memberId = memberId ?? String(member.id)
 	} else if (!memberId) {
 		return { mightyMemberId: null, mightyPurchaseId: purchaseId, welcomeSent: false }

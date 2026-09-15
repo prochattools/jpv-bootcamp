@@ -156,6 +156,67 @@ test('stored member ID cannot mask a returned email mismatch and no Plan read or
 	assert.equal(state.grantCalls, 0)
 })
 
+test('masked exact-lookup identity can proceed through access sync without changing provider email', async () => {
+	const state: FakeState = {
+		member: {
+			id: 41580317,
+			email: '',
+			identityEvidence: { source: 'exact_by_email_lookup', requestedEmail: 'student@example.com' },
+		},
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	const result = await reconcileAccess({ row: row({ email: 'student@example.com', normalizedEmail: 'student@example.com', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: syntheticMutationScope })
+	assert.equal(result.mightyMemberId, '41580317')
+	assert.equal(state.grantCalls, 1)
+	assert.equal(state.member?.email, '')
+})
+
+test('masked member without exact-lookup evidence stops before Plan access', async () => {
+	const state: FakeState = {
+		member: { id: 41580317, email: '' },
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ welcomeRequired: false }), config, api: fakeApi(state), mutationScope: syntheticMutationScope }),
+		/error|mighty_member_email_conflict/,
+	)
+	assert.equal(state.grantCalls, 0)
+})
+
+test('stored member ID conflict remains fail-closed before Plan access', async () => {
+	const state: FakeState = {
+		member: {
+			id: 99,
+			email: '',
+			identityEvidence: { source: 'exact_by_email_lookup', requestedEmail: 'student@example.com' },
+		},
+		purchases: [],
+		memberPlanAccess: false,
+		findMemberCalls: 0,
+		createMemberCalls: 0,
+		grantCalls: 0,
+		revokeCalls: [],
+		revokePlanCalls: [],
+	}
+	await assert.rejects(
+		() => reconcileAccess({ row: row({ mightyMemberId: '41580317', welcomeRequired: false }), config, api: fakeApi(state), mutationScope: syntheticMutationScope }),
+		(error: unknown) => error instanceof MightyAccessSyncCheckpointError && error.code === 'mighty_member_identity_conflict',
+	)
+	assert.equal(state.grantCalls, 0)
+})
+
 test('new-member email mismatch stops before Plan grant', async () => {
 	let grantCalls = 0
 	const api = {
@@ -190,6 +251,33 @@ test('422 recovery email mismatch stops before Plan grant', async () => {
 		(error: unknown) => error instanceof MightyAccessSyncCheckpointError && error.code === 'mighty_member_email_conflict',
 	)
 	assert.equal(grantCalls, 0)
+})
+
+test('422 recovery accepts a masked exact-lookup member only after ID-bound lookup evidence', async () => {
+	let findCalls = 0
+	let grantCalls = 0
+	let accessStateCalls = 0
+	const api = {
+		findMember: async () => {
+			findCalls += 1
+			return findCalls === 1 ? null : {
+				id: 41580317,
+				email: '',
+				identityEvidence: { source: 'exact_by_email_lookup' as const, requestedEmail: 'student@example.com' },
+			}
+		},
+		createMember: async () => { throw new MightyApiError(422, { code: 'duplicate_assignment' }) },
+		getAccessState: async () => {
+			accessStateCalls += 1
+			return { memberId: '41580317', planId: '678', purchases: [], plans: accessStateCalls > 1 ? [{ id: 678 }] : [], memberPlanAccess: accessStateCalls > 1, hasAccess: accessStateCalls > 1 }
+		},
+		restoreAccess: async () => { grantCalls += 1; return { id: 678 } },
+	} as unknown as MightyAdminApi
+
+	const result = await reconcileAccess({ row: row({ welcomeRequired: false }), config, api, mutationScope: syntheticMutationScope })
+	assert.equal(result.mightyMemberId, '41580317')
+	assert.equal(findCalls, 2)
+	assert.equal(grantCalls, 1)
 })
 
 test('denied reconciliation rejects an email mismatch before access reads or revocation', async () => {

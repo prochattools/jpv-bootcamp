@@ -1,6 +1,6 @@
 import { normalizeEmail } from '@/lib/normalize-email'
 
-import { assertMightyMemberMatchesExpectedEmail, type MightyMember, type MightyPlan, type MightyPurchase, type MightySpace } from './adminApi'
+import { assertMightyMemberMatchesExpectedEmail, type MightyIdentityEvidence, type MightyMember, type MightyPlan, type MightyPurchase, type MightySpace } from './adminApi'
 import { STANDARD_JPV_SPACE_NAMES } from './mutationPolicy'
 
 export type CutoverAction =
@@ -37,6 +37,7 @@ export type CutoverManifestRow = {
 	stripeSubscriptionId: string | null
 	mightyMatchState: CutoverMatchState
 	mightyMemberId: string | null
+	identityEvidence: MightyIdentityEvidence | null
 	roleClass: CutoverRoleClass
 	targetPlan: { id: string; present: boolean }
 	otherPlans: Array<{ id: string; name: string | null }>
@@ -134,6 +135,9 @@ export function buildCutoverManifestRow(input: CutoverManifestInput): CutoverMan
 		stripeSubscriptionId: input.stripeSubscriptionId?.trim() || null,
 		mightyMatchState: matchState,
 		mightyMemberId: input.member ? String(input.member.id) : null,
+		identityEvidence: input.member
+			? input.member.identityEvidence ?? { source: 'provider_email_match', expectedEmail: email }
+			: null,
 		roleClass: role,
 		targetPlan: { id: targetPlanId, present: targetPresent },
 		otherPlans,

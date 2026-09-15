@@ -54,6 +54,23 @@ test('dry-run rejects a member whose provider email conflicts with the requested
 	)
 })
 
+test('dry-run accepts a masked exact-lookup member only with bound evidence', () => {
+	const decision = classifyMightyReconciliation(row({
+		email: 'westhoek@hotmail.com',
+		member: {
+			id: 41580317,
+			email: '',
+			role: 'contributor',
+			identityEvidence: { source: 'exact_by_email_lookup', requestedEmail: 'westhoek@hotmail.com' },
+		},
+	}), scope)
+	assert.equal(decision.classification, 'NEEDS_PLAN_GRANT')
+	assert.throws(
+		() => classifyMightyReconciliation(row({ email: 'westhoek@hotmail.com', member: { id: 41580317, email: '', role: 'contributor' } })),
+		/mighty_member_email_conflict/,
+	)
+})
+
 test('dry-run summary is sanitized and explicitly read-only', () => {
 	assert.deepEqual(summarizeMightyReconciliation([
 		classifyMightyReconciliation(row(), scope),
