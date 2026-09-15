@@ -1,5 +1,27 @@
 # JPV Mighty zero-touch migration operator runbook
 
+## Exact-email identity binding hardening — 2026-09-15
+
+Production is currently `ca8f1b6516994a72187e13eb1f780e1cb6566c5d` and remains
+`DEPLOYED + HARDENED + INERT`. The one authorized diagnostic for
+`westhoek@hotmail.com` used only the exact `by_email` endpoint and returned the
+known member ID `41580317` with an empty `email` field. Classify this as
+provider identity ambiguity (`B`), not as an email match.
+
+The runtime identity contract is fail-closed. A returned member is accepted
+only when `normalizeEmail(returned.email)` equals the exact expected email.
+Missing, null, empty, or different email values produce
+`mighty_member_email_conflict`. This assertion applies to exact lookup,
+creation responses, 422 recovery, restore/recovery, cutover manifest input,
+reconciliation classification, grant, revoke, and finalization paths. A stored
+member ID or exact lookup request cannot mask an email conflict. No broad
+member search is an allowed fallback.
+
+The provider's empty email response is not treated as proof of identity. Stop
+and review before any Plan read, bootstrap, worker, canary retry, or provider
+data correction. This diagnostic did not read Plans, Spaces, or purchases and
+performed no provider or Stripe mutation.
+
 ## Phase A bootstrap runtime release candidate — 2026-09-14
 
 The current production lineage is

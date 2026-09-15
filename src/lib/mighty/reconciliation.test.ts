@@ -47,6 +47,13 @@ test('dry-run never proposes a mutation for a missing identity or provider error
 	assert.equal(classifyMightyReconciliation(row({ providerError: 'provider_error_500' }), scope).classification, 'PROVIDER_ERROR')
 })
 
+test('dry-run rejects a member whose provider email conflicts with the requested identity', () => {
+	assert.throws(
+		() => classifyMightyReconciliation(row({ member: { ...member, email: 'other@example.com' } }), scope),
+		/mighty_member_email_conflict/,
+	)
+})
+
 test('dry-run summary is sanitized and explicitly read-only', () => {
 	assert.deepEqual(summarizeMightyReconciliation([
 		classifyMightyReconciliation(row(), scope),

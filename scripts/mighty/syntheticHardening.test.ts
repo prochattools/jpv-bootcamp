@@ -24,7 +24,7 @@ const standardSpaces = ['Activity Feed', 'Chat', 'Course', 'Events', 'JPV Resour
 	.map((name, index) => ({ id: index + 1, name }))
 
 function manifest(overrides: Partial<Parameters<typeof buildCutoverManifestRow>[0]> = {}) {
-	return buildCutoverManifestRow({
+	const input = {
 		email: 'ordinary@example.test',
 		stripeEntitled: true,
 		member: { id: 'member-ordinary', email: 'ordinary@example.test', role: 'contributor' },
@@ -33,7 +33,9 @@ function manifest(overrides: Partial<Parameters<typeof buildCutoverManifestRow>[
 		spaces: standardSpaces,
 		targetPlanId: TARGET_PLAN_ID,
 		...overrides,
-	})
+	}
+	const memberEmail = input.member?.email?.trim() || input.email
+	return buildCutoverManifestRow({ ...input, email: memberEmail })
 }
 
 test('synthetic member matrix fails closed for privilege, ambiguity, and overlapping access', () => {

@@ -1,10 +1,11 @@
 import { normalizeEmail } from '@/lib/normalize-email'
 
 import { getMightyConfig, type MightyConfig } from './config'
+import { MightySafetyError } from './mutationPolicy'
 
 export type MightyMember = {
 	id: number | string
-	email: string
+	email?: string | null
 	member_type?: string | null
 	role?: string | null
 	first_name?: string | null
@@ -57,6 +58,30 @@ export class MightyApiError extends Error {
 		this.providerCode = details.code?.trim() || null
 		this.providerMessage = details.message?.trim() || null
 	}
+}
+
+export class MightyMemberIdentityError extends MightySafetyError {
+	constructor() {
+		super('mighty_member_email_conflict')
+		this.name = 'MightyMemberIdentityError'
+	}
+}
+
+/**
+ * A provider member is safe to use only when its returned email binds to the
+ * exact email that initiated the lookup or creation. An absent, empty, or
+ * malformed email is ambiguity, not proof of identity. The exact by_email
+ * endpoint and a stable member ID are useful evidence, but are not by
+ * themselves sufficient to authorize a Plan read or mutation.
+ */
+export function assertMightyMemberMatchesExpectedEmail(
+	member: MightyMember,
+	expectedEmail: string,
+): MightyMember {
+	const expected = normalizeEmail(expectedEmail)
+	const actual = normalizeEmail(member.email)
+	if (!expected || !actual || actual !== expected) throw new MightyMemberIdentityError()
+	return member
 }
 
 type FetchLike = typeof fetch
@@ -163,13 +188,14 @@ export class MightyAdminApi {
 		const normalizedEmail = normalizeEmail(email)
 		if (!normalizedEmail) throw new Error('A valid email is required to find a Mighty member')
 
-		return this.request<MightyMember>(
+		const result = await this.request<MightyMember>(
 			'GET',
 			`networks/${numericId(this.config.networkId)}/members/by_email`,
 			{ email: normalizedEmail },
 			undefined,
 			true,
 		)
+		return result ? assertMightyMemberMatchesExpectedEmail(result, normalizedEmail) : null
 	}
 
 	async createMember(params: {
@@ -193,7 +219,7 @@ export class MightyAdminApi {
 			},
 		)
 		if (!result) throw new Error('Mighty member creation returned no member')
-		return result
+		return assertMightyMemberMatchesExpectedEmail(result, email)
 	}
 
 	async findPurchases(memberId: number | string, planId: number | string = this.config.accessPlanId): Promise<MightyPurchase[]> {

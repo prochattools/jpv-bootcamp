@@ -1,6 +1,6 @@
 import { normalizeEmail } from '@/lib/normalize-email'
 
-import type { MightyMember, MightyPlan, MightyPurchase, MightySpace } from './adminApi'
+import { assertMightyMemberMatchesExpectedEmail, type MightyMember, type MightyPlan, type MightyPurchase, type MightySpace } from './adminApi'
 import { STANDARD_JPV_SPACE_NAMES } from './mutationPolicy'
 
 export type CutoverAction =
@@ -75,6 +75,7 @@ function purchasePlanId(purchase: MightyPurchase): string {
 export function buildCutoverManifestRow(input: CutoverManifestInput): CutoverManifestRow {
 	const email = normalizeEmail(input.email)
 	if (!email) throw new Error('cutover_manifest_email_required')
+	if (input.member) assertMightyMemberMatchesExpectedEmail(input.member, email)
 	const targetPlanId = String(input.targetPlanId)
 	const matchState: CutoverManifestRow['mightyMatchState'] = input.providerError
 		? 'PROVIDER_UNCERTAIN'
