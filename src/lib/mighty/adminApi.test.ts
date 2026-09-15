@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assertMightyMemberMatchesExpectedEmail, isDuplicatePlanAssignmentError, MightyAdminApi, MightyApiError, MightyMemberIdentityError, type MightyConfig } from './adminApi'
+import { assertMightyMemberMatchesExpectedEmail, isDuplicatePlanAssignmentError, MightyAdminApi, MightyApiError, MightyMemberIdentityConflictError, MightyMemberIdentityError, type MightyConfig } from './adminApi'
 
 const config: MightyConfig = {
 	apiBaseUrl: 'https://api.mn.co/admin/v1',
@@ -44,6 +44,10 @@ test('findMember prefers the exact-email lookup when the member is absent from t
 		id: 44,
 		email: 'student@example.com',
 		member_type: 'full',
+		identityEvidence: {
+			source: 'exact_by_email_lookup',
+			requestedEmail: 'student@example.com',
+		},
 	})
 })
 
@@ -58,7 +62,7 @@ test('findMemberByEmail uses Mighty exact-email lookup and treats absent members
 	assert.match(requestUrl, /\/members\/by_email\?email=student%40example\.com$/)
 })
 
-test('member identity binding accepts only the normalized expected email', () => {
+test('member identity binding accepts a normalized provider email and rejects arbitrary masked members', () => {
 	assert.doesNotThrow(() => assertMightyMemberMatchesExpectedEmail({ id: 1, email: '  STUDENT@Example.com ' }, 'student@example.com'))
 	assert.throws(
 		() => assertMightyMemberMatchesExpectedEmail({ id: 1, email: 'other@example.com' }, 'student@example.com'),
@@ -70,20 +74,32 @@ test('member identity binding accepts only the normalized expected email', () =>
 			(error: unknown) => error instanceof MightyMemberIdentityError && error.code === 'mighty_member_email_conflict',
 		)
 	}
+	assert.doesNotThrow(() => assertMightyMemberMatchesExpectedEmail({
+		id: 1,
+		email: '',
+		identityEvidence: { source: 'exact_by_email_lookup', requestedEmail: 'student@example.com' },
+	}, 'student@example.com'))
 })
 
-test('findMember rejects a provider member whose email is different or absent', async () => {
-	for (const providerMember of [
-		{ id: 44, email: 'other@example.com', member_type: 'full' },
-		{ id: 44, email: '', member_type: 'full' },
-		{ id: 44, member_type: 'full' },
-	]) {
-		const api = new MightyAdminApi(config, async () => response(providerMember))
-		await assert.rejects(
-			() => api.findMember('student@example.com'),
-			(error: unknown) => error instanceof MightyMemberIdentityError && error.code === 'mighty_member_email_conflict',
-		)
+test('exact by_email lookup accepts masked provider email with bound lookup evidence', async () => {
+	for (const maskedEmail of ['', null, undefined]) {
+		const api = new MightyAdminApi(config, async () => response({ id: 44, ...(maskedEmail === undefined ? {} : { email: maskedEmail }), member_type: 'full' }))
+		const member = await api.findMemberByEmail(' Student@Example.com ')
+		assert.equal(member?.id, 44)
+		assert.equal(member?.email ?? '', '')
+		assert.deepEqual(member?.identityEvidence, {
+			source: 'exact_by_email_lookup',
+			requestedEmail: 'student@example.com',
+		})
 	}
+})
+
+test('exact by_email lookup rejects a different non-empty provider email', async () => {
+	const api = new MightyAdminApi(config, async () => response({ id: 44, email: 'other@example.com', member_type: 'full' }))
+	await assert.rejects(
+		() => api.findMember('student@example.com'),
+		(error: unknown) => error instanceof MightyMemberIdentityError && error.code === 'mighty_member_email_conflict',
+	)
 })
 
 test('provider requests include the required User-Agent header', async () => {
@@ -101,7 +117,7 @@ test('createMember disables Mighty welcome email and grant uses the documented q
 	const calls: Array<{ url: string; method: string; body?: string }> = []
 	const api = new MightyAdminApi(config, async (input, init) => {
 		calls.push({ url: String(input), method: init?.method ?? 'GET', body: init?.body as string | undefined })
-		if (init?.method === 'POST' && String(input).includes('/members')) {
+		if (init?.method === 'POST' && String(input).endsWith('/members')) {
 			return response({ id: 11, email: 'student@example.com' }, 201)
 		}
 		return response({ id: 678, name: 'JPV Access' })
@@ -113,6 +129,37 @@ test('createMember disables Mighty welcome email and grant uses the documented q
 	assert.match(calls[0].body ?? '', /"member_type":"full"/)
 	assert.match(calls[0].body ?? '', /"send_welcome_email":false/)
 	assert.match(calls[1].url, /\/plans\/678\/members\?user_id=11$/)
+})
+
+test('createMember verifies a masked creation response through exact by_email and preserves the provider email', async () => {
+	const calls: string[] = []
+	const api = new MightyAdminApi(config, async (input, init) => {
+		calls.push(`${init?.method ?? 'GET'} ${String(input)}`)
+		if (init?.method === 'POST') return response({ id: 41580317, email: '' }, 201)
+		return response({ id: 41580317, email: null, member_type: 'full' })
+	})
+
+	const member = await api.createMember({ email: 'westhoek@hotmail.com' })
+	assert.equal(member.id, 41580317)
+	assert.equal(member.email, null)
+	assert.deepEqual(member.identityEvidence, {
+		source: 'exact_by_email_lookup',
+		requestedEmail: 'westhoek@hotmail.com',
+	})
+	assert.equal(calls.length, 2)
+	assert.match(calls[1], /\/members\/by_email\?email=westhoek%40hotmail\.com$/)
+})
+
+test('createMember rejects a masked response when exact lookup returns a different member ID', async () => {
+	const api = new MightyAdminApi(config, async (_input, init) => {
+		if (init?.method === 'POST') return response({ id: 41580317, email: '' }, 201)
+		return response({ id: 99, email: '' })
+	})
+
+	await assert.rejects(
+		() => api.createMember({ email: 'westhoek@hotmail.com' }),
+		(error: unknown) => error instanceof MightyMemberIdentityConflictError && error.code === 'mighty_member_identity_conflict',
+	)
 })
 
 test('createMember rejects an identity-mismatched provider response before any later grant', async () => {

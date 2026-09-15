@@ -23,7 +23,7 @@ function row(email = 'student@example.com'): CutoverManifestRow {
 	return buildCutoverManifestRow({
 		email,
 		stripeEntitled: true,
-		member: { id: 41, email, role: 'contributor' },
+		member: { id: email === 'student@example.com' ? 41 : 42, email, role: 'contributor' },
 		plans: [],
 		purchases: [],
 		spaces: [],
@@ -44,6 +44,7 @@ test('runner is bounded, idempotent, and stops on the first provider error witho
 	let fail = true
 	let providerHasPlan = false
 	const adapter = {
+		findMemberByEmail: async (email: string) => ({ id: email === 'student@example.com' ? '41' : '42', email }),
 		createMember: async (email: string) => ({ id: email === 'student@example.com' ? '41' : '42' }),
 		grantPlan: async (memberId: string) => {
 			calls.push(`grant:${memberId}`)
@@ -77,6 +78,7 @@ test('definite grant rejection stops safely without verification or rollback', a
 		dryRun: false,
 		store,
 		adapter: {
+			findMemberByEmail: async (email: string) => ({ id: '41', email }),
 			createMember: async () => ({ id: 'never-created' }),
 			grantPlan: async () => { calls.push('grant'); throw new Error('provider_rejected_before_mutation') },
 			verifyPlan: async () => { calls.push('verify'); return false },
@@ -99,6 +101,7 @@ test('verification failure after a possible successful grant stays review-only',
 		dryRun: false,
 		store,
 		adapter: {
+			findMemberByEmail: async (email: string) => ({ id: '41', email }),
 			createMember: async () => ({ id: 'never-created' }),
 			grantPlan: async () => { calls.push('grant') },
 			verifyPlan: async () => { calls.push('verify'); return false },
@@ -122,6 +125,7 @@ test('definite member-creation rejection records no provider ID and never grants
 		dryRun: false,
 		store,
 		adapter: {
+			findMemberByEmail: async () => null,
 			createMember: async () => { calls.push('create'); throw new Error('member_creation_rejected') },
 			grantPlan: async () => { calls.push('grant') },
 			verifyPlan: async () => { calls.push('verify'); return false },
@@ -145,7 +149,7 @@ test('runner skips identity, overlap, and privileged actions', async () => {
 		buildCutoverManifestRow({ email: 'unknown@example.com', stripeEntitled: true, member: { id: 1, email: 'unknown@example.com', role: null }, plans: [], purchases: [], spaces: [], targetPlanId: 2000039 }),
 		buildCutoverManifestRow({ email: 'overlap@example.com', stripeEntitled: true, member: { id: 2, email: 'overlap@example.com', role: 'contributor' }, plans: [], purchases: [], spaces: [{ id: 1, name: 'FIRST FOUNDATION' }], targetPlanId: 2000039 }),
 	]
-	const result = await runCutoverBatch({ rows: skipped, batchSize: 10, dryRun: false, store, adapter: { createMember: async () => ({ id: 'nope' }), grantPlan: async () => { throw new Error('must_not_call') }, verifyPlan: async () => false }, planId: '2000039', mutationScope: syntheticScope, currentEntitlement: entitlementRecheck })
+	const result = await runCutoverBatch({ rows: skipped, batchSize: 10, dryRun: false, store, adapter: { findMemberByEmail: async () => null, createMember: async () => ({ id: 'nope' }), grantPlan: async () => { throw new Error('must_not_call') }, verifyPlan: async () => false }, planId: '2000039', mutationScope: syntheticScope, currentEntitlement: entitlementRecheck })
 	assert.equal(result.mutationPerformed, false)
 	assert.equal(result.processed.length, 0)
 })
@@ -154,13 +158,15 @@ test('new-subscriber failure preserves the created ID for review and never delet
 	const store = createMemoryCutoverCheckpointStore()
 	const calls: string[] = []
 	let fail = true
+	let createdMemberId: string | null = null
 	const result = await runCutoverBatch({
 		rows: [buildCutoverManifestRow({ email: 'new@example.com', stripeEntitled: true, member: null, plans: [], purchases: [], spaces: [], targetPlanId: 2000039 })],
 		batchSize: 1,
 		dryRun: false,
 		store,
 		adapter: {
-			createMember: async () => { calls.push('create'); return { id: '99' } },
+			findMemberByEmail: async () => createdMemberId ? { id: createdMemberId, email: 'new@example.com' } : null,
+			createMember: async () => { calls.push('create'); createdMemberId = '99'; return { id: '99' } },
 			grantPlan: async () => { calls.push('grant'); if (fail) throw new Error('provider_timeout') },
 			verifyPlan: async () => true,
 		},
@@ -181,6 +187,7 @@ test('new-subscriber failure preserves the created ID for review and never delet
 		dryRun: false,
 		store,
 		adapter: {
+			findMemberByEmail: async () => ({ id: '99', email: 'new@example.com' }),
 			createMember: async () => { calls.push('duplicate-create'); return { id: '100' } },
 			grantPlan: async (memberId: string) => { calls.push(`resume-grant:${memberId}`) },
 			verifyPlan: async (memberId: string) => memberId === '99',
@@ -215,6 +222,7 @@ test('runner rejects an empty manifest and unauthorized identities before provid
 			dryRun: false,
 			store,
 			adapter: {
+				findMemberByEmail: async (email: string) => ({ id: '41', email }),
 				createMember: async () => { providerCalls += 1; return { id: '1' } },
 				grantPlan: async () => { providerCalls += 1 },
 				verifyPlan: async () => false,
@@ -250,6 +258,7 @@ test('runner stops without mutation when a checkpoint identity changes', async (
 		dryRun: false,
 		store,
 		adapter: {
+			findMemberByEmail: async (email: string) => ({ id: '41', email }),
 			createMember: async () => { providerCalls += 1; return { id: 'new-id' } },
 			grantPlan: async () => { providerCalls += 1 },
 			verifyPlan: async () => false,
@@ -262,4 +271,51 @@ test('runner stops without mutation when a checkpoint identity changes', async (
 	assert.equal(result.mutationPerformed, false)
 	assert.equal(providerCalls, 0)
 	assert.equal(store.get('student@example.com')?.lastError, 'cutover_identity_changed_since_checkpoint')
+})
+
+test('cutover rechecks exact lookup identity and stops on a locked member-ID conflict', async () => {
+	const row = buildCutoverManifestRow({
+		email: 'westhoek@hotmail.com',
+		stripeEntitled: true,
+		member: {
+			id: 41580317,
+			email: '',
+			role: 'contributor',
+			identityEvidence: { source: 'exact_by_email_lookup', requestedEmail: 'westhoek@hotmail.com' },
+		},
+		plans: [],
+		purchases: [],
+		spaces: [],
+		targetPlanId: 2000039,
+	})
+	const store = createMemoryCutoverCheckpointStore()
+	let grantCalls = 0
+	const result = await runCutoverBatch({
+		rows: [row],
+		batchSize: 1,
+		dryRun: false,
+		store,
+		adapter: {
+			findMemberByEmail: async () => ({
+				id: 99,
+				email: '',
+				identityEvidence: { source: 'exact_by_email_lookup', requestedEmail: 'westhoek@hotmail.com' },
+			}),
+			createMember: async () => ({ id: 'unexpected' }),
+			grantPlan: async () => { grantCalls += 1 },
+			verifyPlan: async () => true,
+		},
+		planId: '2000039',
+		mutationScope: {
+			...syntheticScope,
+			allowedEmails: new Set([...syntheticScope.allowedEmails, 'westhoek@hotmail.com']),
+			roleOverrides: new Map([...syntheticScope.roleOverrides, ['westhoek@hotmail.com', 'ordinary']]),
+		},
+		currentEntitlement: entitlementRecheck,
+	})
+	assert.equal(result.stoppedOnError, true)
+	assert.equal(result.mutationPerformed, false)
+	assert.equal(grantCalls, 0)
+	assert.equal(store.get('westhoek@hotmail.com')?.status, 'REVIEW_REQUIRED')
+	assert.equal(store.get('westhoek@hotmail.com')?.lastError, 'mighty_member_identity_conflict')
 })

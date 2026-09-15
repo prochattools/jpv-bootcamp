@@ -134,7 +134,7 @@ test('non-dry-run execution requires an entitlement re-check callback', async ()
 				allowNewMemberCreation: true,
 				roleOverrides: new Map(),
 			},
-			adapter: { createMember: async () => ({ id: 'a' }), grantPlan: async () => undefined, verifyPlan: async () => true },
+			adapter: { findMemberByEmail: async (email) => ({ id: 'a', email }), createMember: async () => ({ id: 'a' }), grantPlan: async () => undefined, verifyPlan: async () => true },
 		}),
 		/cutover_current_entitlement_recheck_required/,
 	)
@@ -187,6 +187,7 @@ test('synthetic operator rehearsal completes ordinary access, stops on timeout, 
 	} as const
 	const store = createMemoryCutoverCheckpointStore()
 	let createCalls = 0
+	let createdMemberId: string | null = null
 	let firstGrant = true
 	const first = await runCutoverBatch({
 		rows: [existingRow, newRow],
@@ -197,7 +198,10 @@ test('synthetic operator rehearsal completes ordinary access, stops on timeout, 
 		mutationScope: scope,
 		currentEntitlement: async (row) => row.stripeEntitlement,
 		adapter: {
-			createMember: async () => { createCalls += 1; return { id: 'mighty-b' } },
+			findMemberByEmail: async (email) => email === 'member-a@example.test'
+				? { id: 'mighty-a', email }
+				: createdMemberId ? { id: createdMemberId, email } : null,
+			createMember: async () => { createCalls += 1; createdMemberId = 'mighty-b'; return { id: 'mighty-b' } },
 			grantPlan: async (memberId) => { if (memberId === 'mighty-b' && firstGrant) { firstGrant = false; throw new Error('provider_timeout') } },
 			verifyPlan: async () => true,
 		},
@@ -216,6 +220,7 @@ test('synthetic operator rehearsal completes ordinary access, stops on timeout, 
 		mutationScope: scope,
 		currentEntitlement: async (row) => row.stripeEntitlement,
 		adapter: {
+			findMemberByEmail: async (email) => ({ id: 'mighty-b', email }),
 			createMember: async () => { throw new Error('duplicate_create_forbidden') },
 			grantPlan: async () => undefined,
 			verifyPlan: async () => true,
@@ -249,6 +254,7 @@ test('cutover runner stops on entitlement mismatch without touching the provider
 		},
 		currentEntitlement: async () => 'DENIED',
 		adapter: {
+			findMemberByEmail: async (email) => ({ id: 'a', email }),
 			createMember: async () => { providerCalls += 1; return { id: 'unexpected' } },
 			grantPlan: async () => { providerCalls += 1 },
 			verifyPlan: async () => true,

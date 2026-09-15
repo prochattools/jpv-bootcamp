@@ -1,6 +1,7 @@
 import { normalizeEmail } from '@/lib/normalize-email'
 
 import type { CutoverAction, CutoverManifestRow } from './cutoverManifest'
+import { assertMightyMemberMatchesExpectedEmail, type MightyMember } from './adminApi'
 import { JPV_MIGHTY_ACCESS_PLAN_ID } from './config'
 import {
 	assertMightyMutationAllowed,
@@ -25,6 +26,7 @@ export type CutoverCheckpointStore = {
 }
 
 export type CutoverMutationAdapter = {
+	findMemberByEmail(email: string): Promise<MightyMember | null>
 	createMember(email: string): Promise<{ id: string }>
 	grantPlan(memberId: string, planId: string): Promise<void>
 	verifyPlan(memberId: string, planId: string): Promise<boolean>
@@ -57,6 +59,30 @@ function mutableAction(action: CutoverAction): boolean {
 	return action === 'MIGRATE_EXISTING' || action === 'CREATE_NEW_AT_CUTOVER'
 }
 
+function assertManifestIdentityEvidence(row: CutoverManifestRow): void {
+	if (!row.mightyMemberId) return
+	const email = normalizeEmail(row.email)
+	const evidence = row.identityEvidence
+	if (!email || !evidence) throw new Error('cutover_identity_evidence_required')
+	if (evidence.source === 'exact_by_email_lookup' && evidence.requestedEmail !== email) {
+		throw new Error('cutover_identity_evidence_email_mismatch')
+	}
+	if (evidence.source === 'provider_email_match' && evidence.expectedEmail !== email) {
+		throw new Error('cutover_identity_evidence_email_mismatch')
+	}
+}
+
+async function assertProviderMemberMatchesLockedIdentity(
+	adapter: CutoverMutationAdapter,
+	row: CutoverManifestRow,
+	memberId: string,
+): Promise<void> {
+	const member = await adapter.findMemberByEmail(row.email)
+	if (!member) throw new Error('cutover_member_identity_not_found')
+	assertMightyMemberMatchesExpectedEmail(member, row.email)
+	if (String(member.id) !== memberId) throw new Error('mighty_member_identity_conflict')
+}
+
 export function planCutoverBatch(rows: CutoverManifestRow[], limit: number): CutoverManifestRow[] {
 	if (!Number.isInteger(limit) || limit <= 0) throw new Error('cutover_batch_limit_must_be_positive')
 	if (limit > MAX_CUTOVER_BATCH_SIZE) throw new Error('cutover_batch_limit_exceeds_approved_maximum')
@@ -86,6 +112,7 @@ export async function runCutoverBatch(params: {
 		if (!email) throw new Error('cutover_manifest_identity_required')
 		if (seenEmails.has(email)) throw new Error('cutover_manifest_duplicate_identity')
 		seenEmails.add(email)
+		assertManifestIdentityEvidence(row)
 		assertMightyMutationAllowed(mutationScope, row.email, 'cutover')
 	}
 	const processed: CutoverCheckpoint[] = []
@@ -142,9 +169,22 @@ export async function runCutoverBatch(params: {
 		params.store.put(started)
 		let memberId = resumedMemberId
 		try {
+			if (memberId) {
+				await assertProviderMemberMatchesLockedIdentity(adapter, row, memberId)
+			} else {
+				const existingProviderMember = await adapter.findMemberByEmail(row.email)
+				if (existingProviderMember) {
+					assertMightyMemberMatchesExpectedEmail(existingProviderMember, row.email)
+					const review = checkpoint(row.email, 'REVIEW_REQUIRED', String(existingProviderMember.id), 'cutover_member_appeared_after_manifest')
+					params.store.put(review)
+					processed.push(review)
+					return { dryRun: false, processed, stoppedOnError: true, mutationPerformed: false }
+				}
+			}
 			if (!memberId) {
 				memberId = (await adapter.createMember(row.email)).id
 				mutationPerformed = true
+				await assertProviderMemberMatchesLockedIdentity(adapter, row, memberId)
 			}
 			mutationPerformed = true
 			// Treat an attempted provider write as an uncertain mutation until a
