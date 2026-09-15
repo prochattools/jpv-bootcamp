@@ -2,6 +2,25 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: STRIPE→MIGHTY LIFECYCLE READINESS — OWNER REVIEW — 2026-09-15
+
+`JPV STRIPE→MIGHTY LIFECYCLE READINESS: PASS`
+`LIFECYCLE SAFETY RC: READY FOR OWNER REVIEW`
+`RC BRANCH: codex/mighty-lifecycle-readiness-rc`
+`PRODUCTION REVISION: 03b78c550d09d5b155ddaf68b826869dc64973bb`
+`PRODUCTION CHANGED: NO`
+`SCHEDULER: DISABLED`
+`REAL POPULATION: NOT TOUCHED`
+`REAL MEMBER MIGRATION: NOT AUTHORIZED`
+
+The lifecycle safety controls are validated on a clean production-lineage RC.
+Synthetic/provider-mocked evidence covers privileged protection, paid and
+coupon entitlement, new-subscriber onboarding, payment failure and recovery,
+cancellation, idempotency, and safe email rendering. The exact RC is pushed
+for owner review and is not deployed. No live Mighty or Stripe account was
+accessed and no production scheduler, worker, migration, or provider mutation
+was run.
+
 ## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — OWNER REVIEW — 2026-09-15
 
 `PRODUCTION REVISION: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
@@ -63,7 +82,7 @@ worker finalization is guarded.
 
 The RC was validated only with synthetic/local tests. No live Stripe or Mighty
 operation, deployment, migration, scheduler execution, worker execution, or
-user/data change occurred. The release suite target is `198/198`; deployment
+user/data change occurred. The release suite target is `199/199`; deployment
 and any live Phase A bootstrap remain separately unauthorized.
 
 ## CURRENT PHASE: PRODUCTION MIGHTY MIGRATION PREFLIGHT — BLOCKED — 2026-09-14

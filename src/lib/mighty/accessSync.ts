@@ -2,7 +2,6 @@ import type Stripe from 'stripe'
 
 import prisma from '@/libs/prisma'
 import { normalizeEmail } from '@/lib/normalize-email'
-import { buildMemberForgotPasswordUrl } from '@/lib/memberAuthUrls'
 import { MIGHTY_STUDENT_LOGIN_URL } from './studentLogin'
 
 import {
@@ -18,8 +17,8 @@ import { getMightyConfig, type MightyConfig } from './config'
 import { deriveMightyDesiredAccess, type MightyDesiredAccess } from './entitlement'
 import {
 	assertIdentityMutationSafe,
+	assertMightyLifecycleMutationAllowed,
 	assertMightyMemberCreationAllowed,
-	assertMightyMutationAllowed,
 	assertMightyMutationRuntimeReady,
 	assertMightyRecoveryAllowed,
 	classifyMightyIdentity,
@@ -530,6 +529,12 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 	const mutationScope = params.mutationScope ?? getMightyMutationScope()
 	let memberId = params.row.mightyMemberId
 	let purchaseId = params.row.mightyPurchaseId
+	const authoritativeStripeIdentity = Boolean(
+		params.row.stripeCustomerId?.trim() &&
+		params.row.stripeSubscriptionId?.trim() &&
+		params.row.lastStripeEventId?.trim() &&
+		params.row.lastStripeEventType?.trim(),
+	)
 
 	if (params.row.desiredAccess === 'ALLOWED') {
 		try {
@@ -546,7 +551,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 				if (member) assertMightyMemberMatchesExpectedEmail(member, params.row.email)
 				if (!member) {
 					assertMightyMutationRuntimeReady(mutationScope)
-					assertMightyMemberCreationAllowed(mutationScope, params.row.email)
+					assertMightyMemberCreationAllowed(mutationScope, params.row.email, authoritativeStripeIdentity)
 					try {
 						member = await api.createMember({ email: params.row.email })
 						assertMightyMemberMatchesExpectedEmail(member, params.row.email)
@@ -572,7 +577,18 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 					plans: currentState.plans,
 					scope: mutationScope,
 				})
-				assertMightyMutationAllowed(mutationScope, params.row.email, 'grant_plan')
+				if (identityClass === 'host' || identityClass === 'administrator') {
+					return { mightyMemberId: memberId, mightyPurchaseId: purchaseId, welcomeSent: false }
+				}
+				assertMightyLifecycleMutationAllowed({
+					scope: mutationScope,
+					email: params.row.email,
+					action: 'grant_plan',
+					stripeCustomerId: params.row.stripeCustomerId,
+					stripeSubscriptionId: params.row.stripeSubscriptionId,
+					lastStripeEventId: params.row.lastStripeEventId,
+					lastStripeEventType: params.row.lastStripeEventType,
+				})
 				if (mutationScope.enforce) {
 					assertIdentityMutationSafe({ identityClass, desiredAccess: 'ALLOWED', mutationRequired: true })
 				}
@@ -580,7 +596,7 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 					await api.restoreAccess(memberId, config.accessPlanId)
 				} catch (error) {
 					if (error instanceof MightyApiError && error.status === 404) {
-						assertMightyRecoveryAllowed(mutationScope, params.row.email)
+						assertMightyRecoveryAllowed(mutationScope, params.row.email, authoritativeStripeIdentity)
 						const recoveredMember = await api.createMember({ email: params.row.email })
 						assertMightyMemberMatchesExpectedEmail(recoveredMember, params.row.email)
 						if (String(recoveredMember.id) !== memberId) throw new MightyMemberIdentityConflictError()
@@ -635,8 +651,19 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 		plans: currentState.plans,
 		scope: mutationScope,
 	})
+	if (identityClass === 'host' || identityClass === 'administrator') {
+		return { mightyMemberId: memberId, mightyPurchaseId: purchaseId, welcomeSent: false }
+	}
 	assertMightyMutationRuntimeReady(mutationScope)
-	assertMightyMutationAllowed(mutationScope, params.row.email, 'revoke_plan')
+	assertMightyLifecycleMutationAllowed({
+		scope: mutationScope,
+		email: params.row.email,
+		action: 'revoke_plan',
+		stripeCustomerId: params.row.stripeCustomerId,
+		stripeSubscriptionId: params.row.stripeSubscriptionId,
+		lastStripeEventId: params.row.lastStripeEventId,
+		lastStripeEventType: params.row.lastStripeEventType,
+	})
 	if (mutationScope.enforce) {
 		assertIdentityMutationSafe({ identityClass, desiredAccess: 'DENIED', mutationRequired: true })
 	}
@@ -661,11 +688,10 @@ export async function reconcileAccess(params: ReconcileInput): Promise<{
 async function sendMightyWelcome(row: AccessSyncRow): Promise<void> {
 	const { sendWelcomeEmail } = await import('@/lib/email')
 	const plan = 'jpv_bootcamp_membership' as const
-	const portalUrl = process.env.PORTAL_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://jpvbootcamp.com/portal'
 	await sendWelcomeEmail({
 		to: row.email,
 		plan,
-		resetUrl: buildMemberForgotPasswordUrl(portalUrl),
+		resetUrl: MIGHTY_STUDENT_LOGIN_URL,
 		credentials: null,
 		meta: {
 			templateKey: 'membership_access_ready',
@@ -676,6 +702,7 @@ async function sendMightyWelcome(row: AccessSyncRow): Promise<void> {
 			customerId: row.stripeCustomerId,
 			source: 'webhook',
 			loginUrl: MIGHTY_STUDENT_LOGIN_URL,
+			mightyAccessReady: true,
 			dedupeKey: `${row.stripeSubscriptionId ?? row.normalizedEmail}:mighty-welcome`,
 			stackHint: 'lib/mighty/accessSync:sendMightyWelcome',
 		},
@@ -693,13 +720,15 @@ function nextAttempt(attempt: number): Date {
 
 async function claimRows(
 	limit: number,
-	allowedEmails: ReadonlySet<string>,
-	scopedEmails: readonly string[] | undefined,
+	scope: MightyMutationScope,
 ): Promise<AccessSyncRow[]> {
 	const now = new Date()
+	const where = (scope.ordinaryLifecycleEnabled
+		? { stripeCustomerId: { not: null }, stripeSubscriptionId: { not: null } }
+		: { normalizedEmail: { in: [...scope.allowedEmails] } }) as Parameters<typeof prisma.mightyAccessSync.findMany>[0]['where']
 	const candidates = await prisma.mightyAccessSync.findMany({
 		where: {
-			normalizedEmail: { in: [...(scopedEmails ?? allowedEmails)] },
+			...where,
 			OR: [
 				{ syncStatus: 'pending', OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
 				{ syncStatus: 'failed', OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
@@ -744,9 +773,9 @@ export async function processMightyAccessSync(limit = 25, emails?: readonly stri
 	if (mutationScope.liveTestOnly && emails === undefined) {
 		throw new MightySafetyError('mighty_worker_scope_required')
 	}
-	const scopedEmails = normalizeMightyAccessSyncScope(emails, mutationScope.allowedEmails)
+	if (emails !== undefined) normalizeMightyAccessSyncScope(emails, mutationScope.allowedEmails)
 	const api = createMightyAdminApi(config)
-	const rows = await claimRows(limit, mutationScope.allowedEmails, scopedEmails)
+	const rows = await claimRows(limit, mutationScope)
 	let succeeded = 0
 	let failed = 0
 	let allowed = 0

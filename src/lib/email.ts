@@ -12,6 +12,7 @@ import prisma from '@/libs/prisma'
 import crypto from 'crypto'
 import { redactEmail } from '@/lib/log-redact'
 import { assertStagingRecipientAllowed as canonicalStagingGuard } from '@/lib/staging-email-guard'
+import { buildMightyAccessReadyEmailContent } from '@/lib/mighty/accessReadyEmail'
 
 // Canonical Resend helpers live in this module; server routes call these functions to send email.
 let resendClient: Resend | null = null
@@ -47,6 +48,7 @@ type EmailAttemptMeta = {
 	dedupeKey?: string | null
 	stackHint?: string
 	loginUrl?: string | null
+	mightyAccessReady?: boolean
 }
 
 function logEmailAttempt(params: {
@@ -160,13 +162,23 @@ type WelcomeEmailContent = {
 }
 
 function buildWelcomeEmailContent(params: {
+	email?: string
 	plan: Plan
 	resetUrl: string
 	loginUrl?: string | null
 	variant: MembershipEmailVariant
 	credentials?: { email: string; password: string } | null
+	mightyAccessReady?: boolean
 }): WelcomeEmailContent {
 	const { email: emailConfig } = getServerConfig()
+	if (params.mightyAccessReady) {
+		return buildMightyAccessReadyEmailContent({
+			email: params.email ?? '',
+			loginUrl: params.loginUrl ?? emailConfig.portalUrl,
+			from: emailConfig.from,
+			replyTo: emailConfig.replyTo,
+		})
+	}
 	const introLine = getMembershipEmailIntro({ plan: params.plan, variant: params.variant })
 	const isUpgrade = params.variant === 'upgrade'
 
@@ -466,7 +478,15 @@ function buildSendParams(params: {
 		const variant = (payload.variant as MembershipEmailVariant | undefined) ?? 'welcome'
 		const credentials = payload.credentials as { email: string; password: string } | null | undefined
 		const loginUrl = payload.loginUrl as string | null | undefined
-		const content = buildWelcomeEmailContent({ plan, resetUrl, loginUrl, variant, credentials })
+		const content = buildWelcomeEmailContent({
+			email: recipient,
+			plan,
+			resetUrl,
+			loginUrl,
+			variant,
+			credentials,
+			mightyAccessReady: payload.mightyAccessReady === true,
+		})
 		return {
 			from: content.from,
 			to: [recipient],
@@ -622,6 +642,7 @@ export async function sendWelcomeEmail({
 			customerId: meta?.customerId ?? null,
 			credentials: credentials ?? null,
 			loginUrl: meta?.loginUrl ?? null,
+			mightyAccessReady: meta?.mightyAccessReady === true,
 		},
 		idempotencyKey,
 	})

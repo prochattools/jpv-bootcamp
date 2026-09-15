@@ -634,6 +634,8 @@ async function run() {
       payload.docs('payload_email_events').filter((emailEvent) => emailEvent.templateKey === 'billing-payment-failed').length,
       1
     )
+    const failedPaymentEmail = payload.docs('payload_email_events').find((emailEvent) => emailEvent.templateKey === 'billing-payment-failed')
+    assert.equal((failedPaymentEmail?.metadata as Record<string, unknown> | undefined)?.billingUrl, 'https://stripe.example/invoice')
     assert.equal(
       payload.docs('payload_member_security_events').filter((securityEvent) => securityEvent.eventType === 'billing_payment_failed').length,
       1

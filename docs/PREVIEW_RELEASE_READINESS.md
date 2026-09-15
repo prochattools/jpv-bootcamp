@@ -1,17 +1,5 @@
 # JPV Bootcamp Preview Release Readiness
 
-## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
-
-The current production revision is
-`b1e105d3ac855f20a983fb70bcefffb2490c864f`, with the provenance migration
-applied and verified clean. The non-production RC branch
-`codex/mighty-phase-a-bootstrap-runtime-rc-v2` contains only the bounded
-bootstrap runtime/queue hardening and synthetic coverage needed for a future
-owner-authorized Phase A operation. It is not deployed. `pnpm test:release` passed `198/198`;
-no live Stripe/Mighty access, migration, scheduler execution,
-worker execution, population inspection, real manifest, or user/data change
-occurred.
-
 ## CURRENT PRODUCTION-FREEZE SYNTHETIC HARDENING — 2026-09-11
 
 `PRODUCTION-FREEZE SYNTHETIC HARDENING GATE: PASS`
@@ -19,7 +7,7 @@ occurred.
 The live production platform is frozen for the current goal. No live Mighty
 read or mutation, live Stripe operation, population inspection, production test
 data, worker execution, scheduler enablement, configuration change, or
-deployment is authorized. `pnpm test:release` passed `197/197`. The controlling
+deployment is authorized. `pnpm test:release` passed `199/199`. The controlling
 record is `docs/release/MIGHTY_PRODUCTION_FREEZE_SYNTHETIC_HARDENING_2026-09-11.md`.
 
 ## Historical Rooms production release — 2026-08-30 (audit record)
