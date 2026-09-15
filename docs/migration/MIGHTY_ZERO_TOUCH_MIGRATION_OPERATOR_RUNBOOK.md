@@ -1,5 +1,35 @@
 # JPV Mighty zero-touch migration operator runbook
 
+## Silent communication contract
+
+This runbook applies an additional hard stop to every future Mighty migration
+or cutover communication. The only recognized migration recipients are the
+three exact addresses hard-coded in
+`src/lib/mighty/migrationCommunicationPolicy.ts`:
+`westhoek@hotmail.com`, `steve@yeshua.academy`, and `info@prochat.tools`.
+Environment variables, manifest rows, worker scope, and operator input cannot
+expand this list.
+
+Every migration email must carry the explicit `mighty_migration` communication
+context. Unauthorized recipients are suppressed before an outbox row is
+created. The final queue boundary repeats the check for legacy or directly
+inserted rows and records a terminal `suppressed` state without constructing a
+provider client or calling Resend. Suppression is not retried. Ordinary
+checkout, billing, account-action, support, and other non-migration lifecycle
+email remains on its existing path.
+
+Mighty member creation must continue to send `send_welcome_email=false`, and
+Plan enrollment must use the direct Plan-member access endpoint. No invitation,
+welcome email, login email, or content/Space/role change is part of silent
+pre-enrollment. The existing-member staging contract is Plan-only: add or
+remove only Plan `2000039` after entitlement and identity checks; preserve all
+other member state.
+
+The read-only Plan endpoint confirmed `2000039` (`JPV Member Access`) as hidden,
+non-paid, externally managed, and not visible to members. Because the endpoint
+does not expose every gate field, CREATE_NEW remains `HARD_CUTOVER_ONLY` until
+a separately authorized provider proof confirms silent creation.
+
 ## Status
 
 `ZERO-TOUCH MIGRATION OPERATIONS READINESS: PASS`
