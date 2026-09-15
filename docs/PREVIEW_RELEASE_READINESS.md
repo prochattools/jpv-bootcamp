@@ -1,5 +1,14 @@
 # JPV Bootcamp Preview Release Readiness
 
+## Owner-attested silent staging gate — 2026-09-15
+
+The migration-only authorization registry is empty by default and remains
+synthetic-only pending exact owner role attestation. It binds any future silent
+Plan `2000039` grant to one exact existing-member identity and immutable
+evidence hashes, with fresh entitlement, identity, overlap, and post-grant
+checks. No provider operation, real manifest, population inspection,
+deployment, or migration occurred. `pnpm test:release` passed `201/201`.
+
 ## Silent-migration guard production deployment — 2026-09-15
 
 The exact reviewed PR #55 merge `6ff599e9145c5154856ddecbd3305a17bb4e703b`
