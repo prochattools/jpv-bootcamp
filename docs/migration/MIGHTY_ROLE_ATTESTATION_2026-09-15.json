@@ -1,0 +1,36 @@
+{
+  "version": "mighty-jpv-role-attestation-v1",
+  "productionRevision": "6ff599e9145c5154856ddecbd3305a17bb4e703b",
+  "inputManifestSha256": "e6fdcb0df3fc399ef643e6f8c357637290df283adfb4026c84a7550cc70cf4c1",
+  "observedAt": "2026-09-15T22:11:31Z",
+  "rows": [
+    {
+      "normalizedEmail": "adaumoudit@gmail.com",
+      "mightyMemberId": "41566725",
+      "providerApiRole": null,
+      "operatorVisibleRole": null,
+      "evidenceSource": "Exact Mighty member profile UI /members/41566725; no explicit account-role classification rendered; space-membership labels are not treated as role evidence.",
+      "classification": "UNRESOLVED",
+      "reason": "Mighty API role is null and exact member UI does not positively classify ordinary or privileged status."
+    },
+    {
+      "normalizedEmail": "amechiclarangozi2022@gmail.com",
+      "mightyMemberId": "41567964",
+      "providerApiRole": null,
+      "operatorVisibleRole": null,
+      "evidenceSource": "Exact Mighty member profile UI /members/41567964; no explicit account-role classification rendered; space-membership labels are not treated as role evidence.",
+      "classification": "UNRESOLVED",
+      "reason": "Mighty API role is null and exact member UI does not positively classify ordinary or privileged status; Stripe identity ambiguity remains independent."
+    },
+    {
+      "normalizedEmail": "happyalamss@gmail.com",
+      "mightyMemberId": "41566259",
+      "providerApiRole": null,
+      "operatorVisibleRole": null,
+      "evidenceSource": "Exact Mighty member profile UI /members/41566259; no explicit account-role classification rendered; space-membership labels are not treated as role evidence.",
+      "classification": "UNRESOLVED",
+      "reason": "Mighty API role is null and exact member UI does not positively classify ordinary or privileged status."
+    }
+  ],
+  "canonicalSha256": "c95145543e55fd5acf31dbe5516a7d4c9118bd91b1f97dd6443da76febac8a8e"
+}

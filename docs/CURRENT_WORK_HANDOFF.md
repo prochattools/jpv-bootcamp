@@ -2,6 +2,27 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## CURRENT PHASE: OWNER-ATTESTED SILENT STAGING GATE — READY FOR REVIEW — 2026-09-15
+
+`OWNER-ATTESTED SILENT STAGING GATE: PASS`
+`PRODUCTION REVISION: 6ff599e9145c5154856ddecbd3305a17bb4e703b`
+`ROLE ATTESTATION COMMIT: 00638a57628ec1eb5452a441371e69b57e75d5dc`
+`ROLE ATTESTATION SHA: c95145543e55fd5acf31dbe5516a7d4c9118bd91b1f97dd6443da76febac8a8e`
+`MANIFEST SHA: e6fdcb0df3fc399ef643e6f8c357637290df283adfb4026c84a7550cc70cf4c1`
+`TARGET PLAN: 2000039`
+`pnpm test:release` passed `201/201`
+`SOURCE AUTHORIZATION REGISTRY: EMPTY`
+`REAL POPULATION: NOT TOUCHED`
+`LIVE MIGHTY/STRIPE ACCESS: NOT AUTHORIZED`
+`NEXT GATE: OWNER ATTESTATION OF ONE EXACT ORDINARY IDENTITY`
+
+The new migration-only gate is empty by default and cannot be populated from
+environment configuration. A future reviewed source change must bind one exact
+member identity to the immutable manifest and role-attestation hashes, require
+fresh Stripe and Mighty checks, and permit only a silent Plan `2000039` grant.
+It cannot email, create members, revoke Plans, or change unrelated member
+state. The current candidate is synthetic-only and is not deployed.
+
 ## CURRENT PHASE: SILENT-MIGRATION GUARD DEPLOYED — 2026-09-15
 
 `JPV SILENT MIGRATION GUARD INERT DEPLOYMENT: PASS`

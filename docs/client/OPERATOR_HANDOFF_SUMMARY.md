@@ -1,5 +1,19 @@
 # Operator Handoff Summary
 
+## Owner-attested silent staging gate — 2026-09-15
+
+`OWNER-ATTESTED SILENT STAGING GATE: PASS`
+
+The migration-only authorization registry is empty by default and is not
+environment-configurable. It binds any future silent Plan `2000039` grant to
+one exact existing-member identity, manifest SHA-256, and role-attestation
+SHA-256, with fresh entitlement, identity, overlap, and post-grant checks.
+There is no email, member-creation, revoke, content, Space, profile, role,
+login, or Stripe-write capability. Production and real accounts remain
+untouched. Deterministic release gate: `pnpm test:release` (`201/201`).
+The next gate is owner attestation of one exact ordinary identity; no real
+authorization has been added and no deployment is requested by this handoff.
+
 ## Silent-migration guard deployed — 2026-09-15
 
 `JPV SILENT MIGRATION GUARD INERT DEPLOYMENT: PASS`

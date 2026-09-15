@@ -89,6 +89,7 @@ function command(
 }
 
 export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
+  test('mighty.silent-migration-authorizations', 'migration inventory, readiness, rehearsal, and rollback safety', 'src/lib/mighty/silentMigrationAuthorizations.test.ts', 'Protects the empty-by-default owner-attested silent existing-member Plan-staging gate, exact evidence binding, no-email/no-create/no-revoke boundary, and synthetic replay behavior.', 'The migration-only authorization gate could widen scope, lose exact evidence binding, or perform an unsafe side effect.', 'readiness'),
   command('toolchain.frozen-install', 'toolchain and install integrity', 'pnpm', ['install', '--frozen-lockfile', '--ignore-scripts'], 'Proves package.json and pnpm-lock.yaml install deterministically without regeneration.', 'The pinned dependency graph cannot be reproduced safely.', 'M1-02'),
   command('toolchain.contract', 'toolchain and install integrity', 'pnpm', ['toolchain:check'], 'Enforces the repository Node and pnpm contracts before release checks.', 'The current runtime does not match the supported toolchain.', 'M1-02'),
   command('toolchain.diff-check', 'toolchain and install integrity', 'git', ['diff', '--check'], 'Rejects whitespace errors in the exact release candidate diff.', 'The release candidate contains invalid patch whitespace.', 'M1-02'),
