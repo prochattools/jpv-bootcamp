@@ -2,36 +2,39 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## CURRENT PHASE: MIGHTY EXACT-EMAIL IDENTITY BINDING HARDENING — OWNER REVIEW — 2026-09-15
+## CURRENT PHASE: MIGHTY EXACT-LOOKUP IDENTITY BINDING V2 — OWNER REVIEW — 2026-09-15
 
-`PRODUCTION REVISION: ca8f1b6516994a72187e13eb1f780e1cb6566c5d`
-`PRODUCTION MODE: DEPLOYED + HARDENED + INERT`
+`PRODUCTION REVISION: 4d1dd2fc867258ecde6b194b1ecb57a29592977f`
+`PRODUCTION MODE: DEPLOYED + HARDENED + IDENTITY-BINDING FAIL-CLOSED + INERT`
 `AUTHORIZED IDENTITY: westhoek@hotmail.com`
 `KNOWN MIGHTY MEMBER ID: 41580317`
 `MIGHTY SCHEDULER: DISABLED`
 `MIGHTY WORKER: DORMANT`
 `MIGHTY IDENTITY DIAGNOSTIC: EXACT by_email READ ONLY`
 `MISMATCH CLASSIFICATION: B — EMAIL FIELD PRESENT BUT EMPTY`
+`V2 RC BRANCH: codex/mighty-exact-lookup-identity-binding-v2`
+`V2 RC COMMIT: f879cab5`
+`IDENTITY EVIDENCE: provider_email_match OR exact_by_email_lookup`
 `LIVE MIGHTY MUTATIONS: 0`
 `LIVE STRIPE MUTATIONS: 0`
 `PLANS / SPACES / PURCHASES: NOT READ`
 `BOOTSTRAP / WORKER: NOT INVOKED`
-`NEXT GATE: OWNER REVIEW AND NORMAL APPROVAL OF THE IDENTITY-HARDENING RC`
+`NEXT GATE: OWNER REVIEW AND NORMAL APPROVAL OF THE V2 RC`
 
-The one authorized exact Westhoek lookup returned member ID `41580317`, with
-an empty provider `email` field. This is provider response ambiguity, not a
-case/whitespace normalization difference and not evidence of a different
-address. The hardening RC rejects absent, empty, or mismatched provider email
-before any Plan read, identity classification, grant, revoke, restore,
-recovery, or finalization. A stored member ID cannot mask an email conflict.
-The exact lookup endpoint and stable ID are not treated as sufficient proof
-when the provider email is absent.
+The production exact lookup returned member ID `41580317` with an empty
+provider `email` field. This is provider masking, not evidence of a different
+address. V2 keeps arbitrary empty-email members rejected while allowing a
+masked response only when the adapter attaches explicit
+`exact_by_email_lookup` evidence bound to the normalized request. Non-empty
+mismatches and locked member-ID conflicts remain fail-closed. Create and 422
+recovery paths perform exact post-create/recovery lookup and require the same
+ID before any Plan operation.
 
-No provider data was changed and the live canary was not retried. The clean
-hardening branch is based directly on the deployed production revision and is
-limited to identity binding, fail-closed tests, and bounded documentation.
-Deployment, bootstrap, worker execution, Plan reads, and any further live
-canary remain separate gates.
+No provider data was changed and the live canary was not retried. The V2 RC is
+based directly on the deployed production revision and is limited to explicit
+identity evidence, masked-email handling, fail-closed tests, and bounded
+documentation. Deployment, bootstrap, worker execution, Plan reads, and the
+single post-deploy identity check remain separate gates.
 
 ## CURRENT PHASE: PHASE A AUTHORITATIVE BOOTSTRAP RUNTIME RC — OWNER REVIEW — 2026-09-14
 
